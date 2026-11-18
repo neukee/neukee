@@ -1,0 +1,8 @@
+# Every change needs the owner's approval. Replace with your GitHub username (task T-001).
+* @YOUR_GITHUB_USERNAME
+
+# Security-sensitive paths: add a reviewer here once you have one.
+/.github/ @YOUR_GITHUB_USERNAME
+/packages/action/ @YOUR_GITHUB_USERNAME
+/catalog/ @YOUR_GITHUB_USERNAME
+/.claude/ @YOUR_GITHUB_USERNAME
