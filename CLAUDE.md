@@ -13,7 +13,7 @@ Working name **Valore** (trademark check pending; rename in T-053). A local-firs
 
 - `pnpm install` · `pnpm verify` (typecheck + lint + tests; must pass before any task is done)
 - `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm lint:fix`, `pnpm build`
-- Single package: `pnpm --filter @valore/scanner test`
+- Tests for one package or file: `pnpm test packages/scanner` (Vitest filters by path)
 
 ## How to work (every task)
 
