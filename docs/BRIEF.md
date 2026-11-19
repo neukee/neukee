@@ -135,19 +135,20 @@ Everything else, Claude does without asking and reports afterwards.
 
 ## 10. Where everything lives
 
-| What                                                       | Where                                                                     | Updated by                                |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------- |
-| This brief                                                 | `docs/BRIEF.md`                                                           | Claude proposes; Sreeram approves         |
-| Build rules for Claude Code                                | `CLAUDE.md`                                                               | Claude, with an ADR when rules change     |
-| What to build next                                         | `docs/TASKS.md`                                                           | Claude                                    |
-| Where we are, resume point, velocity, checkpoints          | `docs/PROGRESS.md`                                                        | Claude at `/next`, `/wrap`, `/checkpoint` |
-| Why things are the way they are                            | `docs/DECISIONS.md`                                                       | Claude; Sreeram approves anything in §8   |
-| What needs a human reviewer                                | `docs/REVIEW-QUEUE.md`                                                    | Claude                                    |
-| Architecture and specs                                     | `docs/ARCHITECTURE.md`, `docs/SPEC-SCANNER.md`, `docs/SPEC-ENGINE.md`     | Claude                                    |
-| Leads, calls, audits, pilots                               | `docs/business/PIPELINE.md`                                               | Claude drafts; Sreeram confirms outcomes  |
-| Full product spec for reviewers                            | [Spec doc](https://claude.ai/artifact/F5SUVrUBQNM4RNnYQ6gdAE)             | Claude                                    |
-| Business timeline, pitches, revenue ladder (internal only) | [Execution plan](https://claude.ai/artifact/89MJqU8ZF9SGmwR1K5KapA)       | Claude                                    |
-| Competitive response and moats                             | [CTO discussion brief](https://claude.ai/artifact/Fdm2PQHKPLamVGMwBg5P3Z) | Claude                                    |
+| What                                                       | Where                                                                       | Updated by                                |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------- |
+| This brief                                                 | `docs/BRIEF.md`                                                             | Claude proposes; Sreeram approves         |
+| Build rules for Claude Code                                | `CLAUDE.md`                                                                 | Claude, with an ADR when rules change     |
+| What to build next                                         | `docs/TASKS.md`                                                             | Claude                                    |
+| Where we are, resume point, velocity, checkpoints          | `docs/PROGRESS.md`                                                          | Claude at `/next`, `/wrap`, `/checkpoint` |
+| Why things are the way they are                            | `docs/DECISIONS.md`                                                         | Claude; Sreeram approves anything in §8   |
+| What needs a human reviewer                                | `docs/REVIEW-QUEUE.md`                                                      | Claude                                    |
+| Architecture and specs                                     | `docs/ARCHITECTURE.md`, `docs/SPEC-SCANNER.md`, `docs/SPEC-ENGINE.md`       | Claude                                    |
+| Leads, calls, audits, pilots                               | `docs/business/PIPELINE.md`                                                 | Claude drafts; Sreeram confirms outcomes  |
+| Full product spec for reviewers                            | [Spec doc](https://claude.ai/artifact/F5SUVrUBQNM4RNnYQ6gdAE)               | Claude                                    |
+| Business timeline, pitches, revenue ladder (internal only) | [Execution plan](https://claude.ai/artifact/89MJqU8ZF9SGmwR1K5KapA)         | Claude                                    |
+| Competitive response and moats                             | [CTO discussion brief](https://claude.ai/artifact/Fdm2PQHKPLamVGMwBg5P3Z)   | Claude                                    |
+| Workbench setup checklist                                  | [Valore Workbench Setup](https://claude.ai/artifact/2G822NqN856K5RuYdQicyk) | Claude, as Sreeram reports status         |
 
 ## 11. Quality bar
 
