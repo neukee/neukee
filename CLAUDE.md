@@ -4,14 +4,21 @@ Working name **Valore** (trademark check pending; rename in T-053). A local-firs
 
 ## Read before working
 
+- `docs/BRIEF.md` — **first, every session.** Who we are (Sreeram + Claude, nobody else), the goal, principles, decisions, dates, and when to stop and ask.
 - `docs/ARCHITECTURE.md` — the source of truth for structure, types, security model and quality gate.
 - `docs/SPEC-SCANNER.md` — exact scanner behavior and the launch targets.
 - `docs/TASKS.md` — the ordered task list. Work only on the task `/next` selects.
 - `docs/PROGRESS.md`, `docs/DECISIONS.md`, `docs/REVIEW-QUEUE.md` — where things stand, why, and what needs a person.
 
+## Sessions
+
+- **Start:** `/status` (where we stopped, the exact next step, the next date). **Work:** `/next`, repeated. **End:** `/wrap` (updates "Resume here" and the velocity log so any later session resumes exactly here). **Sunday:** `/checkpoint`.
+- A date in `docs/BRIEF.md` §7 at risk by more than 3 days: tell Sreeram the same day, with options.
+
 ## Commands
 
 - `pnpm install` · `pnpm verify` (typecheck + lint + tests; must pass before any task is done)
+- `pnpm check:all` (verify + `knip` unused code + `pack:check` package correctness; run before opening a PR) · `pnpm mutation` (Stryker; slow, nightly in CI)
 - `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm lint:fix`, `pnpm build`
 - Tests for one package or file: `pnpm test packages/scanner` (Vitest filters by path)
 
@@ -34,6 +41,7 @@ Working name **Valore** (trademark check pending; rename in T-053). A local-firs
 - **No absolute paths, secrets or file contents in reports** beyond the single line that locates a finding.
 - **Catalog entries come from official sources only.** Fetch and read the source before writing an entry; paste the exact URL. Never write an entry from memory.
 - **New runtime dependencies need a decision** in `docs/DECISIONS.md` first (see ADR-004 for the allowed list).
+- **Workspace packages resolve to source through the `@valore/source` export condition** (tests and typecheck). Never use the `development` condition: bundlers enable it for consumers.
 - **Respect the dependency direction:** `action → cli → scanner → core`; `core` imports nothing internal.
 - **Deterministic output:** sort findings; no timestamps except `scannedAt`; no `Math.random`.
 - **Detectors never throw.** Errors become `Diagnostic` entries; one bad file never stops a scan.

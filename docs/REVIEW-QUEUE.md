@@ -6,9 +6,11 @@ Work that a qualified person must look at. Claude adds items when a task is mark
 
 ## Waiting for review
 
-| Added      | Task  | What to check                                                          | Files                                 | Risk if wrong                  |
-| ---------- | ----- | ---------------------------------------------------------------------- | ------------------------------------- | ------------------------------ |
-| 2026-11-18 | T-001 | Branch protection, required checks and CODEOWNERS are set up correctly | GitHub settings, `.github/CODEOWNERS` | Unreviewed code reaches `main` |
+| Added      | Task     | What to check                                                              | Files                                 | Risk if wrong                          |
+| ---------- | -------- | -------------------------------------------------------------------------- | ------------------------------------- | -------------------------------------- |
+| 2026-11-19 | ADR-005  | Sreeram confirms: public repo from day one; Apache-2.0 scanner; FSL engine | `docs/DECISIONS.md`                   | Publishing code is irreversible        |
+| 2026-11-19 | Brief §5 | Sreeram confirms the target customer                                       | `docs/BRIEF.md`                       | Sales effort aimed at the wrong buyers |
+| 2026-11-18 | T-001    | Branch protection, required checks and CODEOWNERS are set up correctly     | GitHub settings, `.github/CODEOWNERS` | Unreviewed code reaches `main`         |
 
 ## Reviewed
 

@@ -7,7 +7,9 @@
     "valore": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -16,5 +18,6 @@
   "dependencies": {
     "@valore/core": "workspace:*",
     "@valore/scanner": "workspace:*"
-  }
+  },
+  "license": "Apache-2.0"
 }

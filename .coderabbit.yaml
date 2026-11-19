@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit reviews every pull request. Repos with fewer than 10 stars need a manual
+# trigger: comment "@coderabbitai review" on the PR.
+language: en-US
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "**/*"
+      instructions: >-
+        Follow CLAUDE.md and docs/ARCHITECTURE.md. Flag: any network access (fetch, sockets, DNS);
+        running the scanned project's code or scripts; absolute paths or file contents in reports;
+        imports that break the dependency direction action -> cli -> scanner -> core; detectors that
+        can throw; non-deterministic output; weakened, skipped or deleted tests; new runtime
+        dependencies without an ADR in docs/DECISIONS.md.
+    - path: "catalog/**"
+      instructions: >-
+        Every entry needs an https sourceUrl on an official domain, positive and negative fixtures,
+        and text that matches the source. Flag anything that reads like it was written from memory.
+    - path: ".github/**"
+      instructions: >-
+        Actions must be pinned to full commit SHAs with a version comment. Permissions must be the
+        minimum needed. Flag any secret exposure or pull_request_target usage.

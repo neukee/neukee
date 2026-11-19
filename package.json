@@ -12,12 +12,21 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "test": "vitest run",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test",
+    "knip": "knip",
+    "pack:check": "pnpm -r build && pnpm -r --filter=./packages/* exec publint && pnpm --filter=@valore/core --filter=@valore/scanner exec attw --pack . --profile esm-only",
+    "mutation": "stryker run",
+    "check:all": "pnpm verify && pnpm knip && pnpm pack:check"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@biomejs/biome": "^2.6.8",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/vitest-runner": "^10.1.1",
     "@types/node": "^26.6.6",
     "@vitest/coverage-v8": "^5.1.1",
+    "knip": "^6.46.1",
+    "publint": "^0.3.25",
     "typescript": "^7.0.2",
     "vitest": "^5.1.1"
   }

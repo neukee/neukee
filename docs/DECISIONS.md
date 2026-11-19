@@ -4,6 +4,24 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-007 · Extra quality gates for an AI-built codebase (2026-11-19)
+
+- **Context:** Claude writes both the code and the tests, and CodeRabbit is also AI, so their blind spots are correlated. A test that passes without checking anything can get past all of them.
+- **Decision:** add tools that follow fixed rules. **Stryker** mutation testing (nightly full run; threshold rises to 80% on core and scanner in T-038). **Knip** for unused files, exports and dependencies. **publint** and **Are the Types Wrong** for package correctness (`pnpm pack:check`). **OpenSSF Scorecard**. **Dependabot** for Actions and npm. Every Action is pinned to a full commit SHA with a version comment. **CodeRabbit** reviews every PR with the rules from `CLAUDE.md` (`.coderabbit.yaml`). The dependency-direction rule stays a custom test (T-004) rather than dependency-cruiser, to avoid relying on the TypeScript compiler API that TypeScript 7 removed.
+- **Consequences:** `pnpm check:all` = verify + knip + pack:check. CI runs `quality` next to the matrix. Scaffold mutation baseline: 62.9%. `fast-check` (property-based tests) is added in T-015 when the first parser lands.
+
+## ADR-006 · Crowd signatures are opt-in and explicit (2026-11-19)
+
+- **Context:** a future "Behavior Confidence" signal needs data across repos, but ADR-002 promises no network and no telemetry.
+- **Decision:** ADR-002 stands for every scan and verification run. If crowd data ships (v1 at the earliest), it is a separate, explicit command that the user runs on purpose. It uploads only hashed change signatures (package, versions, change category, verdict), never code, paths or test names. The signature format is defined now (T-006) so it never needs a breaking change.
+- **Consequences:** no silent telemetry, ever. Contributors get crowd data in return (give-to-get).
+
+## ADR-005 · Public monorepo and licenses (2026-11-19) — default, waiting for Sreeram to confirm
+
+- **Context:** the scanner is open source anyway; public repos get CodeRabbit, GitHub Actions minutes, CodeQL and Scorecard for free; the engine is the paid product and must not be taken by record/replay competitors.
+- **Decision:** the repository is public from day one. `core`, `scanner`, `cli` and the Action are Apache-2.0 (root `LICENSE`, `NOTICE`). The engine package (`packages/engine`, when created) carries the Functional Source License (FSL-1.1, converting to Apache-2.0 after two years): source visible, no competing use.
+- **Consequences:** this supersedes "private repo until launch" in T-001 and WORKFLOW. Publishing code is irreversible, so Sreeram confirms before T-001 pushes. If he chooses a closed engine instead, the engine lives in a separate private repository.
+
 ## ADR-004 · Allowed runtime dependencies (2026-11-18)
 
 - **Context:** a security tool's dependency tree is part of what buyers review.

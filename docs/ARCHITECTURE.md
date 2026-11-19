@@ -182,6 +182,13 @@ The scanner reads code that belongs to someone else. Its guarantees:
 
 `pnpm verify` runs, in order: typecheck → lint → tests (unit, rule fixtures, snapshot tests on fixture repos). CI runs the same command on Node 22 and 24, on Linux and Windows.
 
+Around it (ADR-007), because AI writes both the code and the tests:
+
+- `pnpm check:all` adds **Knip** (unused files, exports, dependencies) and `pack:check` (**publint** and **Are the Types Wrong**). CI runs both in the `quality` job.
+- **Stryker** mutation testing runs nightly; the score must reach 80% on core and scanner (T-038).
+- **CodeRabbit** reviews every PR with the rules in `.coderabbit.yaml`; **CodeQL** and **OpenSSF Scorecard** run on GitHub; **Dependabot** keeps SHA-pinned Actions and dev tools current.
+- From T-037, a nightly **corpus job** scans 100+ pinned public repos and fails on any crash or unexpected output change.
+
 **How we avoid breaking old work (regression strategy):**
 
 - **Golden snapshots:** each fixture repo has a committed expected report. Any change in output fails the test until a human-readable reason is written in the commit message and the snapshot is deliberately updated.

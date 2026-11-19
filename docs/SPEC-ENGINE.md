@@ -24,6 +24,7 @@ Because it runs only the tests the customer's CI already runs, it adds no new ex
 
 ## 3. First experiments (spikes) before committing to the design
 
+0. **Competitive spike (E-001, first, due Dec 31):** in a demo app, upgrade `pg` or `ioredis` by one major version with a behavior change the tests don't assert. Run Tusk Drift's demo replay, Keploy and our approach (real database containers, never mocking the upgraded library). Record who catches it. If record/replay tools catch it too, the pitch leans on catalog verdicts and evidence (see `docs/BRIEF.md` §6).
 1. **Recorder spike:** can `diagnostics_channel` capture inbound requests in a Next.js 15/16 App Router app under `next start` and in route-handler tests? Measure overhead.
 2. **Noise spike:** run one open-source app's tests twice; list every field that differs; check whether the two-run mask removes all of it.
 3. **Replay spike:** take 5 real past Renovate PRs from an open-source app; run baseline vs candidate; count real vs false differences by hand.

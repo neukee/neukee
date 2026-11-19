@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreDependencies": ["@stryker-mutator/api", "@arethetypeswrong/cli"],
+  "workspaces": {
+    ".": {
+      "entry": ["test/**/*.test.ts"]
+    },
+    "packages/cli": {
+      "entry": ["src/index.ts", "src/**/*.test.ts"],
+      "ignoreDependencies": ["@valore/core", "@valore/scanner"]
+    },
+    "packages/*": {
+      "entry": ["src/**/*.test.ts"]
+    }
+  }
+}

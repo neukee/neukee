@@ -5,13 +5,15 @@
   "type": "module",
   "exports": {
     ".": {
-      "development": "./src/index.ts",
+      "@valore/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -20,5 +22,6 @@
   "dependencies": {
     "@valore/core": "workspace:*",
     "oxc-parser": "^0.159.0"
-  }
+  },
+  "license": "Apache-2.0"
 }

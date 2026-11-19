@@ -1,0 +1,5 @@
+Valore
+Copyright 2026 Sreeram Venugopal
+
+The scanner, core, CLI and GitHub Action packages are licensed under the Apache License, Version 2.0 (see LICENSE).
+The engine package, when added, carries its own license file (see docs/DECISIONS.md, ADR-005).

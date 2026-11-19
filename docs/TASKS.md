@@ -25,8 +25,8 @@
 - Status: todo
 - Depends on: T-000
 - Human review: yes (you do this; Claude gives instructions)
-- Build: Create a private GitHub repo, push `main`. Turn on: branch protection for `main` (require PR, require the `verify` check, no force pushes), secret scanning, Dependabot alerts, 2FA on your account. Replace `@YOUR_GITHUB_USERNAME` in `.github/CODEOWNERS`.
-- Done when: a test PR shows the `verify` check running and blocking merge until green.
+- Build (follow the workbench setup checklist): confirm ADR-005 first. Create the repo (public per ADR-005), push `main`. Turn on: branch protection for `main` (require a PR, require the `verify` and `quality` checks, no force pushes), secret scanning with push protection, Dependabot alerts, CodeQL default setup, 2FA on your account. Install the CodeRabbit GitHub app on the repo. Replace `@YOUR_GITHUB_USERNAME` in `.github/CODEOWNERS`.
+- Done when: a test PR shows `verify` and `quality` running and blocking merge until green, and CodeRabbit reviews it (comment `@coderabbitai review` while the repo has fewer than 10 stars).
 
 ### T-002 · Core types and JSON Schema
 
@@ -67,6 +67,16 @@
 - Done when:
   - [ ] Fixture with nested `.gitignore`, a symlink pointing outside, a 2 MB file and a `node_modules` folder gives exactly the expected file list.
   - [ ] Test passes on Windows in CI (paths use `/`).
+
+### T-006 · Change-signature schema
+
+- Status: todo
+- Depends on: T-002
+- Human review: yes (Sreeram confirms nothing identifying can leak)
+- Build: `ChangeSignature` type and JSON Schema in `packages/core` per ADR-006: package name, from and to versions, change category, verdict, catalog entry id (if any), and a SHA-256 hash of the normalized change shape. No code, paths, test names, hostnames or values. Nothing uses it yet; it exists so the format never needs a breaking change.
+- Done when:
+  - [ ] Schema and type agree (test).
+  - [ ] A test feeds a change containing a path, a hostname and a secret-looking value and proves none of them appear in the signature.
 
 ## Phase 1 — Detectors
 
@@ -116,7 +126,7 @@
 - Status: todo
 - Depends on: T-005
 - Human review: no
-- Build: v2/v3 `packages` map → resolved versions, direct vs transitive, `hasInstallScript`.
+- Build: v2/v3 `packages` map → resolved versions, direct vs transitive, `hasInstallScript`. Add `fast-check` (ADR-007) and property-based tests: the parser never throws on arbitrary input.
 - Done when: fixtures from real `npm install` output (small) parse exactly; a corrupt lockfile gives a diagnostic, not a crash.
 
 ### T-016 · Lockfile: pnpm-lock.yaml
@@ -205,6 +215,14 @@
 - Human review: no
 - Done when: a server-side `fetch` without explicit cache options in a Next 14 project produces an info finding for target `next@15`.
 
+### T-027 · Research: compare MergeWarden
+
+- Status: todo
+- Depends on: —
+- Human review: no
+- Build: read MergeWarden's public docs; write `docs/research/mergewarden.md`: what it checks, how (static policy, LLM review, or runtime), pricing, and where Valore differs. Sources linked; nothing from memory.
+- Done when: the comparison is written and `docs/BRIEF.md` §6 is updated (propose the change; Sreeram approves).
+
 ## Phase 2 — Output and CLI
 
 ### T-030 · Report assembly
@@ -234,7 +252,7 @@
 - Status: todo
 - Depends on: T-031, T-032
 - Human review: no
-- Build: `valore scan` with all options in `docs/SPEC-SCANNER.md` §1, exit codes, `--help` text, friendly errors.
+- Build: `valore scan` with all options in `docs/SPEC-SCANNER.md` §1, exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
 - Done when: e2e tests run the built CLI as a child process on fixtures and check output and exit codes.
 
 ### T-034 · Fleet mode
@@ -259,6 +277,22 @@
 - Human review: no
 - Build: a CI job that runs the CLI e2e tests with networking disabled (e.g. `unshare -n` on Linux).
 - Done when: the job passes, and a deliberately added `fetch` in a branch makes it fail.
+
+### T-037 · Corpus job (nightly)
+
+- Status: todo
+- Depends on: T-033
+- Human review: no
+- Build: `corpus/repos.yaml` lists 100+ public Node.js and Next.js repos, each pinned to a commit SHA (mixed sizes and package managers). A script clones them shallowly in CI only (never in tests), runs the CLI, and compares the JSON output with stored expectations. The nightly workflow fails on any crash, timeout (over 60 s), or unexpected output change.
+- Done when: the job runs green nightly; a deliberately broken detector in a branch makes it fail.
+
+### T-038 · Mutation score target
+
+- Status: todo
+- Depends on: T-033
+- Human review: no
+- Build: raise the Stryker `break` threshold to 80% for `packages/core` and `packages/scanner` by strengthening tests (never by excluding files without an ADR).
+- Done when: the nightly mutation job passes at 80%.
 
 ## Phase 3 — GitHub Action
 
@@ -292,7 +326,7 @@
 - Status: todo
 - Depends on: T-040
 - Human review: yes (a qualified person, not Claude alone)
-- Build: checklist in `docs/SECURITY-REVIEW.md` (network, file writes, path traversal, symlinks, dependency list, Action permissions, release signing); external reviewer signs off.
+- Build: checklist in `docs/SECURITY-REVIEW.md` (network, file writes, path traversal, symlinks, YAML and regex denial of service, dependency list, Action permissions, release signing, OpenSSF Scorecard results); external reviewer signs off. Actions are already SHA-pinned (ADR-007); confirm Dependabot keeps them current.
 - Done when: all items checked and the reviewer's notes are resolved.
 
 ### T-053 · Name, packages and release pipeline
@@ -317,6 +351,15 @@
 - Human review: yes (you press publish)
 - Done when: v0.1.0 on npm with provenance, Action tagged `v0`, README live, launch post drafted (Show HN, LinkedIn, blog).
 
+### T-056 · UpgradeBench
+
+- Status: todo
+- Depends on: T-033 (collection can start earlier)
+- Human review: yes (each regression is checked against its GitHub issue)
+- Build: `bench/` with 50 real upgrade regressions from public GitHub issues (Node.js and Next.js majors, pg, Prisma, undici, ioredis): the repo and commit, the upgrade, the issue link, and a reproduction test. A runner reports catch rates for: tests alone, the scanner, record/replay tools where runnable, and the engine once it exists.
+- Done when: 50 cases reproduce; results table published in `bench/README.md` (target: public by April 30, 2027).
+
 ## Phase E — Engine (after launch; detailed later)
 
-- E-001 Recorder spike · E-002 Noise spike · E-003 Replay spike — see `docs/SPEC-ENGINE.md` §3. All three: human review yes.
+- **E-001 Competitive spike (first):** in a small demo app, upgrade `pg` or `ioredis` by one major version and change behavior the tests don't assert. Run Tusk Drift's demo replay, Keploy and the Valore approach (real database containers, no mock of the upgraded library). Record which tools catch the change. Due by Dec 31.
+- E-002 Recorder spike · E-003 Noise spike · E-004 Replay spike — see `docs/SPEC-ENGINE.md` §3. All: human review yes.
