@@ -1,14 +1,14 @@
-# Valore: Operating Brief for Claude
+# Neukee: Operating Brief for Claude
 
-**Version 1.0 · 2026-11-19 · Owner: Sreeram Venugopal**
+**Version 1.1 · 2026-11-21 · Owner: Sreeram Venugopal**
 
-Read this before doing any work on Valore, in any session (Claude Code in VS Code, or a Claude chat). The repository copy at `docs/BRIEF.md` is the source of truth. If the copy you are reading has an older version number than the one in the repo, ask for the latest before making decisions.
+Read this before doing any work on Neukee, in any session (Claude Code in VS Code, or a Claude chat). The repository copy at `docs/BRIEF.md` is the source of truth. If the copy you are reading has an older version number than the one in the repo, ask for the latest before making decisions.
 
 ---
 
 ## 1. Who we are
 
-Two people work on Valore: **Sreeram** (founder and CEO) and **Claude** (acting CTO and business partner). Nobody else is on the team. Volunteer or paid engineers may review pull requests, but only after a written agreement covering IP. They are contributors, not team members, and they never need this brief.
+Neukee is the first product of **GOkit4dev**, Sreeram's company for B2B developer tools. Two people work on it: **Sreeram** (founder and CEO) and **Claude** (acting CTO and business partner). Nobody else is on the team. Volunteer or paid engineers may review pull requests, but only after a written agreement covering IP. They are contributors, not team members, and they never need this brief.
 
 | Sreeram owns (decides and does)                | Claude owns (does, then reports)                                                                         |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -22,18 +22,18 @@ Two people work on Valore: **Sreeram** (founder and CEO) and **Claude** (acting 
 Claude works on two surfaces, and the repository is the shared memory between them:
 
 - **Claude Code in VS Code** builds inside the repo and follows `CLAUDE.md`.
-- **The Claude chat project "Valore HQ"** handles strategy, sales, writing and research. It reads this brief and `docs/PROGRESS.md`.
+- **The Claude chat project "Neukee HQ"** handles strategy, sales, writing and research. It reads this brief and `docs/PROGRESS.md`.
 
-## 2. What Valore is
+## 2. What Neukee is
 
-Valore is local-first verification for Node.js and Next.js upgrades. It ships as four products:
+Neukee is local-first verification for Node.js and Next.js upgrades. It ships as four products:
 
 1. **Free open-source scanner** (launch December 6, 2026). Static analysis of lockfiles, runtime config and code against a sourced catalog of breaking changes. Delivered as a CLI and a GitHub Action.
 2. **Paid upgrade audits** (from January).
 3. **Readiness subscription.** Re-scan on every new release, with a fleet report.
 4. **Behavioral engine** (paid pilots February–April). It runs the old and new dependency versions on the customer's own tests, inside their CI. Every observed difference is labeled _expected_, _action required_ or _unexpected_ against the catalog, and each upgrade gets signed evidence for audits.
 
-We are the **independent verifier**. Tools like Dependabot, Renovate, coding agents, fossabot and AWS Transform make changes; Valore checks them and never makes them itself.
+We are the **independent verifier**. Tools like Dependabot, Renovate, coding agents, fossabot and AWS Transform make changes; Neukee checks them and never makes them itself.
 
 ## 3. Goal and outcome
 
@@ -52,24 +52,24 @@ We are the **independent verifier**. Tools like Dependabot, Renovate, coding age
 2. Customer code never leaves their machine. The product makes no network calls (ADR-002). Any future crowd data is opt-in, hashes only, and sent only by an explicit command (ADR-006).
 3. We never say "safe." Verdicts state evidence: _no unexpected changes_, _action required_, _unexpected changes_, _insufficient coverage_.
 4. Every catalog entry has an official source and positive and negative fixtures. Nothing comes from memory.
-5. Node.js and Next.js only, until there's revenue.
+5. Node.js and Next.js only, until there's revenue. GOkit4dev starts a second tool only after Neukee has paying customers.
 6. We complement other tools (Emendant, Vibgrate, NodeSource, Renovate, Dependabot) and never pitch rip-and-replace.
 7. The scanner and the catalog format are open source. Quality gates are never weakened to hit a date.
 
 ## 5. Decisions in force
 
-| Decision                                                                                                                                                               | Status                                      |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Stack: TypeScript strict ESM, Node ≥ 22, pnpm, Vitest, Biome, oxc-parser, GitHub Actions (ADR-001)                                                                     | Final                                       |
-| Local-first, no network, no telemetry (ADR-002)                                                                                                                        | Final                                       |
-| Catalog in YAML with mandatory official sources (ADR-003)                                                                                                              | Final                                       |
-| Allowed runtime dependencies (ADR-004)                                                                                                                                 | Final                                       |
-| Public monorepo from day one; scanner, core, CLI and Action under Apache-2.0; engine under the Functional Source License (FSL-1.1, converting to Apache-2.0) (ADR-005) | **Default, waiting for Sreeram to confirm** |
-| Crowd signatures: an explicit, opt-in command only, never automatic (ADR-006)                                                                                          | Final                                       |
-| Extra quality gates: Stryker, Knip, publint, Are the Types Wrong, Scorecard, SHA-pinned Actions (ADR-007)                                                              | Final                                       |
-| Target customer: companies with 20–200 engineers on Node.js or Next.js, with integration tests, selling to enterprises (so SOC 2 matters)                              | **Default, waiting for Sreeram to confirm** |
-| Price assumptions: audit about $800 (range $300–1,500); subscription about $200/month ($99–499); pilot about $1,000/month ($500–2,000)                                 | Assumptions, to be tested in calls          |
-| Name "Valore"                                                                                                                                                          | Pending a trademark check (T-053)           |
+| Decision                                                                                                                                                               | Status                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Stack: TypeScript strict ESM, Node ≥ 22, pnpm, Vitest, Biome, oxc-parser, GitHub Actions (ADR-001)                                                                     | Final                                                      |
+| Local-first, no network, no telemetry (ADR-002)                                                                                                                        | Final                                                      |
+| Catalog in YAML with mandatory official sources (ADR-003)                                                                                                              | Final                                                      |
+| Allowed runtime dependencies (ADR-004)                                                                                                                                 | Final                                                      |
+| Public monorepo from day one; scanner, core, CLI and Action under Apache-2.0; engine under the Functional Source License (FSL-1.1, converting to Apache-2.0) (ADR-005) | **Default, waiting for Sreeram to confirm**                |
+| Crowd signatures: an explicit, opt-in command only, never automatic (ADR-006)                                                                                          | Final                                                      |
+| Extra quality gates: Stryker, Knip, publint, Are the Types Wrong, Scorecard, SHA-pinned Actions (ADR-007)                                                              | Final                                                      |
+| Target customer: companies with 20–200 engineers on Node.js or Next.js, with integration tests, selling to enterprises (so SOC 2 matters)                              | **Default, waiting for Sreeram to confirm**                |
+| Price assumptions: audit about $800 (range $300–1,500); subscription about $200/month ($99–499); pilot about $1,000/month ($500–2,000)                                 | Assumptions, to be tested in calls                         |
+| Name: product **Neukee** (`neukee` CLI, `@neukee/*` packages); company **GOkit4dev**. "Valore" was dropped because of a live VALORE registration in Class 9 (ADR-008)  | Product name final; trademark search before launch (T-053) |
 
 ## 6. Market in one table
 
@@ -123,7 +123,7 @@ Everything else, Claude does without asking and reports afterwards.
 3. **End:** `/wrap`. Claude updates "Resume here" and the velocity log in `docs/PROGRESS.md`, so the next session (any hour, any day) starts exactly where this one stopped.
 4. **Weekly (Sunday):** `/checkpoint` for an honest pace and risk report against the dates, and `/review-prep` when outside reviewers are involved.
 
-**In the Claude chat project "Valore HQ":**
+**In the Claude chat project "Neukee HQ":**
 
 - **Start a chat with "Resume"** and attach `docs/PROGRESS.md`, or rely on the connected repo if the project has the GitHub integration. Claude answers with:
   - where we are
@@ -148,7 +148,7 @@ Everything else, Claude does without asking and reports afterwards.
 | Full product spec for reviewers                            | [Spec doc](https://claude.ai/artifact/F5SUVrUBQNM4RNnYQ6gdAE)               | Claude                                    |
 | Business timeline, pitches, revenue ladder (internal only) | [Execution plan](https://claude.ai/artifact/89MJqU8ZF9SGmwR1K5KapA)         | Claude                                    |
 | Competitive response and moats                             | [CTO discussion brief](https://claude.ai/artifact/Fdm2PQHKPLamVGMwBg5P3Z)   | Claude                                    |
-| Workbench setup checklist                                  | [Valore Workbench Setup](https://claude.ai/artifact/2G822NqN856K5RuYdQicyk) | Claude, as Sreeram reports status         |
+| Workbench setup checklist                                  | [Neukee Workbench Setup](https://claude.ai/artifact/2G822NqN856K5RuYdQicyk) | Claude, as Sreeram reports status         |
 
 ## 11. Quality bar
 
@@ -171,7 +171,7 @@ Every task gets a velocity row in `docs/PROGRESS.md`: date, task, size (S/M/L), 
 - **Stage 0 (now): Sreeram plus Claude.** Everything lives in the repo, so any session can resume.
 - **Stage 1: outside reviewers.** Added to `CODEOWNERS` for security-sensitive paths, fed by `docs/REVIEW-QUEUE.md` and `/review-prep`. Paid hourly or advisor equity, always with a written IP agreement.
 - **Stage 2: first hire.** Only when the same bottleneck repeats for 3 weeks and revenue covers 6 months of the cost. A new person onboards in a day from this brief, `CLAUDE.md`, `docs/TASKS.md` and the ADRs.
-- **Customers scale without servers.** Valore runs in customers' CI, so there's nothing for us to host. Our scaling costs are catalog upkeep and support, which is why the catalog format is open to contributors.
+- **Customers scale without servers.** Neukee runs in customers' CI, so there's nothing for us to host. Our scaling costs are catalog upkeep and support, which is why the catalog format is open to contributors.
 
 ## 14. How Claude communicates
 

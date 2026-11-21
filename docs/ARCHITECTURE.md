@@ -1,6 +1,6 @@
 # Architecture
 
-> Working name: **Valore** (pending trademark check). Renaming is a find-and-replace across package names; do it before the first npm publish (task T-053).
+> Working name: **Neukee** (pending trademark check). Renaming is a find-and-replace across package names; do it before the first npm publish (task T-053).
 
 This document is the source of truth for how the system is built. If code and this document disagree, the code is wrong or this document must be updated in the same change, with an entry in `docs/DECISIONS.md`.
 
@@ -39,7 +39,7 @@ Both are **local-first**: no server, no database, no account, no network calls. 
 ## 3. Repository layout
 
 ```
-valore/
+neukee/
 ├── CLAUDE.md                 # Project memory for Claude Code (read every session)
 ├── docs/                     # Architecture, specs, tasks, progress, decisions
 ├── catalog/                  # Versioned knowledge: what breaks in each release
@@ -49,7 +49,7 @@ valore/
 ├── packages/
 │   ├── core/                 # Types, report schema, catalog loader. Depends on nothing internal.
 │   ├── scanner/              # Detectors and the scan pipeline. Depends on core.
-│   ├── cli/                  # `valore` command. Depends on scanner + core.
+│   ├── cli/                  # `neukee` command. Depends on scanner + core.
 │   └── action/               # GitHub Action wrapper (task T-040). Depends on cli.
 ├── fixtures/                 # Small sample repos used by tests (never real customer code)
 └── .claude/                  # Claude Code skills, reviewer agent, settings, hooks

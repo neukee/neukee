@@ -10,7 +10,7 @@
 | The GitHub Action            | This repo (`packages/action`), listed on the GitHub Marketplace at launch                                                                                           |
 | Marketing site and docs      | A **separate** repository (Astro or Next.js) on Cloudflare Pages, or Vercel Pro. Vercel's free Hobby plan is non-commercial only. The product itself has no server. |
 | Company email                | Your domain (Google Workspace or Zoho)                                                                                                                              |
-| Operating brief              | `docs/BRIEF.md`; also attached to the Claude chat project "Valore HQ"                                                                                               |
+| Operating brief              | `docs/BRIEF.md`; also attached to the Claude chat project "Neukee HQ"                                                                                               |
 | Leads, calls, audits, pilots | `docs/business/PIPELINE.md`                                                                                                                                         |
 
 This is different from a web app: there is no backend, database or hosting for the product. What you ship is a package and an Action that run on other people's machines, so the quality bar is "never breaks someone's CI" and "never touches what it should not."

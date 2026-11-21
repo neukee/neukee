@@ -1,11 +1,11 @@
 {
-  "name": "@valore/core",
+  "name": "@neukee/core",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": {
-      "@valore/source": "./src/index.ts",
+      "@neukee/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }

@@ -41,10 +41,10 @@ importers:
 
   packages/cli:
     dependencies:
-      '@valore/core':
+      '@neukee/core':
         specifier: workspace:*
         version: link:../core
-      '@valore/scanner':
+      '@neukee/scanner':
         specifier: workspace:*
         version: link:../scanner
 
@@ -52,7 +52,7 @@ importers:
 
   packages/scanner:
     dependencies:
-      '@valore/core':
+      '@neukee/core':
         specifier: workspace:*
         version: link:../core
       oxc-parser:

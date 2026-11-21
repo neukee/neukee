@@ -1,5 +1,5 @@
 {
-  "name": "valore",
+  "name": "neukee",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.28.0",
@@ -14,7 +14,7 @@
     "test": "vitest run",
     "verify": "pnpm typecheck && pnpm lint && pnpm test",
     "knip": "knip",
-    "pack:check": "pnpm -r build && pnpm -r --filter=./packages/* exec publint && pnpm --filter=@valore/core --filter=@valore/scanner exec attw --pack . --profile esm-only",
+    "pack:check": "pnpm -r build && pnpm -r --filter=./packages/* exec publint && pnpm --filter=@neukee/core --filter=@neukee/scanner exec attw --pack . --profile esm-only",
     "mutation": "stryker run",
     "check:all": "pnpm verify && pnpm knip && pnpm pack:check"
   },

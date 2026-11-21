@@ -1,10 +1,10 @@
 {
-  "name": "@valore/cli",
+  "name": "@neukee/cli",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "bin": {
-    "valore": "./dist/index.js"
+    "neukee": "./dist/index.js"
   },
   "files": [
     "dist",
@@ -16,8 +16,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@valore/core": "workspace:*",
-    "@valore/scanner": "workspace:*"
+    "@neukee/core": "workspace:*",
+    "@neukee/scanner": "workspace:*"
   },
   "license": "Apache-2.0"
 }

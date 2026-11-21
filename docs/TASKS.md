@@ -220,7 +220,7 @@
 - Status: todo
 - Depends on: —
 - Human review: no
-- Build: read MergeWarden's public docs; write `docs/research/mergewarden.md`: what it checks, how (static policy, LLM review, or runtime), pricing, and where Valore differs. Sources linked; nothing from memory.
+- Build: read MergeWarden's public docs; write `docs/research/mergewarden.md`: what it checks, how (static policy, LLM review, or runtime), pricing, and where Neukee differs. Sources linked; nothing from memory.
 - Done when: the comparison is written and `docs/BRIEF.md` §6 is updated (propose the change; Sreeram approves).
 
 ## Phase 2 — Output and CLI
@@ -252,7 +252,7 @@
 - Status: todo
 - Depends on: T-031, T-032
 - Human review: no
-- Build: `valore scan` with all options in `docs/SPEC-SCANNER.md` §1, exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
+- Build: `neukee scan` with all options in `docs/SPEC-SCANNER.md` §1, exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
 - Done when: e2e tests run the built CLI as a child process on fixtures and check output and exit codes.
 
 ### T-034 · Fleet mode
@@ -361,5 +361,5 @@
 
 ## Phase E — Engine (after launch; detailed later)
 
-- **E-001 Competitive spike (first):** in a small demo app, upgrade `pg` or `ioredis` by one major version and change behavior the tests don't assert. Run Tusk Drift's demo replay, Keploy and the Valore approach (real database containers, no mock of the upgraded library). Record which tools catch the change. Due by Dec 31.
+- **E-001 Competitive spike (first):** in a small demo app, upgrade `pg` or `ioredis` by one major version and change behavior the tests don't assert. Run Tusk Drift's demo replay, Keploy and the Neukee approach (real database containers, no mock of the upgraded library). Record which tools catch the change. Due by Dec 31.
 - E-002 Recorder spike · E-003 Noise spike · E-004 Replay spike — see `docs/SPEC-ENGINE.md` §3. All: human review yes.

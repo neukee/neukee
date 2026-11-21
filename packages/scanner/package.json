@@ -1,11 +1,11 @@
 {
-  "name": "@valore/scanner",
+  "name": "@neukee/scanner",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": {
-      "@valore/source": "./src/index.ts",
+      "@neukee/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
@@ -20,7 +20,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@valore/core": "workspace:*",
+    "@neukee/core": "workspace:*",
     "oxc-parser": "^0.159.0"
   },
   "license": "Apache-2.0"

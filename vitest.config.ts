@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     // Resolve workspace packages to their TypeScript source during tests.
-    conditions: ["@valore/source"],
+    conditions: ["@neukee/source"],
   },
   test: {
     include: ["packages/*/src/**/*.test.ts", "test/**/*.test.ts"],

@@ -7,10 +7,10 @@ The scanner answers one question for a repository: _what stands between this cod
 ## 1. Command-line interface
 
 ```
-valore scan [path] [--target <tool@version>]... [--format <terminal|markdown|json|sarif>] [--output <file>] [--fail-on <action-required|warning|never>]
-valore fleet <dir-or-list-file> --target <tool@version>... [--format markdown|json] [--output <file>]
-valore --version
-valore --help
+neukee scan [path] [--target <tool@version>]... [--format <terminal|markdown|json|sarif>] [--output <file>] [--fail-on <action-required|warning|never>]
+neukee fleet <dir-or-list-file> --target <tool@version>... [--format markdown|json] [--output <file>]
+neukee --version
+neukee --help
 ```
 
 | Option      | Default                                                             | Behavior                                                                                                                              |
@@ -93,7 +93,7 @@ A finding is produced only if the rule's `applies` range is crossed by the upgra
 ## 4. GitHub Action (T-040)
 
 ```yaml
-- uses: <org>/valore@v0
+- uses: <org>/neukee@v0
   with:
     targets: node@24 next@16
     fail-on: action-required

@@ -1,4 +1,4 @@
-import type { Diagnostic } from "@valore/core";
+import type { Diagnostic } from "@neukee/core";
 import { parseSync } from "oxc-parser";
 
 export interface SyntaxCheck {

@@ -1,6 +1,6 @@
-# Valore — project memory for Claude
+# Neukee — project memory for Claude
 
-Working name **Valore** (trademark check pending; rename in T-053). A local-first verification tool for Node.js and Next.js upgrades. First product: the **scanner** (static analysis, launch target **December 6, 2026**). Later: the **engine** (behavioral comparison on the customer's tests).
+Working name **Neukee** (trademark check pending; rename in T-053). A local-first verification tool for Node.js and Next.js upgrades. First product: the **scanner** (static analysis, launch target **December 6, 2026**). Later: the **engine** (behavioral comparison on the customer's tests).
 
 ## Read before working
 
@@ -41,7 +41,7 @@ Working name **Valore** (trademark check pending; rename in T-053). A local-firs
 - **No absolute paths, secrets or file contents in reports** beyond the single line that locates a finding.
 - **Catalog entries come from official sources only.** Fetch and read the source before writing an entry; paste the exact URL. Never write an entry from memory.
 - **New runtime dependencies need a decision** in `docs/DECISIONS.md` first (see ADR-004 for the allowed list).
-- **Workspace packages resolve to source through the `@valore/source` export condition** (tests and typecheck). Never use the `development` condition: bundlers enable it for consumers.
+- **Workspace packages resolve to source through the `@neukee/source` export condition** (tests and typecheck). Never use the `development` condition: bundlers enable it for consumers.
 - **Respect the dependency direction:** `action → cli → scanner → core`; `core` imports nothing internal.
 - **Deterministic output:** sort findings; no timestamps except `scannedAt`; no `Math.random`.
 - **Detectors never throw.** Errors become `Diagnostic` entries; one bad file never stops a scan.
