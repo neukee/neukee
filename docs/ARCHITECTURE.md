@@ -1,6 +1,6 @@
 # Architecture
 
-> Working name: **Neukee** (pending trademark check). Renaming is a find-and-replace across package names; do it before the first npm publish (task T-053).
+> Name: **Neukee**, a product of GOkit4dev (ADR-008). The trademark search runs in T-053, before the first npm publish.
 
 This document is the source of truth for how the system is built. If code and this document disagree, the code is wrong or this document must be updated in the same change, with an entry in `docs/DECISIONS.md`.
 
@@ -17,20 +17,20 @@ Both are **local-first**: no server, no database, no account, no network calls. 
 
 ## 2. Stack
 
-| Concern       | Choice                                                       | Why                                                                                                         |
-| ------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Language      | TypeScript, `strict` on, ESM only                            | Same ecosystem as the users; types are the contract between packages                                        |
-| Runtime       | Node.js ≥ 22 for users; Node 24 LTS for development          | Node 20 is end-of-life; 22 and 24 are supported LTS lines                                                   |
-| Packages      | pnpm workspaces (monorepo)                                   | One repo, several publishable packages, strict dependency isolation                                         |
-| Build         | `tsc` for libraries; `esbuild` to bundle the GitHub Action   | Fewest moving parts; Actions need a single bundled file                                                     |
-| Tests         | Vitest                                                       | Fast, ESM-native, snapshot support                                                                          |
-| Lint + format | Biome                                                        | One fast tool instead of ESLint + Prettier                                                                  |
-| JS/TS parsing | `oxc-parser`                                                 | Fast, error-tolerant, does not depend on the TypeScript compiler API (which TypeScript 7 does not ship yet) |
-| YAML          | `yaml`                                                       | pnpm lockfiles, Yarn Berry lockfiles, GitHub workflow files, catalog entries                                |
-| Versions      | `semver`                                                     | Range and version comparison                                                                                |
-| CLI arguments | `node:util` `parseArgs`                                      | Built in; one fewer dependency to trust                                                                     |
-| Release       | Changesets + npm publish with provenance from GitHub Actions | Signed, traceable releases; buyers' security teams check this                                               |
-| CI            | GitHub Actions (pinned to commit SHAs)                       | Where the users are                                                                                         |
+| Concern       | Choice                                                                          | Why                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Language      | TypeScript, `strict` on, ESM only                                               | Same ecosystem as the users; types are the contract between packages                                        |
+| Runtime       | Node.js ≥ 22 for users; Node 24 LTS for development                             | Node 20 is end-of-life; 22 and 24 are supported LTS lines                                                   |
+| Packages      | pnpm workspaces (monorepo)                                                      | One repo, several publishable packages, strict dependency isolation                                         |
+| Build         | `tsc` for libraries; `esbuild` to bundle the GitHub Action                      | Fewest moving parts; Actions need a single bundled file                                                     |
+| Tests         | Vitest                                                                          | Fast, ESM-native, snapshot support                                                                          |
+| Lint + format | Biome                                                                           | One fast tool instead of ESLint + Prettier                                                                  |
+| JS/TS parsing | `oxc-parser`                                                                    | Fast, error-tolerant, does not depend on the TypeScript compiler API (which TypeScript 7 does not ship yet) |
+| YAML          | `yaml`                                                                          | pnpm lockfiles, Yarn Berry lockfiles, GitHub workflow files, catalog entries                                |
+| Versions      | `semver`                                                                        | Range and version comparison                                                                                |
+| CLI arguments | `node:util` `parseArgs`                                                         | Built in; one fewer dependency to trust                                                                     |
+| Release       | Changesets + npm trusted publishing (OIDC) from GitHub Actions, with provenance | Signed, traceable releases with no stored npm token; buyers' security teams check this                      |
+| CI            | GitHub Actions (pinned to commit SHAs)                                          | Where the users are                                                                                         |
 
 **Dependency rule:** every new runtime dependency needs an entry in `docs/DECISIONS.md` (why it is needed, its maintenance status, its install scripts). A security tool with 300 transitive dependencies will not pass a buyer's review.
 

@@ -334,7 +334,7 @@
 - Status: todo
 - Depends on: T-033
 - Human review: yes (you own the npm and GitHub accounts)
-- Build: final name decision (trademark checked), npm package names available, Changesets, release workflow publishing with npm provenance from GitHub Actions, Action version tags.
+- Build: trademark search for Neukee (USPTO, EUIPO, India; ADR-008), Changesets, and a release workflow that publishes through **npm trusted publishing (OIDC)** from GitHub Actions, which adds provenance automatically. No npm token is ever stored in GitHub (ADR-009). Action version tags.
 - Done when: a dry-run release produces correct packages; nothing is published yet.
 
 ### T-054 · Documentation
@@ -349,7 +349,8 @@
 - Status: todo
 - Depends on: T-050, T-051, T-052, T-053, T-054
 - Human review: yes (you press publish)
-- Done when: v0.1.0 on npm with provenance, Action tagged `v0`, README live, launch post drafted (Show HN, LinkedIn, blog).
+- Build: trusted publishing can't do a package's first publish. Sreeram publishes v0.1.0 of each package once from his laptop with 2FA, then sets each package's trusted publisher (repo `neukee/neukee`, the release workflow) on npmjs.com and turns on "require 2FA and disallow tokens". Every later release goes through GitHub Actions.
+- Done when: v0.1.0 on npm with provenance, trusted publishing configured for every package, Action tagged `v0`, README live, launch post drafted (Show HN, LinkedIn, blog).
 
 ### T-056 · UpgradeBench
 
