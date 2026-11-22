@@ -120,6 +120,9 @@ describe("compareFindings: a total order", () => {
   it("compares text by code unit, not by locale", () => {
     expect(compareFindings(finding(at("Z.ts")), finding(at("a.ts")))).toBeLessThan(0);
     expect(compareFindings(finding({ message: "B" }), finding({ message: "a" }))).toBeLessThan(0);
+    // Accented letters: code units put "é" (U+00E9) after "f"; every locale puts it before.
+    expect(compareFindings(finding({ message: "f" }), finding({ message: "é" }))).toBeLessThan(0);
+    expect(compareFindings(finding({ title: "z" }), finding({ title: "ä" }))).toBeLessThan(0);
   });
 
   // After the eight sort keys, every remaining field breaks ties, so 0 means "equal in every
@@ -188,9 +191,58 @@ describe("compareFindings: a total order", () => {
       .map(({ item }) => item);
   }
 
+  // 32 findings equal on all eight sort keys that differ only in the late keys: title, fix
+  // present or absent, sourceUrl, and the location list (same first location; then a different
+  // second location, or a different count).
+  function lateKeyFindings(): Finding[] {
+    const first = { file: "a.ts", line: 1, column: 1 };
+    const locationLists = [
+      [first],
+      [first, { file: "b.ts", line: 1 }],
+      [first, { file: "c.ts", line: 1 }],
+      [first, { file: "c.ts", line: 1 }, { file: "d.ts" }],
+    ];
+    const out: Finding[] = [];
+    for (const title of ["a", "b"])
+      for (const fix of [undefined, "f"])
+        for (const sourceUrl of ["https://a.org/", "https://b.org/"])
+          for (const locations of locationLists)
+            out.push(
+              finding({ title, ...(fix === undefined ? {} : { fix }), sourceUrl, locations }),
+            );
+    return out;
+  }
+
+  it("orders late-key findings: title, fix absent first, sourceUrl, locations by element then count", () => {
+    const late = lateKeyFindings();
+    expect(late).toHaveLength(32);
+    // Reversed first: they are built in the expected order, and sort is stable, so sorting them
+    // as built would pass even without the late-key tie-breakers.
+    const sorted = [...late].reverse().sort(compareFindings);
+    // The first eight sorted findings share title "a" and no fix; within them, sourceUrl then
+    // locations: [a], [a,b], [a,c], [a,c,d].
+    expect(
+      sorted
+        .slice(0, 8)
+        .map((f) => [f.title, f.fix ?? "-", f.sourceUrl, f.locations.map((l) => l.file).join(",")]),
+    ).toEqual([
+      ["a", "-", "https://a.org/", "a.ts"],
+      ["a", "-", "https://a.org/", "a.ts,b.ts"],
+      ["a", "-", "https://a.org/", "a.ts,c.ts"],
+      ["a", "-", "https://a.org/", "a.ts,c.ts,d.ts"],
+      ["a", "-", "https://b.org/", "a.ts"],
+      ["a", "-", "https://b.org/", "a.ts,b.ts"],
+      ["a", "-", "https://b.org/", "a.ts,c.ts"],
+      ["a", "-", "https://b.org/", "a.ts,c.ts,d.ts"],
+    ]);
+    expect(sorted[8]?.fix).toBe("f");
+    expect(sorted[16]?.title).toBe("b");
+  });
+
   it("gives identical output for the same findings shuffled 100 times", () => {
-    // Every combination of two values per sort key: 2^8 = 256 findings that tie on all keys but one.
-    const all: Finding[] = [];
+    // Every combination of two values per sort key: 2^8 = 256 findings that tie on all keys but
+    // one, plus 32 that tie on all eight keys and differ only in the late keys.
+    const all: Finding[] = lateKeyFindings();
     for (const severity of ["action-required", "info"] as const)
       for (const file of ["a.ts", "b.ts"])
         for (const line of [1, 2])
@@ -208,7 +260,9 @@ describe("compareFindings: a total order", () => {
                         message,
                       }),
                     );
-    expect(all).toHaveLength(256);
+    expect(all).toHaveLength(288);
+    // All distinct, so any instability in the order would show in the JSON.
+    expect(new Set(all.map((f) => JSON.stringify(f))).size).toBe(288);
 
     const expected = JSON.stringify([...all].sort(compareFindings));
     const random = seededRandom(20261122);
