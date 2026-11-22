@@ -4,11 +4,11 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, evening IST (T-001 done via PR #1; Claude now runs the GitHub side of each task)
-- **Branch:** `main`
-- **Last finished:** T-001 (repo, ruleset on `main`, CODEOWNERS, `.gitattributes` forcing LF so Windows CI passes)
+- **Last updated:** 2026-11-22, evening IST (T-001 merged via PR #1, workflow chore via PR #2; T-002 PR #3 green, waiting for merge approval)
+- **Branch:** `t-002-core-schema` (PR #3, `main` merged in)
+- **Last finished:** T-002 (report JSON Schema and `validateReport`)
 - **In progress:** nothing
-- **Exact next step:** `/next` → T-002 (core types and JSON Schema).
+- **Exact next step:** merge PR #3 once approved, then `/next` → T-003 (catalog loader).
 - **Blocked / waiting on Sreeram:** NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Open item: decide the pronunciation and check the registration details before the T-053 trademark search.
 - **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (13 days). Launch Dec 6 (14 days).
 
@@ -29,7 +29,7 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 ## Current state
 
 - **Phase:** 0 — Foundation
-- **Current task:** T-002 (Claude)
+- **Current task:** T-003 (Claude)
 - **Scanner launch target:** December 6, 2026
 - **On track?** Not yet measured. Run `/checkpoint` after T-005.
 
@@ -56,6 +56,7 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 | ---------- | ----- | ---- | --------------- | ------------- | ------ | ----------------------------------------------------------------------- |
 | 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                                  |
 | 2026-11-22 | T-001 | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI |
+| 2026-11-22 | T-002 | S    | 1               | —             | done   | Schema + validator; reviewer found 1 must-fix, 4 should-fix             |
 
 ## Daily log
 
@@ -76,6 +77,37 @@ Sreeram's notes and each session's summary. Newest first.
 - New tasks: T-006 change-signature schema, T-027 MergeWarden comparison, T-037 corpus job, T-038 mutation score target, T-056 UpgradeBench; E-001 reframed as the competitive spike.
 
 ## Log (task entries)
+
+### 2026-11-22 · T-002 · Core types and JSON Schema — done
+
+- `packages/core/schema/scan-report.v1.json`: hand-written draft 2020-12 schema, published with the package and exported as `@neukee/core/schema/scan-report.v1.json`.
+- `validateReport(value)` returns the typed report or every problem as `{ path, message }`. Messages are full sentences (`report.findings[0].severity must be one of "action-required", "warning" or "info" (got "critical").`). It interprets the schema itself, with no new dependency (ADR-004).
+- ARCHITECTURE §5 now documents what the schema adds (ADR-011): closed objects, canonical repo-relative paths, 1-based UTF-16 columns, https sources, the rule-id grammar, and timestamps with a time zone.
+- Sreeram's three changes before merge (ADR-011):
+  - `stats.durationMs` is removed from the type and the schema, so only `scannedAt` varies. This matches SPEC-SCANNER target 6. Timing may return behind an opt-in flag (note on T-033).
+  - `compareFindings` is now a total order: severity, file, line, column, ruleId, target.tool, target.version, message. After CodeRabbit's finding, the remaining fields (title, fix, sourceUrl, all locations) break any tie left, so 0 means equal in every field. Tests cover each tie and key precedence, and check reversed input for every remaining field. A seeded test shuffles 288 findings 100 times and gets identical output every time. 32 of them tie on all eight keys and differ only in title, fix (present or absent), sourceUrl, a second location or the location count. With the late-key tie-breakers removed by hand, that test and the late-key order test both fail. Text comparison is plain code-unit order (no `localeCompare` or `Intl` anywhere), tested with accented letters, where code-unit and locale order disagree.
+  - New compatibility policy: optional fields may be added within v1, and consumers ignore unknown fields. Removing, renaming, retyping or changing a field's meaning bumps `schemaVersion`. Our validator stays strict, and every schema change needs an ADR.
+  - The validator no longer supports `number` (no field uses it), and its one unchecked `as` tuple cast is gone.
+  - Sreeram confirmed the three schema defaults; the review-queue row is closed.
+- Tests (core: 2 → 292; whole repo 300):
+  - 22 broken reports with exact messages.
+  - A generated violation for every schema constraint (60+ cases).
+  - Real paths the detectors will emit (Next.js route syntax, dotfiles, Unicode) must pass.
+  - Fields, required/optional and enums are compared between types and schema both ways.
+  - The constraint inventory is a snapshot (new file `packages/core/src/__snapshots__/validate.test.ts.snap`). A schema change fails until the snapshot is updated on purpose, with an ADR (and a `schemaVersion` bump if the change is breaking).
+  - Hand mutation check: deleting a `minLength` and loosening `integer` → `number` both fail it.
+- Reviewer subagent: one must-fix (document the extra constraints, plus an ADR) and four should-fixes. The validator now applies keywords next to `$ref` and object keywords on any object. The path rule now rejects `./`, `.`, empty segments, a trailing `/`, `file:` and control characters. Values and keys are truncated on code points. Every coverage gap is now a test. All fixed. Second pass: PASS. I took its three optional suggestions:
+  - Paths also reject C1 controls and bidi overrides (U+202A–202E, U+2066–2069). The snapshot was regenerated before its first commit, because the pattern changed.
+  - The unverified "SARIF default columnKind" claim was dropped; T-032 sets `columnKind` explicitly.
+  - T-005 tests paths against the exported pattern.
+- CodeRabbit on PR #3 (3 findings, all fixed):
+  - `scannedAt` now rejects out-of-range months, days, clock values and offsets. It also rejects dates that don't exist, through `format: "date-time"`, which `validateReport` asserts (`SUPPORTED_FORMATS`). CodeRabbit pointed out that `validateReport` checks arbitrary input, not only our own output.
+  - `sourceUrl` must have a dotted host name. Any port must be 1–65535, checked exhaustively for every value from 0 to 70,000.
+  - Unknown keys are reported in sorted order.
+  - The constraint snapshot was updated on purpose, four times. First for the two changed patterns, then for the one new `format` line, then for the `sourceUrl` port range, and last for the removal of the two `durationMs` lines. Nothing else changed.
+  - Every pattern was timed on 100k-character hostile input: all under 5 ms, linear.
+- Follow-ups written into later tasks: T-003 shares the id grammar; T-004 normalizes with fixed values; T-005 skips unrepresentable paths; T-021 column unit; T-031 neutralises control/bidi characters and escapes markdown in repo-derived text; T-032 SARIF fallback location and explicit `columnKind`; T-034 fleet wrapper; T-040 ships `schema/`.
+- `pnpm verify` and `pnpm check:all` pass.
 
 ### 2026-11-22 · T-001 · GitHub repository and protections — done
 

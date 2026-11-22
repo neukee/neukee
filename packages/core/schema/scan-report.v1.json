@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Neukee scan report, schema version 1",
+  "description": "The JSON report written by `neukee scan --format json`. Hand-written to match the types in packages/core/src/index.ts (docs/ARCHITECTURE.md §5); tests keep the two in agreement. Changing it means a new schemaVersion and a decision record.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tool": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "required": ["name", "version"],
+      "additionalProperties": false
+    },
+    "scannedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:(?:0\\d|1[0-3]):[0-5]\\d|14:00))$",
+      "description": "an ISO 8601 date and time with a time zone",
+      "format": "date-time"
+    },
+    "root": { "const": "." },
+    "targets": { "type": "array", "items": { "$ref": "#/$defs/Target" } },
+    "detected": {
+      "type": "object",
+      "properties": {
+        "node": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "packageManager": { "type": "string", "minLength": 1 },
+        "frameworks": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        }
+      },
+      "required": ["node", "frameworks"],
+      "additionalProperties": false
+    },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/Finding" } },
+    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/Diagnostic" } },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "filesScanned": { "type": "integer", "minimum": 0 },
+        "filesSkipped": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["filesScanned", "filesSkipped"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "tool",
+    "scannedAt",
+    "root",
+    "targets",
+    "detected",
+    "findings",
+    "diagnostics",
+    "stats"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "RepoPath": {
+      "type": "string",
+      "pattern": "^(?![A-Za-z][A-Za-z0-9+.-]*:)(?!/)(?!.*[\\u0000-\\u001F\\u007F-\\u009F\\u202A-\\u202E\\u2066-\\u2069\\\\])(?!.*//)(?!.*/$)(?!(?:.*/)?\\.{1,2}(?:/|$)).+$",
+      "description": "a repo-relative path with forward slashes, never absolute and never outside the repo"
+    },
+    "Target": {
+      "type": "object",
+      "properties": {
+        "tool": { "enum": ["node", "next", "react", "prisma"] },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "required": ["tool", "version"],
+      "additionalProperties": false
+    },
+    "Location": {
+      "type": "object",
+      "properties": {
+        "file": { "$ref": "#/$defs/RepoPath" },
+        "line": { "type": "integer", "minimum": 1 },
+        "column": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+    "Finding": {
+      "type": "object",
+      "properties": {
+        "ruleId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*(?:/[a-z0-9][a-z0-9.-]*)+$",
+          "description": "a catalog entry id such as \"next16/sync-request-apis\""
+        },
+        "severity": { "enum": ["action-required", "warning", "info"] },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^\\r\\n]+$",
+          "description": "a single line of text"
+        },
+        "message": { "type": "string", "minLength": 1 },
+        "fix": { "type": "string", "minLength": 1 },
+        "sourceUrl": {
+          "type": "string",
+          "pattern": "^https://(?:[A-Za-z0-9]+(?:-+[A-Za-z0-9]+)*\\.)+[A-Za-z0-9]+(?:-+[A-Za-z0-9]+)*(?::(?:6553[0-5]|655[0-2]\\d|65[0-4]\\d\\d|6[0-4]\\d{3}|[1-5]\\d{4}|[1-9]\\d{0,3}))?(?:[/?#]\\S*)?$",
+          "description": "an https URL"
+        },
+        "locations": { "type": "array", "items": { "$ref": "#/$defs/Location" } },
+        "target": { "$ref": "#/$defs/Target" }
+      },
+      "required": ["ruleId", "severity", "title", "message", "sourceUrl", "locations", "target"],
+      "additionalProperties": false
+    },
+    "Diagnostic": {
+      "type": "object",
+      "properties": {
+        "level": { "enum": ["error", "warning"] },
+        "message": { "type": "string", "minLength": 1 },
+        "file": { "$ref": "#/$defs/RepoPath" }
+      },
+      "required": ["level", "message"],
+      "additionalProperties": false
+    }
+  }
+}

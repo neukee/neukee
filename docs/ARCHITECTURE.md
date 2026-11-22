@@ -90,11 +90,11 @@ flowchart TD
 1. **Discover** — walk the repo from the given path. Respect `.gitignore`, always skip `node_modules`, `.git`, build output (`.next`, `dist`, `build`, `coverage`). Skip files over 1 MB and record them as skipped. Follow no symlinks out of the repo.
 2. **Detect** — each detector is a pure function: `(context) => Finding[]`. A detector never throws; failures become `Diagnostic` entries in the report (e.g. "could not parse pnpm-lock.yaml at line 40"). One broken file never stops a scan.
 3. **Match** — detectors produce raw facts; catalog entries turn facts into findings for the requested targets. Detection logic lives in code; knowledge (what breaks, severity, fix, source link) lives in the catalog.
-4. **Report** — findings are sorted deterministically (severity, then file, then line, then rule id) so that the same input always produces byte-identical output. This is what makes snapshot tests and CI comparisons possible.
+4. **Report** — findings are sorted by a total order (`compareFindings`): severity, then the first location's file, line and column (absent sorts first), then rule id, target tool, target version and message. Any tie left after those is broken by the remaining fields: title, fix (absent first), sourceUrl, then every location in turn. So two findings compare equal only if they are equal in every field. Text compares by code unit, never by locale. The same input in any order always produces byte-identical output. This is what makes snapshot tests and CI comparisons possible.
 
 ## 5. Core types (packages/core)
 
-These are the contract. Changing them is a schema change: bump `schemaVersion`, add a decision record, update snapshots deliberately.
+These are the contract. Every change to them, or to the report schema, needs a decision record and a deliberate snapshot update. Whether it also bumps `schemaVersion` follows the compatibility policy below.
 
 ```ts
 type Severity = "action-required" | "warning" | "info";
@@ -131,14 +131,35 @@ interface ScanReport {
   schemaVersion: 1;
   tool: { name: string; version: string };
   scannedAt: string; // ISO timestamp — the ONLY non-deterministic field; excluded from snapshots
-  root: string; // "." — never an absolute path (no leaking machine paths)
+  root: "."; // always "." — never an absolute path (no leaking machine paths)
   targets: Target[];
   detected: { node: string[]; packageManager?: string; frameworks: Record<string, string> };
   findings: Finding[];
   diagnostics: Diagnostic[];
-  stats: { filesScanned: number; filesSkipped: number; durationMs: number };
+  stats: { filesScanned: number; filesSkipped: number }; // counts only: no timing, it differs on every run
 }
 ```
+
+### Compatibility policy (`schemaVersion`)
+
+- **Within `schemaVersion: 1`**, we may add **optional** fields. Consumers must ignore fields they don't know.
+- **Removing, renaming or retyping a field, or changing its meaning**, bumps `schemaVersion`. So does making an optional field required.
+- **Our own validator stays strict.** The published schema keeps every object closed, so `validateReport` rejects fields it doesn't know. Any added field goes into the schema, the types and the tests in the same PR that adds it. A consumer that validates reports with our schema should use the schema from the same `@neukee/core` version that produced them.
+- **Every schema change needs an ADR**, breaking or not. The constraint snapshot in the tests fails until the change is made on purpose.
+
+### The report schema (`packages/core/schema/scan-report.v1.json`)
+
+The JSON Schema is hand-written (draft 2020-12) and published with `@neukee/core`. `validateReport(value)` checks a parsed report against it and returns either the typed report or every problem as `{ path, message }`. ADR-004 allows no JSON Schema library at runtime, so `validateReport` interprets only the keywords the schema uses. Tests pin the schema to that subset, generate a violation for every constraint, and keep the schema's fields in agreement with the TypeScript types. The schema says more than the types can (ADR-011):
+
+- Every object is closed (`additionalProperties: false`): a misspelled or extra field is an error for our validator. This is the producer's check on its own output; consumers still ignore unknown fields (compatibility policy above).
+- Only `scannedAt` varies between runs of the same scan. `stats` holds counts only.
+- `Location.file` and `Diagnostic.file` are canonical repo-relative paths. They use forward slashes and never contain a leading `/`, a drive letter or other `scheme:` prefix, a backslash, a `.` or `..` segment, an empty segment, a trailing `/`, a control character (C0, DEL, C1) or a bidirectional-override character (U+202A–202E, U+2066–2069) that could disguise a name in terminal or PR output.
+- `line` and `column` are integers starting at 1. Columns count UTF-16 code units, matching JavaScript string indexes and editors. SARIF output (T-032) states `columnKind: "utf16CodeUnits"` explicitly instead of relying on a default.
+- `sourceUrl` is an `https://` URL with a dotted host name, then an optional port (1–65535, no leading zero) and path, query or fragment. `title` is a single line. Required strings are non-empty.
+- `ruleId` is a catalog id: lowercase segments of `a–z`, `0–9`, `.` and `-`, joined by `/`, at least two segments (`next16/sync-request-apis`). The catalog loader (T-003) uses the same grammar.
+- `scannedAt` is ISO 8601 with a time zone (`Z` or `±hh:mm`, offsets up to ±14:00). The pattern checks that months, days, hours, minutes and seconds are in range. `format: "date-time"`, which `validateReport` asserts, also checks that the date exists: no Feb 30, and no Feb 29 outside leap years. Generic JSON Schema validators treat `format` as an annotation unless format assertion is turned on.
+- Every pattern is written so matching stays linear on long, hostile input (no nested ambiguous quantifiers).
+- `locations` may be empty for repo-wide findings.
 
 ## 6. The catalog
 
