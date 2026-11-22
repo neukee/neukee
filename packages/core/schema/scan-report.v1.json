@@ -17,7 +17,8 @@
     "scannedAt": {
       "type": "string",
       "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:(?:0\\d|1[0-3]):[0-5]\\d|14:00))$",
-      "description": "an ISO 8601 date and time with a time zone"
+      "description": "an ISO 8601 date and time with a time zone",
+      "format": "date-time"
     },
     "root": { "const": "." },
     "targets": { "type": "array", "items": { "$ref": "#/$defs/Target" } },

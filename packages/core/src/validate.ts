@@ -39,9 +39,17 @@ export const SUPPORTED_KEYWORDS = [
   "minimum",
   "minLength",
   "pattern",
+  "format",
 ] as const;
 
 export const SUPPORTED_TYPES = ["object", "array", "string", "integer", "number"] as const;
+
+/**
+ * Formats checked as assertions. JSON Schema treats `format` as an annotation by default;
+ * validateReport asserts these because a report must hold real values, not just well-shaped ones.
+ * Any other format is ignored, as the spec allows.
+ */
+export const SUPPORTED_FORMATS = ["date-time"] as const;
 
 type JsonType = (typeof SUPPORTED_TYPES)[number];
 
@@ -59,6 +67,7 @@ interface SchemaNode {
   minimum?: number;
   minLength?: number;
   pattern?: string;
+  format?: string;
 }
 
 const TYPE_NAMES: Record<JsonType, string> = {
@@ -148,6 +157,8 @@ function check(
       fail(
         `must be ${node.description ?? `text matching ${node.pattern}`} (got ${describe(value)})`,
       );
+    } else if (node.format === "date-time" && !isRealDateTime(value)) {
+      fail(`must be a real calendar date and time (got ${describe(value)})`);
     }
   }
 
@@ -217,6 +228,39 @@ function hasType(value: unknown, type: JsonType): boolean {
     case "number":
       return typeof value === "number" && Number.isFinite(value);
   }
+}
+
+const DATE_TIME =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-](\d{2}):(\d{2}))$/;
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** RFC 3339 date-time with a time zone, and a date that exists (no Feb 30, no Feb 29 in 2027). */
+function isRealDateTime(value: string): boolean {
+  const match = DATE_TIME.exec(value);
+  if (match === null) return false;
+  // Absent groups (the offset, for "Z") count as 0.
+  const part = (group: number): number => Number(match[group] ?? "0");
+  const [year, month, day, hour, minute, second] = [1, 2, 3, 4, 5, 6].map(part) as [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+  ];
+  const offsetHour = part(7);
+  const offsetMinute = part(8);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const monthDays = month === 2 && leap ? 29 : (DAYS_IN_MONTH[month - 1] ?? 0);
+  return (
+    day >= 1 &&
+    day <= monthDays &&
+    hour <= 23 &&
+    minute <= 59 &&
+    second <= 59 &&
+    offsetMinute <= 59 &&
+    (offsetHour < 14 || (offsetHour === 14 && offsetMinute === 0))
+  );
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

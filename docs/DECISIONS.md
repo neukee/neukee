@@ -13,7 +13,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - `line` and `column` are 1-based integers, with columns in UTF-16 code units (JavaScript string indexes, editors). SARIF output sets `columnKind: "utf16CodeUnits"` explicitly.
   - `sourceUrl` is https only. `title` is one line. Required strings are non-empty.
   - `ruleId` follows the catalog id grammar `^[a-z0-9][a-z0-9.-]*(?:/[a-z0-9][a-z0-9.-]*)+$`.
-  - `scannedAt` carries a time zone. `root` is the literal `"."`.
+  - `scannedAt` carries a time zone and is a real calendar date (`format: "date-time"`, asserted by `validateReport`). `root` is the literal `"."`.
   - `validateReport` interprets the schema itself; there is no new dependency (ADR-004).
 - **Consequences:**
   - A file whose real path can't meet the path rule (a backslash, control character or `:` in its first segment) is skipped with a diagnostic that has no `file` (T-005).

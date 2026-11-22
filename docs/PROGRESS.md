@@ -94,10 +94,10 @@ Sreeram's notes and each session's summary. Newest first.
   - The unverified "SARIF default columnKind" claim was dropped; T-032 sets `columnKind` explicitly.
   - T-005 tests paths against the exported pattern.
 - CodeRabbit on PR #3 (3 findings, all fixed):
-  - `scannedAt` now rejects out-of-range months, days, clock values and offsets (Feb 30 isn't checked; see §5).
+  - `scannedAt` now rejects out-of-range months, days, clock values and offsets. It also rejects dates that don't exist, through `format: "date-time"`, which `validateReport` asserts (`SUPPORTED_FORMATS`). CodeRabbit pointed out that `validateReport` checks arbitrary input, not only our own output.
   - `sourceUrl` must have a dotted host name.
   - Unknown keys are reported in sorted order.
-  - The constraint snapshot was updated on purpose: exactly those two patterns changed.
+  - The constraint snapshot was updated on purpose, twice: first for the two changed patterns, then for the one new `format` line. Nothing else changed.
   - Every pattern was timed on 100k-character hostile input: all under 5 ms, linear.
 - Follow-ups written into later tasks: T-003 shares the id grammar; T-004 normalizes with fixed values; T-005 skips unrepresentable paths; T-021 column unit; T-031 neutralises control/bidi characters and escapes markdown in repo-derived text; T-032 SARIF fallback location and explicit `columnKind`; T-034 fleet wrapper; T-040 ships `schema/`.
 - `pnpm verify` and `pnpm check:all` pass.

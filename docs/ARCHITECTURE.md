@@ -149,7 +149,7 @@ The JSON Schema is hand-written (draft 2020-12) and published with `@neukee/core
 - `line` and `column` are integers starting at 1. Columns count UTF-16 code units, matching JavaScript string indexes and editors. SARIF output (T-032) states `columnKind: "utf16CodeUnits"` explicitly instead of relying on a default.
 - `sourceUrl` is an `https://` URL with a dotted host name, then an optional port and path, query or fragment. `title` is a single line. Required strings are non-empty.
 - `ruleId` is a catalog id: lowercase segments of `a–z`, `0–9`, `.` and `-`, joined by `/`, at least two segments (`next16/sync-request-apis`). The catalog loader (T-003) uses the same grammar.
-- `scannedAt` is ISO 8601 with a time zone (`Z` or `±hh:mm`, offsets up to ±14:00). Months, days, hours, minutes and seconds must be in range; per-month day validity (no Feb 30) isn't checked by the pattern, because the producer is `Date.prototype.toISOString()`.
+- `scannedAt` is ISO 8601 with a time zone (`Z` or `±hh:mm`, offsets up to ±14:00). The pattern checks that months, days, hours, minutes and seconds are in range. `format: "date-time"`, which `validateReport` asserts, also checks that the date exists: no Feb 30, and no Feb 29 outside leap years. Generic JSON Schema validators treat `format` as an annotation unless format assertion is turned on.
 - Every pattern is written so matching stays linear on long, hostile input (no nested ambiguous quantifiers).
 - `locations` may be empty for repo-wide findings.
 

@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { Diagnostic, Finding, Location, ScanReport, Target } from "./index.js";
 import { validateReport } from "./index.js";
-import { SUPPORTED_KEYWORDS, SUPPORTED_TYPES, validateWithSchema } from "./validate.js";
+import {
+  SUPPORTED_FORMATS,
+  SUPPORTED_KEYWORDS,
+  SUPPORTED_TYPES,
+  validateWithSchema,
+} from "./validate.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -124,6 +129,7 @@ describe("validateReport: valid reports", () => {
     "2026-12-31T00:00:00+14:00",
     "2026-01-01T00:00:00-12:00",
     new Date(0).toISOString(),
+    "2000-02-29T00:00:00Z",
   ])("accepts the timestamp %j", (scannedAt) => {
     expect(validateReport(changed(["scannedAt"], scannedAt)).valid).toBe(true);
   });
@@ -458,6 +464,53 @@ describe("validateWithSchema: JSON Schema semantics the report schema relies on"
     );
     expect(validateWithSchema({ b: 1 }, { type: "object" })).toEqual([]);
   });
+
+  const dateTime = { type: "string", format: "date-time" };
+
+  it.each([
+    "2026-11-22T12:00:00Z",
+    "2028-02-29T00:00:00Z",
+    "2000-02-29T00:00:00Z",
+    "2026-04-30T23:59:59.999+14:00",
+    "2026-12-31T00:00:00-12:00",
+  ])("format date-time accepts the real date and time %j", (value) => {
+    expect(validateWithSchema(value, dateTime)).toEqual([]);
+  });
+
+  it.each([
+    "2026-02-29T00:00:00Z",
+    "2100-02-29T00:00:00Z",
+    "2026-02-30T00:00:00Z",
+    "2026-04-31T00:00:00Z",
+    "2026-13-01T00:00:00Z",
+    "2026-00-01T00:00:00Z",
+    "2026-01-00T00:00:00Z",
+    "2026-11-22T24:00:00Z",
+    "2026-11-22T12:60:00Z",
+    "2026-11-22T12:00:60Z",
+    "2026-11-22T12:00:00+14:30",
+    "2026-11-22T12:00:00+15:00",
+    "2026-11-22T12:00:00+05:60",
+    "2026-11-22",
+    "not a date",
+  ])("format date-time rejects %j", (value) => {
+    expect(validateWithSchema(value, dateTime)).toEqual([
+      {
+        path: "value",
+        message: `value must be a real calendar date and time (got ${JSON.stringify(value)}).`,
+      },
+    ]);
+  });
+
+  it("checks format only after the pattern passes, so a bad value gets one error", () => {
+    const both = { type: "string", pattern: "^\\d", format: "date-time" };
+    expect(validateWithSchema("x", both)).toHaveLength(1);
+    expect(validateWithSchema("2026-02-30T00:00:00Z", both)).toHaveLength(1);
+  });
+
+  it("ignores formats it does not implement, as JSON Schema annotations", () => {
+    expect(validateWithSchema("anything", { type: "string", format: "email" })).toEqual([]);
+  });
 });
 
 // --- Every constraint in the schema is enforced -------------------------------------------
@@ -606,6 +659,12 @@ function violations(node: JsonObject): { keyword: string; value: unknown }[] {
     if (bad === undefined) throw new Error(`Add bad examples for pattern "${node.description}".`);
     for (const value of bad) out.push({ keyword: `pattern ${JSON.stringify(value)}`, value });
   }
+  if (node.format === "date-time") {
+    // Values that pass the pattern but aren't real dates.
+    for (const value of ["2026-02-30T00:00:00Z", "2027-02-29T00:00:00Z", "2100-02-29T00:00:00Z"]) {
+      out.push({ keyword: `format ${JSON.stringify(value)}`, value });
+    }
+  }
   return out;
 }
 
@@ -622,7 +681,16 @@ const constraintCases = walk(schema, report, [])
 /** One line per schema node: every keyword that constrains it, with its value. */
 function constraintSummary(node: JsonObject): string {
   const parts: string[] = [];
-  for (const key of ["type", "const", "enum", "minimum", "minLength", "pattern", "required"]) {
+  for (const key of [
+    "type",
+    "const",
+    "enum",
+    "minimum",
+    "minLength",
+    "pattern",
+    "format",
+    "required",
+  ]) {
     if (Object.hasOwn(node, key)) parts.push(`${key}=${JSON.stringify(node[key])}`);
   }
   if (node.additionalProperties !== undefined) {
@@ -769,6 +837,7 @@ describe("types and schema agree", () => {
     for (const node of schemaNodes(schema)) {
       for (const key of Object.keys(node)) expect(SUPPORTED_KEYWORDS).toContain(key);
       if (node.type !== undefined) expect(SUPPORTED_TYPES).toContain(node.type);
+      if (node.format !== undefined) expect(SUPPORTED_FORMATS).toContain(node.format);
       if (node.$ref !== undefined) expect(node.$ref).toMatch(/^#\/\$defs\/\w+$/);
       // The validator compares const/enum with ===, and has no boolean-schema support for items.
       if (Object.hasOwn(node, "const")) expect(isPrimitive(node.const)).toBe(true);
