@@ -1,6 +1,6 @@
 # Neukee: Operating Brief for Claude
 
-**Version 1.1 · 2026-11-21 · Owner: Sreeram Venugopal**
+**Version 1.2 · 2026-11-22 · Owner: Sreeram Venugopal**
 
 Read this before doing any work on Neukee, in any session (Claude Code in VS Code, or a Claude chat). The repository copy at `docs/BRIEF.md` is the source of truth. If the copy you are reading has an older version number than the one in the repo, ask for the latest before making decisions.
 
@@ -64,7 +64,7 @@ We are the **independent verifier**. Tools like Dependabot, Renovate, coding age
 | Local-first, no network, no telemetry (ADR-002)                                                                                                                        | Final                                                      |
 | Catalog in YAML with mandatory official sources (ADR-003)                                                                                                              | Final                                                      |
 | Allowed runtime dependencies (ADR-004)                                                                                                                                 | Final                                                      |
-| Public monorepo from day one; scanner, core, CLI and Action under Apache-2.0; engine under the Functional Source License (FSL-1.1, converting to Apache-2.0) (ADR-005) | **Default, waiting for Sreeram to confirm**                |
+| Public monorepo from day one; scanner, core, CLI and Action under Apache-2.0; engine under the Functional Source License (FSL-1.1, converting to Apache-2.0) (ADR-005) | Final (confirmed 2026-11-22)                               |
 | Crowd signatures: an explicit, opt-in command only, never automatic (ADR-006)                                                                                          | Final                                                      |
 | Extra quality gates: Stryker, Knip, publint, Are the Types Wrong, Scorecard, SHA-pinned Actions (ADR-007)                                                              | Final                                                      |
 | Target customer: companies with 20–200 engineers on Node.js or Next.js, with integration tests, selling to enterprises (so SOC 2 matters)                              | **Default, waiting for Sreeram to confirm**                |

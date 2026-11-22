@@ -29,11 +29,11 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 - **Decision:** ADR-002 stands for every scan and verification run. If crowd data ships (v1 at the earliest), it is a separate, explicit command that the user runs on purpose. It uploads only hashed change signatures (package, versions, change category, verdict), never code, paths or test names. The signature format is defined now (T-006) so it never needs a breaking change.
 - **Consequences:** no silent telemetry, ever. Contributors get crowd data in return (give-to-get).
 
-## ADR-005 · Public monorepo and licenses (2026-11-19) — default, waiting for Sreeram to confirm
+## ADR-005 · Public monorepo and licenses (2026-11-19; confirmed by Sreeram 2026-11-22)
 
 - **Context:** the scanner is open source anyway; public repos get CodeRabbit, GitHub Actions minutes, CodeQL and Scorecard for free; the engine is the paid product and must not be taken by record/replay competitors.
 - **Decision:** the repository is public from day one. `core`, `scanner`, `cli` and the Action are Apache-2.0 (root `LICENSE`, `NOTICE`). The engine package (`packages/engine`, when created) carries the Functional Source License (FSL-1.1, converting to Apache-2.0 after two years): source visible, no competing use.
-- **Consequences:** this supersedes "private repo until launch" in T-001 and WORKFLOW. Publishing code is irreversible, so Sreeram confirms before T-001 pushes. If he chooses a closed engine instead, the engine lives in a separate private repository.
+- **Consequences:** this supersedes "private repo until launch" in T-001 and WORKFLOW. Sreeram confirmed on 2026-11-22: public from day one. If he chooses a closed engine instead, the engine lives in a separate private repository.
 
 ## ADR-004 · Allowed runtime dependencies (2026-11-18)
 

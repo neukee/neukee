@@ -4,12 +4,12 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-21, 23:30 IST (workbench Step 1 done; name decided)
+- **Last updated:** 2026-11-22, 12:45 IST (Step 2 mostly done: GitHub org, npm org, 2FA; ADR-005 confirmed)
 - **Branch:** `main`
 - **Last finished:** T-000 scaffold, plus workbench additions (brief, `/wrap`, quality gates, pinned Actions)
 - **In progress:** nothing
 - **Exact next step:** Sreeram finishes workbench Step 2 (GitHub org `neukee`, npm org, domain, trademark search) and T-001 (repo on GitHub, protections, CodeRabbit). Then open Claude Code and run `/status`, then `/next` (T-002).
-- **Blocked / waiting on Sreeram:** confirm ADR-005 (public repo, licenses) and the target customer (brief §5)
+- **Blocked / waiting on Sreeram:** confirm the target customer (brief §5); NEWKEY trademark details (pronunciation decision)
 - **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (14 days). Launch Dec 6 (15 days).
 
 ## Dated checkpoints
