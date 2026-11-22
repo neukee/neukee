@@ -69,6 +69,7 @@ The reviewer subagent checks every item below (ADR-012).
   - test malformed, empty, huge and CRLF input.
 - **Every bug fix starts with a failing test** that reproduces it.
 - **Tests check behavior, not internals.** Assert on outputs and observable effects, never on private helpers or call counts.
+- **Fixtures live only in the top-level `fixtures/` folder;** the reviewer flags fixtures anywhere else.
 
 ## When you are unsure
 

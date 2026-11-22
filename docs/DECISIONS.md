@@ -14,7 +14,8 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - no `any`, no non-null `!`, no unchecked `as` (validate at the boundary), and exhaustive switches. The one narrow exception: a cast is allowed only for a file bundled in our own package and covered by a test that pins its exact shape. Never for scanned input, user config, environment variables or anything read at runtime from outside the package;
   - every scanned file treated as hostile: size cap, no symlinks out of the root, no `eval` or dynamic import, YAML without custom tags, linear-time regexes, and tests for malformed, empty, huge and CRLF input;
   - every bug fix starts with a failing test;
-  - tests check behavior, not internals.
+  - tests check behavior, not internals;
+  - fixtures live only in the top-level `fixtures/` folder, and the reviewer flags fixtures anywhere else.
 - **Enforcement:**
   - Biome makes `suspicious/noExplicitAny` and `style/noNonNullAssertion` errors, so `pnpm verify` and CI fail on them. A probe file containing both was rejected.
   - The rest is checked by the reviewer subagent (`.claude/agents/reviewer.md`, check 9) on every task, before the PR.
