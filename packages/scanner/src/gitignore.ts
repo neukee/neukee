@@ -97,8 +97,9 @@ function parseRule(line: string): IgnoreRule | string | undefined {
   if (pattern.startsWith("/")) pattern = pattern.slice(1);
 
   const segments: Segment[] = [];
-  for (const part of anchored ? pattern.split("/") : [pattern]) {
-    if (anchored && part === "**") {
+  for (const part of anchored ? splitSegments(pattern) : [pattern]) {
+    // A whole segment of two or more stars is a globstar; inside a name (a**b) it's a plain *.
+    if (anchored && part.length >= 2 && [...part].every((char) => char === "*")) {
       if (segments.at(-1) !== "globstar") segments.push("globstar"); // **/** is **
       continue;
     }
@@ -107,6 +108,28 @@ function parseRule(line: string): IgnoreRule | string | undefined {
     segments.push(tokens);
   }
   return { negated, directoryOnly, anchored, segments };
+}
+
+/** Splits on `/`. Git reads an escaped `\\/` as a separator too; other escapes stay in the segment. */
+function splitSegments(pattern: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  for (let i = 0; i < pattern.length; i++) {
+    const char = pattern[i];
+    const next = pattern[i + 1];
+    if (char === "/" || (char === "\\" && next === "/")) {
+      parts.push(current);
+      current = "";
+      if (char === "\\") i++;
+    } else if (char === "\\" && next !== undefined) {
+      current += char + next;
+      i++;
+    } else {
+      current += char;
+    }
+  }
+  parts.push(current);
+  return parts;
 }
 
 const BACKSLASH = 0x5c;

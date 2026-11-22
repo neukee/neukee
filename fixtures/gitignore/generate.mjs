@@ -95,14 +95,33 @@ const CASES = [
   ["case-sensitive", { "": "*.LOG\n" }, "a.log", false],
   ["last match wins", { "": "!a.txt\na.txt\n" }, "a.txt", false],
   ["no rules", { "": "" }, "a.txt", false],
+  ["three stars as a whole segment are a globstar", { "": "***/a\n" }, "x/y/a", false],
+  ["three-star segment matches zero folders", { "": "***/a\n" }, "a", false],
+  ["negation through a three-star segment", { "": "*.log\n!***/keep.log\n" }, "keep.log", false],
+  ["escaped slash is a separator", { "": "dir\\/keep.txt\n" }, "dir/keep.txt", false],
+  ["negation with an escaped slash", { "": "dir/*\n!dir\\/keep.txt\n" }, "dir/keep.txt", false],
+  ["escaped slash keeps the rule anchored", { "": "dir\\/keep.txt\n" }, "x/dir/keep.txt", false],
+  ["escaped ordinary character", { "": "\\a.txt\n" }, "a.txt", false],
 ];
 
-const git = (cwd, ...args) => execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+// No user or system config, no global excludes and no init templates: only each case's own
+// .gitignore files may decide, so the table is the same on every machine.
+const isolated = {
+  ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))),
+  GIT_CONFIG_GLOBAL: "/dev/null",
+  GIT_CONFIG_NOSYSTEM: "1",
+};
+const git = (cwd, ...args) =>
+  execFileSync("git", ["-c", "core.excludesFile=", ...args], {
+    cwd,
+    env: isolated,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 
 function ask(files, path, isDirectory) {
   const repo = mkdtempSync(join(tmpdir(), "neukee-gitignore-"));
   try {
-    git(repo, "init", "-q");
+    git(repo, "init", "-q", "--template=");
     git(repo, "config", "core.ignorecase", "false");
     for (const [folder, text] of Object.entries(files)) {
       mkdirSync(join(repo, folder), { recursive: true });

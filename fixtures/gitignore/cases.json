@@ -749,6 +749,69 @@
       "path": "a.txt",
       "isDirectory": false,
       "ignored": false
+    },
+    {
+      "name": "three stars as a whole segment are a globstar",
+      "files": {
+        "": "***/a\n"
+      },
+      "path": "x/y/a",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "three-star segment matches zero folders",
+      "files": {
+        "": "***/a\n"
+      },
+      "path": "a",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "negation through a three-star segment",
+      "files": {
+        "": "*.log\n!***/keep.log\n"
+      },
+      "path": "keep.log",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "escaped slash is a separator",
+      "files": {
+        "": "dir\\/keep.txt\n"
+      },
+      "path": "dir/keep.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "negation with an escaped slash",
+      "files": {
+        "": "dir/*\n!dir\\/keep.txt\n"
+      },
+      "path": "dir/keep.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "escaped slash keeps the rule anchored",
+      "files": {
+        "": "dir\\/keep.txt\n"
+      },
+      "path": "x/dir/keep.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "escaped ordinary character",
+      "files": {
+        "": "\\a.txt\n"
+      },
+      "path": "a.txt",
+      "isDirectory": false,
+      "ignored": true
     }
   ]
 }

@@ -126,7 +126,7 @@ Sreeram's notes and each session's summary. Newest first.
   - repeated `**` segments collapse;
   - classes are merged ranges searched by bisection.
 - Tests:
-  - It agrees with **real git** on all 83 cases of `fixtures/gitignore/cases.json` (generated once by `fixtures/gitignore/generate.mjs` with git 2.56.1; git never runs in tests).
+  - It agrees with **real git** on all 90 cases of `fixtures/gitignore/cases.json` (generated once by `fixtures/gitignore/generate.mjs` with git 2.56.1; git never runs in tests).
   - Over-long, POSIX-class, unclosed, trailing-backslash, empty, CRLF and BOM input is covered.
   - Six hostile shapes from the review, 2,000 maximal rules each, take about 0.1–0.4 s per file.
 - Mutation score of `gitignore.ts`: 89.8% (the old matcher scored 46%). The remaining survivors are equivalent or only change speed.
