@@ -4,11 +4,11 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-23 (T-005 local quality gates pass; PR not opened)
+- **Last updated:** 2026-11-23 (T-005 review fixes pass locally; revised PR checks pending)
 - **Branch:** `t-005-file-discovery`
 - **Last finished:** T-004 (fixture harness, golden reports, dependency rule). PR #7 merged at `a1ee2c1`.
 - **In progress:** T-005 (file discovery), foundational: first reader of hostile input.
-- **Exact next step:** complete independent review, push/open T-005 PR, request CodeRabbit and verify Linux/Windows CI. Do not start T-006. After T-005 merges, run `/checkpoint`.
+- **Exact next step:** commit and push the T-005 review fixes, request CodeRabbit's second review, and verify revised Linux/Windows CI. Do not start T-006. After T-005 merges, run `/checkpoint`.
 - **Standing instructions (Sreeram, 2026-11-22) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
@@ -120,7 +120,9 @@ Sreeram's notes and each session's summary. Newest first.
 - Tests cover an exact file list, nested ignore rules and negation, CRLF/empty lines, character classes, empty and oversized files, an external symlink, invalid paths without `Diagnostic.file`, and report statistics.
 - Updated `fixtures/expected/empty.json` intentionally: the empty fixture contains a README, so discovery now reports one scanned file instead of zero.
 - A failing regression test caught and fixed `dir/**` incorrectly excluding `dir` itself, which prevented a nested negation from re-including a file.
-- `pnpm check:all` passes locally on macOS (391 tests). Linux/Windows CI and CodeRabbit review are pending. The independent reviewer agent timed out before returning a result.
+- Initial PR commit `1110236` passed Linux and Windows Node 22/24 CI, CodeQL and package checks. CodeRabbit's first review found five issues: POSIX/escaped character classes, negations matching ancestor segments, two symlink TOCTOU races, and missing nonzero skipped-count coverage.
+- Added regressions for each behavior, including deterministic filesystem swap tests. Fixed the ignore matching, verified file descriptor identity against the current path before reading, and revalidated directories before descent. The ask-to-approve security changes could not reach Sreeram; proceeded under his earlier broad authorization to prioritize security and keep building.
+- `pnpm check:all` passes locally on macOS (394 tests). Revised PR checks and CodeRabbit's second review are pending. The independent reviewer agent timed out before returning a result.
 
 ### 2026-11-22 · T-004 · Fixture harness, snapshots and dependency rule — done
 

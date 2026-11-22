@@ -8,6 +8,7 @@ import {
   readdirSync,
   readSync,
   realpathSync,
+  statSync,
 } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { type Diagnostic, repoPathPattern } from "@neukee/core";
@@ -82,12 +83,74 @@ function parseIgnoreRules(contents: string, basePath: string): IgnoreRule[] {
   return rules;
 }
 
+function classEnd(pattern: string, start: number): number {
+  let index = start + 1;
+  if (pattern[index] === "!" || pattern[index] === "^") index++;
+  if (pattern[index] === "]") index++;
+
+  while (index < pattern.length) {
+    if (pattern[index] === "\\") {
+      index += 2;
+      continue;
+    }
+    if (pattern[index] === "[" && pattern[index + 1] === ":") {
+      const end = pattern.indexOf(":]", index + 2);
+      if (end >= 0) {
+        index = end + 2;
+        continue;
+      }
+    }
+    if (pattern[index] === "]") return index;
+    index++;
+  }
+  return -1;
+}
+
+function matchesPosixClass(name: string, value: string): boolean {
+  const code = value.charCodeAt(0);
+  const alpha = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+  const digit = code >= 48 && code <= 57;
+  switch (name) {
+    case "alnum":
+      return alpha || digit;
+    case "alpha":
+      return alpha;
+    case "blank":
+      return code === 9 || code === 32;
+    case "cntrl":
+      return code <= 31 || code === 127;
+    case "digit":
+      return digit;
+    case "graph":
+      return code >= 33 && code <= 126;
+    case "lower":
+      return code >= 97 && code <= 122;
+    case "print":
+      return code >= 32 && code <= 126;
+    case "punct":
+      return (
+        (code >= 33 && code <= 47) ||
+        (code >= 58 && code <= 64) ||
+        (code >= 91 && code <= 96) ||
+        (code >= 123 && code <= 126)
+      );
+    case "space":
+      return code === 32 || (code >= 9 && code <= 13);
+    case "upper":
+      return code >= 65 && code <= 90;
+    case "xdigit":
+      return digit || (code >= 65 && code <= 70) || (code >= 97 && code <= 102);
+    default:
+      return false;
+  }
+}
+
 function classMatch(
   pattern: string,
   start: number,
   value: string,
 ): { end: number; matches: boolean } | undefined {
-  const end = pattern.indexOf("]", start + 1);
+  const end = classEnd(pattern, start);
   if (end < 0) return undefined;
   let index = start + 1;
   const negated = pattern[index] === "!" || pattern[index] === "^";
@@ -95,6 +158,19 @@ function classMatch(
   let matched = false;
 
   while (index < end) {
+    if (pattern[index] === "\\") {
+      if (pattern[index + 1] === value) matched = true;
+      index += 2;
+      continue;
+    }
+    if (pattern[index] === "[" && pattern[index + 1] === ":") {
+      const posixEnd = pattern.indexOf(":]", index + 2);
+      if (posixEnd >= 0 && posixEnd < end) {
+        matched ||= matchesPosixClass(pattern.slice(index + 2, posixEnd), value);
+        index = posixEnd + 2;
+        continue;
+      }
+    }
     const first = pattern[index] ?? "";
     if (pattern[index + 1] === "-" && index + 2 < end) {
       const last = pattern[index + 2] ?? "";
@@ -203,9 +279,8 @@ function matchesRule(path: string, isDirectory: boolean, rule: IgnoreRule): bool
     if (basePattern !== rule.pattern && matchesPathPattern(basePattern, candidate)) return false;
     return matchesPathPattern(rule.pattern, candidate);
   }
-  const segments = candidate.split("/");
-  if (rule.anchored) return matchesSegment(rule.pattern, segments[0] ?? "");
-  return segments.some((segment) => matchesSegment(rule.pattern, segment));
+  const basename = candidate.slice(candidate.lastIndexOf("/") + 1);
+  return matchesSegment(rule.pattern, rule.anchored ? candidate : basename);
 }
 
 function isIgnored(path: string, isDirectory: boolean, rules: readonly IgnoreRule[]): boolean {
@@ -241,18 +316,26 @@ function* readFileOnce(
       const metadata = fstatSync(descriptor);
       if (!metadata.isFile() || metadata.size > MAX_FILE_BYTES) {
         skipped = true;
-      } else if (hasNoFollow && !isWithin(root, realpathSync(absolutePath))) {
-        skipped = true;
       } else {
-        const size = Math.min(metadata.size, MAX_FILE_BYTES);
-        const buffer = Buffer.alloc(size);
-        let bytesRead = 0;
-        while (bytesRead < size) {
-          const count = readSync(descriptor, buffer, bytesRead, size - bytesRead, bytesRead);
-          if (count === 0) break;
-          bytesRead += count;
+        const pathMetadata = statSync(absolutePath);
+        const resolvedPath = realpathSync(absolutePath);
+        if (
+          metadata.dev !== pathMetadata.dev ||
+          metadata.ino !== pathMetadata.ino ||
+          !isWithin(root, resolvedPath)
+        ) {
+          skipped = true;
+        } else {
+          const size = Math.min(metadata.size, MAX_FILE_BYTES);
+          const buffer = Buffer.alloc(size);
+          let bytesRead = 0;
+          while (bytesRead < size) {
+            const count = readSync(descriptor, buffer, bytesRead, size - bytesRead, bytesRead);
+            if (count === 0) break;
+            bytesRead += count;
+          }
+          file = { path, content: buffer.subarray(0, bytesRead).toString("utf8") };
         }
-        file = { path, content: buffer.subarray(0, bytesRead).toString("utf8") };
       }
     }
   } catch {
@@ -288,6 +371,39 @@ function* walk(
   relativeDirectory: string,
   inheritedRules: readonly IgnoreRule[],
 ): Generator<DiscoveryEvent> {
+  let safeDirectory: boolean;
+  try {
+    const metadata = lstatSync(absoluteDirectory);
+    const resolvedDirectory = realpathSync(absoluteDirectory);
+    safeDirectory =
+      metadata.isDirectory() &&
+      !metadata.isSymbolicLink() &&
+      (relativeDirectory === "" ? resolvedDirectory === root : isWithin(root, resolvedDirectory));
+  } catch {
+    yield {
+      type: "diagnostic",
+      diagnostic:
+        relativeDirectory === ""
+          ? { level: "error", message: "Could not read scan root." }
+          : { level: "warning", message: "Could not read directory.", file: relativeDirectory },
+    };
+    return;
+  }
+  if (!safeDirectory) {
+    yield { type: "skipped" };
+    yield {
+      type: "diagnostic",
+      diagnostic:
+        relativeDirectory === ""
+          ? { level: "error", message: "Could not read scan root." }
+          : {
+              level: "warning",
+              message: "Skipped a directory that is not safely inside the scan root.",
+              file: relativeDirectory,
+            },
+    };
+    return;
+  }
   let entries: Dirent[];
   try {
     entries = readdirSync(absoluteDirectory, { withFileTypes: true }).sort((a, b) =>

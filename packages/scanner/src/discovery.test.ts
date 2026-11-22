@@ -27,12 +27,15 @@ describe("file discovery", () => {
     const root = copyFixture();
     writeFileSync(
       join(root, ".gitignore"),
-      "# Root ignore rules\r\n\r\nignored-root.txt\r\n*.log\r\n*.tmp\r\n/root-only/\r\n[0-9].cache\r\nignored-tree/**\r\n!ignored-tree/keep.txt\r\n",
+      "# Root ignore rules\r\n\r\nignored-root.txt\r\n*.log\r\n*.tmp\r\n/root-only/\r\n[[:digit:]].cache\r\n[a\\]].class\r\nignored-tree/**\r\n!ignored-tree/keep.txt\r\n!nested\r\n!/nested\r\n",
     );
     writeFileSync(join(root, "ignored-root.txt"), "ignored");
     writeFileSync(join(root, "visible.log"), "ignored");
     writeFileSync(join(root, "7.cache"), "ignored");
     writeFileSync(join(root, "x.cache"), "included");
+    writeFileSync(join(root, "a.class"), "ignored");
+    writeFileSync(join(root, "].class"), "ignored");
+    writeFileSync(join(root, "x.class"), "included");
     writeFileSync(join(root, "empty.txt"), "");
     mkdirSync(join(root, "root-only"));
     writeFileSync(join(root, "root-only/hidden.txt"), "ignored");
@@ -40,6 +43,7 @@ describe("file discovery", () => {
     writeFileSync(join(root, "nested/keep.tmp"), "included");
     writeFileSync(join(root, "nested/deeper/drop.tmp"), "ignored");
     writeFileSync(join(root, "nested/deeper/keep.tmp"), "included");
+    writeFileSync(join(root, "nested/error.log"), "ignored");
     mkdirSync(join(root, "ignored-tree"));
     writeFileSync(join(root, "ignored-tree/drop.txt"), "ignored");
     writeFileSync(join(root, "ignored-tree/keep.txt"), "included");
@@ -77,6 +81,7 @@ describe("file discovery", () => {
       "root-only.txt",
       "root.txt",
       "x.cache",
+      "x.class",
     ]);
     expect(files.find((file) => file.path === "at-limit.bin")?.content).toHaveLength(1024 * 1024);
     expect(files.find((file) => file.path === "empty.txt")?.content).toBe("");

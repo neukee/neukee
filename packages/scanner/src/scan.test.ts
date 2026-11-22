@@ -47,4 +47,11 @@ describe("scan", () => {
     const report = scan(discoveryFixture, [], tool);
     expect(report.stats).toEqual({ filesScanned: 8, filesSkipped: 0 });
   });
+
+  it("reports files skipped for exceeding the size limit", () => {
+    const root = tempRepo();
+    writeFileSync(join(root, "over-limit.bin"), Buffer.alloc(1024 * 1024 + 1));
+    const report = scan(root, [], tool);
+    expect(report.stats).toEqual({ filesScanned: 0, filesSkipped: 1 });
+  });
 });
