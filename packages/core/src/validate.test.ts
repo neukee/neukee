@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Diagnostic, Finding, Location, ScanReport, Target } from "./index.js";
 import { validateReport } from "./index.js";
 import {
+  type SchemaNode,
   SUPPORTED_FORMATS,
   SUPPORTED_KEYWORDS,
   SUPPORTED_TYPES,
@@ -440,10 +441,10 @@ describe("validateReport: broken reports fail with clear messages", () => {
 });
 
 describe("validateWithSchema: JSON Schema semantics the report schema relies on", () => {
-  const defs = { $defs: { Name: { type: "string", minLength: 1 } } };
+  const defs = { $defs: { Name: { type: "string", minLength: 1 } } } satisfies SchemaNode;
 
   it("applies keywords next to a $ref as well as the referenced schema", () => {
-    const schemaWithSibling = { ...defs, $ref: "#/$defs/Name", pattern: "^a" };
+    const schemaWithSibling = { ...defs, $ref: "#/$defs/Name", pattern: "^a" } satisfies SchemaNode;
     expect(validateWithSchema("", schemaWithSibling).map((e) => e.message)).toEqual([
       "value must not be empty.",
       'value must be text matching ^a (got "").',
@@ -459,7 +460,7 @@ describe("validateWithSchema: JSON Schema semantics the report schema relies on"
       required: ["a"],
       properties: { a: { type: "string" } },
       additionalProperties: false,
-    };
+    } satisfies SchemaNode;
     expect(validateWithSchema({ b: 1 }, untyped).map((e) => e.message)).toEqual([
       'value is missing required property "a".',
       'value has unknown property "b".',
@@ -474,7 +475,7 @@ describe("validateWithSchema: JSON Schema semantics the report schema relies on"
     expect(validateWithSchema({ b: 1 }, { type: "object" })).toEqual([]);
   });
 
-  const dateTime = { type: "string", format: "date-time" };
+  const dateTime = { type: "string", format: "date-time" } satisfies SchemaNode;
 
   it.each([
     "2026-11-22T12:00:00Z",
@@ -512,7 +513,7 @@ describe("validateWithSchema: JSON Schema semantics the report schema relies on"
   });
 
   it("checks format only after the pattern passes, so a bad value gets one error", () => {
-    const both = { type: "string", pattern: "^\\d", format: "date-time" };
+    const both = { type: "string", pattern: "^\\d", format: "date-time" } satisfies SchemaNode;
     expect(validateWithSchema("x", both)).toHaveLength(1);
     expect(validateWithSchema("2026-02-30T00:00:00Z", both)).toHaveLength(1);
   });

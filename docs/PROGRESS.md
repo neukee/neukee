@@ -4,11 +4,11 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, evening IST (T-001 merged via PR #1, workflow chore via PR #2; T-002 PR #3 green, waiting for merge approval)
-- **Branch:** `t-002-core-schema` (PR #3, `main` merged in)
+- **Last updated:** 2026-11-22, evening IST (T-002 merged via PR #3; quality-bar chore PR open)
+- **Branch:** `chore/quality-bar` (PR waiting for merge approval)
 - **Last finished:** T-002 (report JSON Schema and `validateReport`)
 - **In progress:** nothing
-- **Exact next step:** merge PR #3 once approved, then `/next` → T-003 (catalog loader).
+- **Exact next step:** merge the quality-bar PR once approved, then `/next` → T-003 (catalog loader).
 - **Blocked / waiting on Sreeram:** NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Open item: decide the pronunciation and check the registration details before the T-053 trademark search.
 - **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (13 days). Launch Dec 6 (14 days).
 
@@ -77,6 +77,14 @@ Sreeram's notes and each session's summary. Newest first.
 - New tasks: T-006 change-signature schema, T-027 MergeWarden comparison, T-037 corpus job, T-038 mutation score target, T-056 UpgradeBench; E-001 reframed as the competitive spike.
 
 ## Log (task entries)
+
+### 2026-11-22 · chore · Quality bar (ADR-012)
+
+- CLAUDE.md now has a "Quality bar (non-negotiable)" section: simplest code, small PRs, the standard library first, honest types, hostile-input rules, a failing test before every bug fix, and behavior-focused tests.
+- Biome: `noExplicitAny` and `noNonNullAssertion` are errors. The codebase had no violations; a probe file proved both rules fire.
+- The reviewer subagent checks the Quality bar (check 9).
+- `validateWithSchema` no longer has an unchecked `as`. The one remaining `as` on the bundled schema file is documented as an exception (ADR-012).
+- `pnpm check:all` passes.
 
 ### 2026-11-22 · T-002 · Core types and JSON Schema — done
 

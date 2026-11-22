@@ -48,6 +48,28 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 - **Detectors never throw.** Errors become `Diagnostic` entries; one bad file never stops a scan.
 - **Stop and ask the person** before: changing core types or the report schema, changing CI or release workflows, changing Action permissions, deleting files outside the current task, merging a PR, pushing to `main`, force-pushing, publishing, or deleting branches. Pushing a task branch and opening, commenting on and watching its PR are routine and need no approval (ADR-010).
 
+## Quality bar (non-negotiable)
+
+The reviewer subagent checks every item below (ADR-012).
+
+- **Simplest code that passes the tests.** No abstractions, options or extension points until a second real use exists.
+- **Small PRs.** One task per PR. Source changes stay under about 300 lines; tests and fixtures don't count.
+- **Prefer Node's standard library** to a dependency or hand-rolled helper (and see ADR-004 for runtime dependencies).
+- **Types that don't lie:**
+  - no `any` (Biome `noExplicitAny`: error);
+  - no non-null `!` (Biome `noNonNullAssertion`: error);
+  - no unchecked `as`: validate data at the boundary, then let the types follow;
+  - every `switch` over a union is exhaustive.
+- **Treat every scanned file as hostile:**
+  - cap file size;
+  - follow no symlinks outside the root;
+  - no `eval`, `new Function` or dynamic `import()` of anything from the repo;
+  - parse YAML without custom tags;
+  - write only linear-time regexes (no nested ambiguous quantifiers);
+  - test malformed, empty, huge and CRLF input.
+- **Every bug fix starts with a failing test** that reproduces it.
+- **Tests check behavior, not internals.** Assert on outputs and observable effects, never on private helpers or call counts.
+
 ## When you are unsure
 
 Say so. Add the question to `docs/REVIEW-QUEUE.md` with the file and the risk, and continue with what is certain. A wrong guess in a security tool costs more than a pause.

@@ -19,6 +19,14 @@ Check, in this order:
 6. **Catalog:** every new entry has an official `sourceUrl`; spot-check that the entry's claim matches its source if you can read it.
 7. **Determinism:** stable sorting, no timestamps or randomness in output.
 8. **Scope:** changes outside the task, dead code, leftover debug output.
+9. **Quality bar** (`CLAUDE.md`, "Quality bar"). Check each item and flag any breach as `must-fix`, except where marked `should-fix`:
+   - **Simplicity:** an abstraction, option, parameter or extension point with only one real use. Code that could be shorter and still pass the tests is `should-fix`.
+   - **Size:** more than one task in the PR, or more than about 300 changed source lines. Count with `git diff --stat main...HEAD`, excluding tests and fixtures. Over the limit, say how to split it.
+   - **Standard library:** a dependency or hand-rolled helper where Node's standard library already does the job.
+   - **Types:** any `any`, non-null `!`, or `as` that isn't backed by a runtime check at a boundary. Search the diff for type assertions (`value as Type`), non-null assertions (`!.`, `!)`, `!;`) and `any`. Also flag every `switch` over a union without exhaustive handling (a `never` check, or a return type that forces every case).
+   - **Hostile input:** code reading scanned files without a size cap. Also following symlinks out of the root; `eval`, `new Function` or a dynamic `import()` of repo content; YAML parsed with custom tags enabled; and any regex with nested ambiguous quantifiers (`(a+)+`, `(a|a)*`, `(.*)*`). Tests must cover malformed, empty, huge and CRLF input for every new reader or parser.
+   - **Bug fixes:** a fix with no test that fails without it.
+   - **Tests:** tests that assert on internals (private helpers, call counts, implementation details) instead of behavior are `should-fix`.
 
 Reply with exactly one of:
 
