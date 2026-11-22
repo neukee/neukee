@@ -132,8 +132,17 @@ Sreeram's notes and each session's summary. Newest first.
 - Mutation score of `gitignore.ts`: 89.8% (the old matcher scored 46%). The remaining survivors are equivalent or only change speed.
 - TASKS: T-005 is now T-005a (done) and T-005b (the walker; PR #8 reworked next). T-010, T-015 and T-021 now depend on T-005b.
 
-### 2026-11-23 · T-005 · File discovery — in progress
+### 2026-11-23 · T-005b · File discovery — in review (PR #8)
 
+- Claude reworked Copilot's PR #8 on top of T-005a (`packages/scanner/src/discover.ts`, 230 source lines):
+  - `.gitignore` files go through the T-005a matcher, within ADR-015's caps: 64 KiB per file and 2,000 rules in force. Over a cap, or for a rule line the matcher drops, there is a diagnostic naming the file and line, and the scan continues (fail open). A path whose check runs out of the matching budget is scanned and reported.
+  - Every symlink is skipped and reported, inside or outside the root (ADR-015).
+  - Each file is read through one handle: opened with `O_NOFOLLOW | O_NONBLOCK`, checked with `fstat`, then re-checked against the path (same device and inode, real path still inside the root) before reading at most the cap. Without `O_NOFOLLOW` (Windows), `lstat` and `realpath` checks come first.
+  - Each folder is re-checked (not a link, real path inside the root) right before it is listed. Entries are sorted in code-unit order.
+  - Core exports `isRepoPath`, which tests a path against the report schema's own pattern (Copilot's version restated the pattern).
+- Tests: the exact file list for the fixture; caps; unreadable folders, files, `.gitignore` and root; FIFOs; leaked file handles; races where a file or folder is swapped for a link (outside, inside, to the root, above the root), a FIFO or a shorter file; listing order; the too-costly budget path.
+- Mutation score of `discover.ts`: 89.0% (Copilot's version: 46%). The survivors are platform-only (the Windows branch can't run on macOS or Linux) or equivalent (`O_NONBLOCK` always defined; the "unsafe" and "too-large" results behave the same for files).
+- Earlier history of PR #8 (Copilot), kept for the record:
 - Added bounded repository discovery with nested `.gitignore` rules, deterministic forward-slash RepoPaths, generated-directory and symlink skips, size limits, and single-handle reads with `fstat`.
 - Exported the RepoPath pattern from core as required by T-005, rather than duplicating schema validation.
 - Tests cover an exact file list, nested ignore rules and negation, CRLF/empty lines, character classes, empty and oversized files, an external symlink, invalid paths without `Diagnostic.file`, and report statistics.

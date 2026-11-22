@@ -86,7 +86,7 @@
   - [x] Fixture with nested `.gitignore`, a symlink pointing outside, a 2 MB file and a `node_modules` folder gives exactly the expected file list.
   - [ ] Test passes on Windows in CI (paths use `/`).
   - [ ] Each scanned file is read through a single handle: open it, `fstat` that handle, and read at most the size cap from it. Anything that isn't a regular file is skipped. Use no-follow where the platform supports it (`O_NOFOLLOW`); otherwise `lstat` plus `realpath` containment inside the scan root. Tests run in Linux and Windows CI. (Scanned repos are hostile; ARCHITECTURE §7.)
-  - [ ] Mutation score of `discover.ts` at least 80%.
+  - [x] Mutation score of `discover.ts` at least 80%. (89.0%.)
 
 ## Phase 1 — Detectors
 
