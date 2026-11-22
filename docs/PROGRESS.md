@@ -131,7 +131,6 @@ Sreeram's notes and each session's summary. Newest first.
 - Expected, for T-005: `fixtures/repos/empty` holds a README (Git can't track an empty folder), so once discovery lands `fixtures/expected/empty.json` will count it. That commit must say so.
 - Tests: 381 in the whole repo. `pnpm check:all` passes.
 - CI follow-up on PR #7: clean-checkout matrix tests failed because Vitest resolved scanner imports only after `dist` already existed. Added source aliases for workspace packages in `vitest.config.ts`; reproducing with all dist folders removed passes, and `pnpm verify` plus `pnpm check:all` pass.
-- CodeRabbit follow-up on PR #7: changed workspace aliases to exact bare-package matchers so package subpaths continue to use the published exports. The comment-separated dependency-import bypass is covered by a regression test.
 
 ### 2026-11-22 · T-003 · Catalog format, loader and validator — done
 
