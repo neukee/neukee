@@ -139,6 +139,9 @@ describe("validateReport: valid reports", () => {
     "https://nextjs.org/docs/app/guides/upgrading/version-16#async-request-apis",
     "https://github.com/nodejs/node/blob/main/doc/changelogs/CHANGELOG_V24.md?plain=1#L10",
     "https://docs.npmjs.com:443/cli/v11",
+    "https://example.com:1/",
+    "https://example.com:65535",
+    "https://example.com:8080?q=1",
   ])("accepts the source %j", (sourceUrl) => {
     expect(validateReport(changed(["findings", 0, "sourceUrl"], sourceUrl)).valid).toBe(true);
   });
@@ -578,6 +581,11 @@ const BAD_PATTERN_VALUES: Record<string, string[]> = {
     "https://nodejs-.org/",
     "https://nodejs..org/",
     "https://nodejs.org:port/",
+    "https://nodejs.org:99999/",
+    "https://nodejs.org:65536/",
+    "https://nodejs.org:0/",
+    "https://nodejs.org:080/",
+    "https://nodejs.org:/",
     "https://user@nodejs.org/",
     "https://nodejs.org/a b",
     "https://a b",

@@ -104,7 +104,7 @@
         "fix": { "type": "string", "minLength": 1 },
         "sourceUrl": {
           "type": "string",
-          "pattern": "^https://(?:[A-Za-z0-9]+(?:-+[A-Za-z0-9]+)*\\.)+[A-Za-z0-9]+(?:-+[A-Za-z0-9]+)*(?::\\d{1,5})?(?:[/?#]\\S*)?$",
+          "pattern": "^https://(?:[A-Za-z0-9]+(?:-+[A-Za-z0-9]+)*\\.)+[A-Za-z0-9]+(?:-+[A-Za-z0-9]+)*(?::(?:6553[0-5]|655[0-2]\\d|65[0-4]\\d\\d|6[0-4]\\d{3}|[1-5]\\d{4}|[1-9]\\d{0,3}))?(?:[/?#]\\S*)?$",
           "description": "an https URL"
         },
         "locations": { "type": "array", "items": { "$ref": "#/$defs/Location" } },
