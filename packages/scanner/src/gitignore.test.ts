@@ -138,8 +138,8 @@ describe("parseIgnoreFile: lines the scanner drops on purpose, with a reason", (
 describe("matching work per path is bounded on hostile rules within the caps", () => {
   // Each rule is at most MAX_RULE_BYTES and 2,000 rules is the cap on rules in force (ADR-015).
   // A path either gets an answer or runs out of its step budget ("too-costly"), so the cost per
-  // path is bounded whatever the rules. The time bound is generous for slow CI machines, and it
-  // is per path: a scan pays it once for every file and folder.
+  // path is bounded whatever the rules (about 10 ms at worst, ADR-015). The time bound is generous
+  // for slow CI machines and mutation testing; before the budget, these shapes took 3–19 s.
   const cap = MAX_RULE_BYTES - 1;
   const deepPath = Array.from({ length: 200 }, () => "aaaaaaaaaa").join("/");
   const oneLetterPath = Array.from({ length: 1100 }, () => "a").join("/"); // 2,199 bytes
@@ -178,7 +178,7 @@ describe("matching work per path is bounded on hostile rules within the caps", (
     const start = performance.now();
     isIgnored(path, false, rules);
     isIgnored(path, true, rules);
-    expect(performance.now() - start).toBeLessThan(500);
+    expect(performance.now() - start).toBeLessThan(2000);
   });
 
   it("answers too-costly when the budget runs out, rather than guessing", () => {
