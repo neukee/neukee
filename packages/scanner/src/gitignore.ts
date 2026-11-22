@@ -18,8 +18,8 @@ type Token =
   /** `ranges`: sorted, merged [low, high] pairs, flattened; searched by bisection. */
   | { kind: "class"; negated: boolean; ranges: number[] };
 
-/** One path segment of a rule: a token list, or `**` (any number of segments). */
-type Segment = Token[] | "globstar";
+/** One path segment of a rule: a name's tokens, or a run of `**` matching `min` or more segments. */
+type Segment = { kind: "name"; tokens: Token[] } | { kind: "globstar"; min: number };
 
 export interface IgnoreRule {
   negated: boolean;
@@ -97,28 +97,37 @@ function parseRule(line: string): IgnoreRule | string | undefined {
   if (pattern.startsWith("/")) pattern = pattern.slice(1);
 
   const segments: Segment[] = [];
-  for (const part of anchored ? splitSegments(pattern) : [pattern]) {
+  const parts = anchored ? splitSegments(pattern) : [{ text: pattern, escapedSlashAfter: false }];
+  for (const [index, { text, escapedSlashAfter }] of parts.entries()) {
     // A whole segment of two or more stars is a globstar; inside a name (a**b) it's a plain *.
-    if (anchored && part.length >= 2 && [...part].every((char) => char === "*")) {
-      if (segments.at(-1) !== "globstar") segments.push("globstar"); // **/** is **
+    if (anchored && text.length >= 2 && [...text].every((char) => char === "*")) {
+      // Git lets ** match zero folders only when a plain `/` follows it, so a trailing ** or one
+      // before an escaped `\/` needs at least one. A run of them adds up: a/**/**\/b needs one.
+      const min = index === parts.length - 1 || escapedSlashAfter ? 1 : 0;
+      const previous = segments.at(-1);
+      if (previous?.kind === "globstar") previous.min += min;
+      else segments.push({ kind: "globstar", min });
       continue;
     }
-    const tokens = tokenize(encoder.encode(part));
+    const tokens = tokenize(encoder.encode(text));
     if (typeof tokens === "string") return tokens;
-    segments.push(tokens);
+    segments.push({ kind: "name", tokens });
   }
   return { negated, directoryOnly, anchored, segments };
 }
 
-/** Splits on `/`. Git reads an escaped `\\/` as a separator too; other escapes stay in the segment. */
-function splitSegments(pattern: string): string[] {
-  const parts: string[] = [];
+/**
+ * Splits on `/`. Git reads an escaped `\\/` as a separator too, but notes it: a `**` before it
+ * can't match zero folders. Other escapes stay in the segment.
+ */
+function splitSegments(pattern: string): { text: string; escapedSlashAfter: boolean }[] {
+  const parts: { text: string; escapedSlashAfter: boolean }[] = [];
   let current = "";
   for (let i = 0; i < pattern.length; i++) {
     const char = pattern[i];
     const next = pattern[i + 1];
     if (char === "/" || (char === "\\" && next === "/")) {
-      parts.push(current);
+      parts.push({ text: current, escapedSlashAfter: char === "\\" });
       current = "";
       if (char === "\\") i++;
     } else if (char === "\\" && next !== undefined) {
@@ -128,7 +137,7 @@ function splitSegments(pattern: string): string[] {
       current += char;
     }
   }
-  parts.push(current);
+  parts.push({ text: current, escapedSlashAfter: false });
   return parts;
 }
 
@@ -234,33 +243,27 @@ function matches(rule: IgnoreRule, path: Uint8Array[], isDirectory: boolean): bo
   if (rule.directoryOnly && !isDirectory) return false;
   if (!rule.anchored) {
     const name = path.at(-1);
-    const tokens = rule.segments[0];
-    return (
-      name !== undefined &&
-      tokens !== undefined &&
-      tokens !== "globstar" &&
-      matchSegment(tokens, name)
-    );
+    const segment = rule.segments[0];
+    return name !== undefined && segment?.kind === "name" && matchSegment(segment.tokens, name);
   }
   // reach[j]: the rule's segments so far can match the first j path segments.
   let reach = path.map(() => false).concat(false);
   reach[0] = true;
-  rule.segments.forEach((segment, index) => {
+  for (const segment of rule.segments) {
     const next = path.map(() => false).concat(false);
-    const last = index === rule.segments.length - 1;
+    let reachedBefore = false;
     for (let j = 0; j <= path.length; j++) {
-      if (segment === "globstar") {
-        // A middle or leading ** matches zero or more segments; a trailing one, one or more.
-        const fromBefore = j > 0 && (reach[j - 1] === true || next[j - 1] === true);
-        next[j] = last ? fromBefore : reach[j] === true || fromBefore;
+      if (segment.kind === "globstar") {
+        // `min` or more segments: true from the first j with some reach[i], i <= j - min.
+        reachedBefore ||= reach[j - segment.min] === true;
+        next[j] = reachedBefore;
       } else {
         const name = path[j - 1];
-        next[j] =
-          j > 0 && reach[j - 1] === true && name !== undefined && matchSegment(segment, name);
+        next[j] = reach[j - 1] === true && name !== undefined && matchSegment(segment.tokens, name);
       }
     }
     reach = next;
-  });
+  }
   return reach[path.length] === true;
 }
 
