@@ -12,7 +12,7 @@
       "Bash(git diff *)",
       "Bash(git log *)",
       "Bash(git push)",
-      "Bash(git push *)",
+      "Bash(git push -u origin HEAD)",
       "Bash(gh pr create *)",
       "Bash(gh pr comment *)",
       "Bash(gh pr checks *)",
@@ -20,16 +20,7 @@
       "Bash(gh run list *)",
       "Bash(gh run view *)"
     ],
-    "ask": [
-      "Bash(gh pr merge *)",
-      "Bash(git push *--delete*)",
-      "Bash(git push -d *)",
-      "Bash(git push * -d *)",
-      "Bash(git push :*)",
-      "Bash(git push * :*)",
-      "Bash(git push *--mirror*)",
-      "Bash(git push *--prune*)"
-    ],
+    "ask": ["Bash(gh pr merge *)"],
     "deny": [
       "Bash(git push --force *)",
       "Bash(git push -f *)",
