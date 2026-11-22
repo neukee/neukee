@@ -1,4 +1,4 @@
-import { lstatSync, readdirSync, readFileSync } from "node:fs";
+import { type Dirent, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseDocument } from "yaml";
 import type { Severity, Tool } from "./index.js";
@@ -66,9 +66,12 @@ const FIXTURE_FIELDS = { positive: true, negative: true };
 export function loadCatalog(dir: string): Catalog {
   const entries: CatalogEntry[] = [];
   const errors: CatalogError[] = [];
-  for (const path of yamlFiles(dir, "")) {
-    const file = `catalog/${path}`;
-    const result = readEntry(join(dir, path), path, file);
+  for (const found of catalogFiles(dir, "")) {
+    const file = found.path === "" ? "catalog" : `catalog/${found.path}`;
+    const result =
+      found.problem === undefined
+        ? readEntry(join(dir, found.path), found.path, file)
+        : `${file} ${found.problem}.`;
     if (typeof result === "string") errors.push({ file, message: result });
     else entries.push(result);
   }
@@ -77,25 +80,39 @@ export function loadCatalog(dir: string): Catalog {
   return { entries, errors };
 }
 
-/** Paths (relative to `dir`, forward slashes) of files that look like YAML. Never follows links. */
-function yamlFiles(dir: string, prefix: string): string[] {
-  return readdirSync(join(dir, prefix), { withFileTypes: true }).flatMap((dirent) => {
+/**
+ * Files that look like YAML (paths relative to `dir`, forward slashes), plus every symlink and
+ * unreadable folder as a problem, so nothing is dropped silently. Never follows links.
+ */
+function catalogFiles(dir: string, prefix: string): { path: string; problem?: string }[] {
+  let dirents: Dirent[];
+  try {
+    dirents = readdirSync(join(dir, prefix), { withFileTypes: true });
+  } catch (error) {
+    return [{ path: prefix, problem: `could not be read (${errorCode(error)})` }];
+  }
+  return dirents.flatMap((dirent) => {
     const path = prefix === "" ? dirent.name : `${prefix}/${dirent.name}`;
-    if (dirent.isDirectory()) return yamlFiles(dir, path);
-    return /\.ya?ml$/i.test(dirent.name) ? [path] : [];
+    if (dirent.isSymbolicLink()) {
+      return [{ path, problem: "is a symbolic link; the catalog doesn't follow links" }];
+    }
+    if (dirent.isDirectory()) return catalogFiles(dir, path);
+    return /\.ya?ml$/i.test(dirent.name) ? [{ path }] : [];
   });
 }
 
 /** The entry, or the first problem found, as a sentence naming the file. */
 function readEntry(fullPath: string, path: string, file: string): CatalogEntry | string {
   if (!path.endsWith(".yaml")) return `${file}: catalog entries use the lowercase .yaml extension.`;
-  const stat = lstatSync(fullPath);
-  if (stat.isSymbolicLink()) return `${file} is a symbolic link; the catalog doesn't follow links.`;
-  if (stat.size > MAX_BYTES)
-    return `${file} is ${stat.size} bytes; catalog entries must be under 64 KiB.`;
 
   let raw: unknown;
   try {
+    const stat = lstatSync(fullPath);
+    // A FIFO or device named *.yaml would block or misbehave on read.
+    if (!stat.isFile()) return `${file} is not a regular file.`;
+    if (stat.size > MAX_BYTES) {
+      return `${file} is ${stat.size} bytes; catalog entries must be under 64 KiB.`;
+    }
     // Core schema only, and any warning is fatal: an unknown tag (e.g. !!js/function) is only a
     // warning in the yaml library, and its value would otherwise pass as a plain string.
     const doc = parseDocument(readFileSync(fullPath, "utf8"), {
@@ -108,6 +125,10 @@ function readEntry(fullPath: string, path: string, file: string): CatalogEntry |
       return `${file} is not valid catalog YAML: ${firstLine(problem.message)}.`;
     raw = doc.toJS(); // throws on alias bombs ("Excessive alias count")
   } catch (error) {
+    // File-system errors give only their code: their messages hold absolute machine paths.
+    // Others (the yaml library's alias guard) are safe to show.
+    const code = errorCode(error);
+    if (code !== "unknown error") return `${file} could not be read (${code}).`;
     return `${file} could not be read: ${firstLine(error instanceof Error ? error.message : String(error))}.`;
   }
   if (!isPlainObject(raw)) return `${file} must contain one YAML mapping (got ${shape(raw)}).`;
@@ -226,6 +247,13 @@ function shape(value: unknown): string {
   if (value === null || value === undefined) return "an empty file";
   if (Array.isArray(value)) return "a list";
   return `a ${typeof value}`;
+}
+
+/** A Node file-system error code such as "EACCES", without the message (it holds absolute paths). */
+function errorCode(error: unknown): string {
+  return error instanceof Error && "code" in error && typeof error.code === "string"
+    ? error.code
+    : "unknown error";
 }
 
 function firstLine(text: string): string {

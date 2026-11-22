@@ -130,7 +130,11 @@ Sreeram's notes and each session's summary. Newest first.
   - must-fix: duplicate ids were possible. Fixed by making the path the id.
   - should-fix: untested branches; untested YAML-1.1 guards; copied helpers; symlinks followed; undocumented decisions.
 - Also from the review: fixture-folder existence moved from the loader to the real-catalog test, because the npm package won't ship `fixtures/`. The entry's fix text was trimmed to what the source says. ARCHITECTURE §6's example is now the real entry.
-- Tests: 50 catalog tests; whole repo 342 core + 8 others. `pnpm check:all` passes.
+- Reviewer, second pass: PASS. I took its three optional suggestions:
+  - file-system errors show only their code, never an absolute path;
+  - an unreadable folder is an error, not a crash;
+  - symlinked folders and special files are reported, not skipped.
+- Tests: 53 catalog tests; 353 in the whole repo. `pnpm check:all` passes. Source size is 322 lines, about 7% over the ~300 guideline, mostly the robustness fixes.
 
 ### 2026-11-22 · chore · Quality bar (ADR-012)
 

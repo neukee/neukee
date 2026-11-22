@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -355,6 +363,55 @@ describe("loadCatalog: invalid entries give clear errors naming the file", () =>
         },
       ],
     });
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "rejects a symlinked folder instead of silently skipping it",
+    () => {
+      const dir = repo({ [at]: VALID, "elsewhere/next17/rule.yaml": VALID });
+      symlinkSync(join(dir, "..", "elsewhere", "next17"), join(dir, "next17"));
+      expect(loadCatalog(dir)).toEqual({
+        entries: [EXPECTED],
+        errors: [
+          {
+            file: "catalog/next17",
+            message: "catalog/next17 is a symbolic link; the catalog doesn't follow links.",
+          },
+        ],
+      });
+    },
+  );
+
+  // Permissions don't apply on Windows or to root, so these run elsewhere.
+  const canDenyRead = process.platform !== "win32" && process.getuid?.() !== 0;
+
+  it.skipIf(!canDenyRead)(
+    "reports an unreadable file by its error code, never an absolute path",
+    () => {
+      const dir = repo({ [at]: VALID, "catalog/next16/locked.yaml": VALID });
+      chmodSync(join(dir, "next16", "locked.yaml"), 0o000);
+      const { entries, errors } = loadCatalog(dir);
+      expect(entries).toEqual([EXPECTED]);
+      expect(errors).toEqual([
+        {
+          file: "catalog/next16/locked.yaml",
+          message: "catalog/next16/locked.yaml could not be read (EACCES).",
+        },
+      ]);
+    },
+  );
+
+  it.skipIf(!canDenyRead)("reports an unreadable folder and keeps loading the rest", () => {
+    const dir = repo({ [at]: VALID, "catalog/locked/x/rule.yaml": VALID });
+    chmodSync(join(dir, "locked"), 0o000);
+    try {
+      expect(loadCatalog(dir)).toEqual({
+        entries: [EXPECTED],
+        errors: [{ file: "catalog/locked", message: "catalog/locked could not be read (EACCES)." }],
+      });
+    } finally {
+      chmodSync(join(dir, "locked"), 0o755); // so the temp folder can be removed
+    }
   });
 
   it("keeps loading the good entries when one file is bad, with errors sorted by file", () => {
