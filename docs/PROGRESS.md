@@ -85,11 +85,11 @@ Sreeram's notes and each session's summary. Newest first.
 - ARCHITECTURE §5 now documents what the schema adds (ADR-011): closed objects, canonical repo-relative paths, 1-based UTF-16 columns, https sources, the rule-id grammar, and timestamps with a time zone.
 - Sreeram's three changes before merge (ADR-011):
   - `stats.durationMs` is removed from the type and the schema, so only `scannedAt` varies. This matches SPEC-SCANNER target 6. Timing may return behind an opt-in flag (note on T-033).
-  - `compareFindings` is now a total order: severity, file, line, column, ruleId, target.tool, target.version, message. A seeded test shuffles 256 findings 100 times and gets identical output every time.
+  - `compareFindings` is now a total order: severity, file, line, column, ruleId, target.tool, target.version, message. After CodeRabbit's finding, the remaining fields (title, fix, sourceUrl, all locations) break any tie left, so 0 means equal in every field. Tests cover each tie and key precedence, and check reversed input for every remaining field. A seeded test shuffles 256 findings 100 times and gets identical output every time.
   - New compatibility policy: optional fields may be added within v1, and consumers ignore unknown fields. Removing, renaming, retyping or changing a field's meaning bumps `schemaVersion`. Our validator stays strict, and every schema change needs an ADR.
   - The validator no longer supports `number` (no field uses it), and its one unchecked `as` tuple cast is gone.
   - Sreeram confirmed the three schema defaults; the review-queue row is closed.
-- Tests (core: 2 → 282; whole repo 290):
+- Tests (core: 2 → 291; whole repo 299):
   - 22 broken reports with exact messages.
   - A generated violation for every schema constraint (60+ cases).
   - Real paths the detectors will emit (Next.js route syntax, dotfiles, Unicode) must pass.

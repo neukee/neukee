@@ -62,22 +62,45 @@ const SEVERITY_RANK: Record<Severity, number> = { "action-required": 0, warning:
 
 /** Code-unit order, so the result never depends on the machine's locale. */
 const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+const byNumber = (a: number, b: number): number => a - b;
+
+/** An absent value sorts before any present one. */
+function absentFirst<T>(a: T | undefined, b: T | undefined, compare: (x: T, y: T) => number) {
+  if (a === undefined) return b === undefined ? 0 : -1;
+  return b === undefined ? 1 : compare(a, b);
+}
+
+const byLocation = (a: Location, b: Location): number =>
+  byText(a.file, b.file) ||
+  absentFirst(a.line, b.line, byNumber) ||
+  absentFirst(a.column, b.column, byNumber);
+
+/** Element by element; a shorter list sorts first when it is a prefix of the other. */
+function byLocations(a: readonly Location[], b: readonly Location[]): number {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const result = absentFirst(a[i], b[i], byLocation);
+    if (result !== 0) return result;
+  }
+  return 0;
+}
 
 /**
- * Total order for findings: severity, first location's file, line and column (absent sorts
- * first), rule id, target tool, target version, message. Any input order gives the same output.
+ * Total order for findings. The sort keys: severity, the first location's file, line and column
+ * (absent first), rule id, target tool, target version, message. Then every remaining field
+ * breaks what is left (title, fix, sourceUrl, all locations), so 0 means equal in every field
+ * and any input order gives the same output.
  */
 export function compareFindings(a: Finding, b: Finding): number {
-  const first = a.locations[0];
-  const second = b.locations[0];
   return (
     SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
-    byText(first?.file ?? "", second?.file ?? "") ||
-    (first?.line ?? 0) - (second?.line ?? 0) ||
-    (first?.column ?? 0) - (second?.column ?? 0) ||
+    absentFirst(a.locations[0], b.locations[0], byLocation) ||
     byText(a.ruleId, b.ruleId) ||
     byText(a.target.tool, b.target.tool) ||
     byText(a.target.version, b.target.version) ||
-    byText(a.message, b.message)
+    byText(a.message, b.message) ||
+    byText(a.title, b.title) ||
+    absentFirst(a.fix, b.fix, byText) ||
+    byText(a.sourceUrl, b.sourceUrl) ||
+    byLocations(a.locations, b.locations)
   );
 }

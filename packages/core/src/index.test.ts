@@ -122,8 +122,52 @@ describe("compareFindings: a total order", () => {
     expect(compareFindings(finding({ message: "B" }), finding({ message: "a" }))).toBeLessThan(0);
   });
 
-  it("returns 0 only for findings equal on every key", () => {
+  // After the eight sort keys, every remaining field breaks ties, so 0 means "equal in every
+  // field" and the output never depends on input order.
+  const remaining: [string, Partial<Finding>, Partial<Finding>][] = [
+    ["title", { title: "a" }, { title: "b" }],
+    ["fix (absent first)", {}, { fix: "a" }],
+    ["fix", { fix: "a" }, { fix: "b" }],
+    ["sourceUrl", { sourceUrl: "https://a.org/" }, { sourceUrl: "https://b.org/" }],
+    [
+      "a later location's file",
+      { locations: [{ file: "a.ts", line: 1 }, { file: "b.ts" }] },
+      { locations: [{ file: "a.ts", line: 1 }, { file: "c.ts" }] },
+    ],
+    [
+      "a later location's line (absent first)",
+      { locations: [{ file: "a.ts" }, { file: "b.ts" }] },
+      { locations: [{ file: "a.ts" }, { file: "b.ts", line: 1 }] },
+    ],
+    [
+      "a later location's column",
+      { locations: [{ file: "a.ts" }, { file: "b.ts", line: 1, column: 1 }] },
+      { locations: [{ file: "a.ts" }, { file: "b.ts", line: 1, column: 2 }] },
+    ],
+    [
+      "fewer locations first",
+      { locations: [{ file: "a.ts" }] },
+      { locations: [{ file: "a.ts" }, { file: "b.ts" }] },
+    ],
+  ];
+
+  it.each(remaining)("breaks a tie on %s, whatever the input order", (_, first, second) => {
+    const a = finding(first);
+    const b = finding(second);
+    expect(compareFindings(a, b)).toBeLessThan(0);
+    expect(compareFindings(b, a)).toBeGreaterThan(0);
+    expect(JSON.stringify([b, a].sort(compareFindings))).toBe(JSON.stringify([a, b]));
+  });
+
+  it("puts the eight sort keys ahead of the remaining fields", () => {
+    expect(
+      compareFindings(finding({ message: "a", title: "z" }), finding({ message: "b", title: "a" })),
+    ).toBeLessThan(0);
+  });
+
+  it("returns 0 only for findings equal in every field", () => {
     expect(compareFindings(finding({}), finding({}))).toBe(0);
+    expect(compareFindings(finding({ fix: "f" }), finding({ fix: "f" }))).toBe(0);
   });
 
   // Seeded, so the test itself is deterministic (no Math.random).

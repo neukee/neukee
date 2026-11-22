@@ -90,7 +90,7 @@ flowchart TD
 1. **Discover** — walk the repo from the given path. Respect `.gitignore`, always skip `node_modules`, `.git`, build output (`.next`, `dist`, `build`, `coverage`). Skip files over 1 MB and record them as skipped. Follow no symlinks out of the repo.
 2. **Detect** — each detector is a pure function: `(context) => Finding[]`. A detector never throws; failures become `Diagnostic` entries in the report (e.g. "could not parse pnpm-lock.yaml at line 40"). One broken file never stops a scan.
 3. **Match** — detectors produce raw facts; catalog entries turn facts into findings for the requested targets. Detection logic lives in code; knowledge (what breaks, severity, fix, source link) lives in the catalog.
-4. **Report** — findings are sorted by a total order (`compareFindings`): severity, then the first location's file, line and column (absent sorts first), then rule id, target tool, target version and message. Text compares by code unit, never by locale. The same input in any order always produces byte-identical output. This is what makes snapshot tests and CI comparisons possible.
+4. **Report** — findings are sorted by a total order (`compareFindings`): severity, then the first location's file, line and column (absent sorts first), then rule id, target tool, target version and message. Any tie left after those is broken by the remaining fields: title, fix (absent first), sourceUrl, then every location in turn. So two findings compare equal only if they are equal in every field. Text compares by code unit, never by locale. The same input in any order always produces byte-identical output. This is what makes snapshot tests and CI comparisons possible.
 
 ## 5. Core types (packages/core)
 
