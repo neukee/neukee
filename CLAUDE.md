@@ -1,6 +1,6 @@
 # Neukee — project memory for Claude
 
-Working name **Neukee** (trademark check pending; rename in T-053). A local-first verification tool for Node.js and Next.js upgrades. First product: the **scanner** (static analysis, launch target **December 6, 2026**). Later: the **engine** (behavioral comparison on the customer's tests).
+Working name **Neukee** (trademark check pending; rename in T-053). A local-first verification tool for Node.js and Next.js upgrades. First product: the **scanner** (static analysis, launch target **Tuesday, December 8, 2026**). Later: the **engine** (behavioral comparison on the customer's tests).
 
 ## Read before working
 
@@ -14,6 +14,8 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 
 - **Start:** `/status` (where we stopped, the exact next step, the next date). **Work:** `/next`, repeated. **End:** `/wrap` (updates "Resume here" and the velocity log so any later session resumes exactly here). **Sunday:** `/checkpoint`.
 - A date in `docs/BRIEF.md` §7 at risk by more than 3 days: tell Sreeram the same day, with options.
+- **Commit on the task branch every time the tests pass,** even mid-task, so no green step is ever lost.
+- **When Sreeram says usage is above 80%,** don't start a new task. Commit the current step on its branch and run `/wrap`.
 
 ## Commands
 
@@ -36,6 +38,12 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 ## Merging
 
 - **Every merge needs Sreeram's approval.** He may give it in advance for a specific PR, with conditions.
+- **Exception: a PR that changes only Markdown docs or code comments** merges under these rules without asking. Everything else asks.
+- **Every task PR's merge request opens with this four-line check:**
+  - Tests added for this task: yes/no, how many
+  - Files changed outside the task's area: list, or "none"
+  - Decisions beyond the spec: list with ADR number, or "none"
+  - New dependencies or core type/schema changes: list, or "none"
 - **Merge only when** every CI check is green, CodeRabbit has reviewed the latest commit, and every review thread is resolved. Squash-merge and delete the branch (`gh pr merge <n> --squash --delete-branch`), then `git switch main` and `git pull`.
 - **Minor CodeRabbit findings** in docs, comments, tests or tooling: fix them, reply on the thread, and continue under the existing approval. List each one in the merge summary.
 - **If a PR gets a third round of minor findings, stop fixing.** Log the rest as follow-ups in `docs/REVIEW-QUEUE.md`, resolve each thread with a short reply, and merge under the existing approval.
@@ -54,7 +62,7 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 - **Respect the dependency direction:** `action → cli → scanner → core`; `core` imports nothing internal.
 - **Deterministic output:** sort findings; no timestamps except `scannedAt`; no `Math.random`.
 - **Detectors never throw.** Errors become `Diagnostic` entries; one bad file never stops a scan.
-- **Stop and ask the person** before: changing core types or the report schema, changing CI or release workflows, changing Action permissions, deleting files outside the current task, merging a PR, pushing to `main`, force-pushing, publishing, or deleting branches. Pushing a task branch and opening, commenting on and watching its PR are routine and need no approval (ADR-010).
+- **Stop and ask the person** before: changing core types or the report schema, changing CI or release workflows, changing Action permissions, deleting files outside the current task, merging a PR (except as "Merging" allows: an advance approval, or a PR that changes only Markdown docs or code comments), pushing to `main`, force-pushing, publishing, or deleting branches. Pushing a task branch and opening, commenting on and watching its PR are routine and need no approval (ADR-010).
 
 ## Quality bar (non-negotiable)
 

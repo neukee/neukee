@@ -2,7 +2,7 @@
 
 Find what blocks your Node.js and Next.js upgrades before your users do.
 
-> Working name, pending trademark check. Pre-release: the scanner is under construction (launch target December 6, 2026).
+> Working name, pending trademark check. Pre-release: the scanner is under construction (launch target December 8, 2026).
 
 ## For contributors
 
