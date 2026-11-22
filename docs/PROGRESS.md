@@ -4,12 +4,12 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, evening IST (T-002 done on its branch; PR open)
-- **Branch:** `t-002-core-schema` (PR waiting for merge approval)
+- **Last updated:** 2026-11-22, evening IST (T-001 merged via PR #1, workflow chore via PR #2; T-002 PR #3 green, waiting for merge approval)
+- **Branch:** `t-002-core-schema` (PR #3, `main` merged in)
 - **Last finished:** T-002 (report JSON Schema and `validateReport`)
 - **In progress:** nothing
-- **Exact next step:** merge the T-002 PR once approved, then `/next` → T-003 (catalog loader).
-- **Blocked / waiting on Sreeram:** confirm the three schema defaults in ADR-011 (column unit, https-only, lowercase rule ids); NEWKEY trademark details (pronunciation decision)
+- **Exact next step:** merge PR #3 once approved, then `/next` → T-003 (catalog loader).
+- **Blocked / waiting on Sreeram:** confirm the three schema defaults in ADR-011 (column unit, https-only, lowercase rule ids). NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Open item: decide the pronunciation and check the registration details before the T-053 trademark search.
 - **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (13 days). Launch Dec 6 (14 days).
 
 ## Dated checkpoints
@@ -52,10 +52,11 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
 One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+). Sreeram's hours only when he gives them.
 
-| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                                                        |
-| ---------- | ----- | ---- | --------------- | ------------- | ------ | ----------------------------------------------------------- |
-| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                      |
-| 2026-11-22 | T-002 | S    | 1               | —             | done   | Schema + validator; reviewer found 1 must-fix, 4 should-fix |
+| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                                                                    |
+| ---------- | ----- | ---- | --------------- | ------------- | ------ | ----------------------------------------------------------------------- |
+| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                                  |
+| 2026-11-22 | T-001 | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI |
+| 2026-11-22 | T-002 | S    | 1               | —             | done   | Schema + validator; reviewer found 1 must-fix, 4 should-fix             |
 
 ## Daily log
 
@@ -82,7 +83,7 @@ Sreeram's notes and each session's summary. Newest first.
 - `packages/core/schema/scan-report.v1.json`: hand-written draft 2020-12 schema, published with the package and exported as `@neukee/core/schema/scan-report.v1.json`.
 - `validateReport(value)` returns the typed report or every problem as `{ path, message }`. Messages are full sentences (`report.findings[0].severity must be one of "action-required", "warning" or "info" (got "critical").`). It interprets the schema itself, with no new dependency (ADR-004).
 - The types are unchanged; they already matched §5. ARCHITECTURE §5 now documents what the schema adds (ADR-011): closed objects, canonical repo-relative paths, 1-based UTF-16 columns, https sources, the rule-id grammar, and timestamps with a time zone.
-- Tests (core: 2 → 198; whole repo 206):
+- Tests (core: 2 → 261; whole repo 269):
   - 22 broken reports with exact messages.
   - A generated violation for every schema constraint (60+ cases).
   - Real paths the detectors will emit (Next.js route syntax, dotfiles, Unicode) must pass.
@@ -101,6 +102,13 @@ Sreeram's notes and each session's summary. Newest first.
   - Every pattern was timed on 100k-character hostile input: all under 5 ms, linear.
 - Follow-ups written into later tasks: T-003 shares the id grammar; T-004 normalizes with fixed values; T-005 skips unrepresentable paths; T-021 column unit; T-031 neutralises control/bidi characters and escapes markdown in repo-derived text; T-032 SARIF fallback location and explicit `columnKind`; T-034 fleet wrapper; T-040 ships `schema/`.
 - `pnpm verify` and `pnpm check:all` pass.
+
+### 2026-11-22 · T-001 · GitHub repository and protections — done
+
+- Sreeram created `neukee/neukee` (public, ADR-005), set the ruleset on `main`, set CODEOWNERS, installed CodeRabbit.
+- PR #1: Windows `verify` failed because Git checked files out with CRLF and Biome rejected them. Added `.gitattributes` (`* text=auto eol=lf`, binary patterns, `fixtures/**/crlf/** -text`). All nine checks then passed, CodeRabbit included; squash-merged as `55c70b9`.
+- Follow-up: T-015 now requires lockfile parsers to accept CRLF input, with a CRLF fixture under `fixtures/**/crlf/`.
+- Workflow change (chore PR): Claude now pushes task branches, opens the PR, requests CodeRabbit, watches checks and fixes failures; Sreeram approves every merge.
 
 ### 2026-11-18 · T-000 · Repository scaffold — done
 
