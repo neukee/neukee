@@ -515,6 +515,69 @@
       "ignored": true
     },
     {
+      "name": "globstar before an escaped slash needs a folder",
+      "files": {
+        "": "a/**\\/b\n"
+      },
+      "path": "a/b",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "globstar before an escaped slash matches one folder",
+      "files": {
+        "": "a/**\\/b\n"
+      },
+      "path": "a/x/b",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "leading globstar before an escaped slash needs a folder",
+      "files": {
+        "": "**\\/b\n"
+      },
+      "path": "b",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "leading globstar before an escaped slash at depth",
+      "files": {
+        "": "**\\/b\n"
+      },
+      "path": "x/b",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "two globstars before escaped slashes need two folders",
+      "files": {
+        "": "a/**\\/**\\/b\n"
+      },
+      "path": "a/x/b",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "two globstars before escaped slashes match two folders",
+      "files": {
+        "": "a/**\\/**\\/b\n"
+      },
+      "path": "a/x/y/b",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "globstar then globstar before an escaped slash",
+      "files": {
+        "": "a/**/**\\/b\n"
+      },
+      "path": "a/b",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
       "name": "double globstar matches everything",
       "files": {
         "": "**/**\n"

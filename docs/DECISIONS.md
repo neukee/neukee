@@ -13,18 +13,23 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - **Own matcher** (`packages/scanner/src/gitignore.ts`, T-005a):
     - rules are parsed once into tokens, with no regular expression built from rule text;
     - matching works on UTF-8 bytes, like git;
-    - a segment match backtracks only to the last `*` (O(name × rule)), and a path match is a segment DP (O(path segments × rule segments));
-    - repeated `**` segments collapse at parse time;
-    - classes are merged ranges searched by bisection.
+    - a segment match backtracks only to the last `*`, and a path match is a segment DP that stops once nothing is reachable;
+    - rules are tried last to first (the last match decides), and an anchored rule whose depth can't fit the path is rejected at once;
+    - repeated `**` segments collapse at parse time, each run keeping the fewest folders it needs;
+    - classes are 256-bit sets.
       The semantics are git's (wildmatch), and tests compare the matcher with a table generated once from real git. **ADR-004 is amended:** `ignore` is not used for scanned input.
   - **Caps, fail open:**
     - a rule line over **1 KiB** is dropped;
     - a `.gitignore` over **64 KiB** is skipped;
     - at most **2,000 rules** are in force at once.
-      Anything over a cap is skipped with a diagnostic naming the file, and the scan continues. It may then scan a few more files, which is the safe direction. Within the caps, the worst hostile shapes take about 0.1–0.4 s per file against a 2,200-byte path.
+      Anything over a cap is skipped with a diagnostic naming the file, and the scan continues. It may then scan a few more files, which is the safe direction.
+  - **Work budget per path (added 2026-11-23 after the reviewer measured 3–19 s per path for segment-heavy rules at the caps; default, waiting for Sreeram to confirm):** each path gets **1,000,000 matching steps** (name bytes compared plus path positions tried). If the rules haven't decided by then, the answer is "too-costly": the path stays in the scan and T-005b reports it (fail open). The caps alone don't bound the work, because the cost multiplies rules × rule length × path length.
+    - Measured on a development Mac, 2,000 rules at the caps: the worst hostile shapes take about 6–10 ms per path, then answer "too-costly". A heavy real-world `.gitignore` (2,000 varied rules) takes about 1.2 ms per path and never reaches the budget.
+    - So a hostile repository costs at most about 10 ms per file and folder: about 100 s for 10,000 paths. Whether the scan also needs a total budget is open (REVIEW-QUEUE).
   - **Symlinks are never followed**, inside or outside the root. Each one is reported as skipped with a diagnostic. This is simplest and safest for v0.1, and can be revisited after launch.
   - **Deliberate differences from git:**
-    - POSIX classes (`[[:digit:]]`) aren't supported: the rule is dropped with a problem, and the file stays in the scan;
+    - POSIX classes (`[[:digit:]]`) aren't supported: any `[:` inside a class drops the rule with a problem (even `[[:x]`, which git reads as a plain class), and the file stays in the scan;
+    - a `/` inside a class (`a[!/]b`, `[a/]b`), which git accepts, makes the class read as unclosed, so the rule is dropped with a problem;
     - matching is case-sensitive, while git defaults to case-insensitive on macOS and Windows;
     - unclosed classes and trailing backslashes match nothing, as in git, but are reported as problems.
 - **Consequences:**
