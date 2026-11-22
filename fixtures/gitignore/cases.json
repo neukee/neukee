@@ -1,0 +1,754 @@
+{
+  "gitVersion": "git version 2.56.1",
+  "cases": [
+    {
+      "name": "star matches a basename",
+      "files": {
+        "": "*.log\n"
+      },
+      "path": "a.log",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "star matches at any depth",
+      "files": {
+        "": "*.log\n"
+      },
+      "path": "src/deep/a.log",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "star needs the whole name",
+      "files": {
+        "": "*.log\n"
+      },
+      "path": "a.log.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "question mark is one character",
+      "files": {
+        "": "a?c\n"
+      },
+      "path": "abc",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "question mark needs a character",
+      "files": {
+        "": "a?c\n"
+      },
+      "path": "ac",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "class member",
+      "files": {
+        "": "[abc].txt\n"
+      },
+      "path": "b.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "class non-member",
+      "files": {
+        "": "[abc].txt\n"
+      },
+      "path": "d.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "class range",
+      "files": {
+        "": "[a-c].txt\n"
+      },
+      "path": "b.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "negated class with !",
+      "files": {
+        "": "[!a-c].txt\n"
+      },
+      "path": "d.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "negated class excludes members",
+      "files": {
+        "": "[!a-c].txt\n"
+      },
+      "path": "b.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "negated class with ^",
+      "files": {
+        "": "[^a-c].txt\n"
+      },
+      "path": "d.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "leading ] is a member",
+      "files": {
+        "": "[]a].txt\n"
+      },
+      "path": "].txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "leading ] class still has a",
+      "files": {
+        "": "[]a].txt\n"
+      },
+      "path": "a.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "range starting at ]",
+      "files": {
+        "": "[]-a].txt\n"
+      },
+      "path": "^.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "range starting at ] excludes b",
+      "files": {
+        "": "[]-a].txt\n"
+      },
+      "path": "b.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "reversed range keeps its first char",
+      "files": {
+        "": "[z-a].txt\n"
+      },
+      "path": "z.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "reversed range matches nothing else",
+      "files": {
+        "": "[z-a].txt\n"
+      },
+      "path": "m.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "trailing dash is literal",
+      "files": {
+        "": "[a-].txt\n"
+      },
+      "path": "-.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "escaped ] inside a class",
+      "files": {
+        "": "[\\]].txt\n"
+      },
+      "path": "].txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "escaped dash inside a class is literal",
+      "files": {
+        "": "[a\\-z].txt\n"
+      },
+      "path": "-.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "escaped dash inside a class is no range",
+      "files": {
+        "": "[a\\-z].txt\n"
+      },
+      "path": "m.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "escaped range end",
+      "files": {
+        "": "[a-\\z].txt\n"
+      },
+      "path": "m.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "negated class with a leading ]",
+      "files": {
+        "": "[!]a].txt\n"
+      },
+      "path": "b.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "negated class with a leading ] excludes ]",
+      "files": {
+        "": "[!]a].txt\n"
+      },
+      "path": "].txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "escape at the end of a class is unclosed",
+      "files": {
+        "": "[a\\\n"
+      },
+      "path": "a",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "trailing backslash keeps trailing spaces",
+      "files": {
+        "": "foo \\\n"
+      },
+      "path": "foo ",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "unclosed class matches nothing",
+      "files": {
+        "": "[ab\n"
+      },
+      "path": "[ab",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "unclosed class is not a prefix",
+      "files": {
+        "": "[ab\n"
+      },
+      "path": "a",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "escaped star is literal",
+      "files": {
+        "": "\\*.txt\n"
+      },
+      "path": "*.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "escaped star needs a star",
+      "files": {
+        "": "\\*.txt\n"
+      },
+      "path": "a.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "escaped bracket is literal",
+      "files": {
+        "": "\\[a]\n"
+      },
+      "path": "[a]",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "trailing spaces are trimmed",
+      "files": {
+        "": "foo  \n"
+      },
+      "path": "foo",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "escaped trailing space is kept",
+      "files": {
+        "": "foo\\ \n"
+      },
+      "path": "foo ",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "comment line",
+      "files": {
+        "": "#foo\n"
+      },
+      "path": "#foo",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "escaped hash",
+      "files": {
+        "": "\\#foo\n"
+      },
+      "path": "#foo",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "negation re-includes",
+      "files": {
+        "": "*.log\n!keep.log\n"
+      },
+      "path": "keep.log",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "negation leaves others",
+      "files": {
+        "": "*.log\n!keep.log\n"
+      },
+      "path": "a.log",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "escaped bang is literal",
+      "files": {
+        "": "\\!x\n"
+      },
+      "path": "!x",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "directory-only rule on a directory",
+      "files": {
+        "": "build/\n"
+      },
+      "path": "build",
+      "isDirectory": true,
+      "ignored": true
+    },
+    {
+      "name": "directory-only rule skips a file",
+      "files": {
+        "": "build/\n"
+      },
+      "path": "build",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "directory-only rule at any depth",
+      "files": {
+        "": "build/\n"
+      },
+      "path": "src/build",
+      "isDirectory": true,
+      "ignored": true
+    },
+    {
+      "name": "anchored rule at root",
+      "files": {
+        "": "/a\n"
+      },
+      "path": "a",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "anchored rule not below root",
+      "files": {
+        "": "/a\n"
+      },
+      "path": "b/a",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "anchored ? does not cross /",
+      "files": {
+        "": "/a?b\n"
+      },
+      "path": "a/b",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "anchored star at root",
+      "files": {
+        "": "/*.js\n"
+      },
+      "path": "b.js",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "anchored star does not cross /",
+      "files": {
+        "": "/*.js\n"
+      },
+      "path": "src/b.js",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "whitelist: re-included folder",
+      "files": {
+        "": "/*\n!/src\n"
+      },
+      "path": "src/x.js",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "whitelist: everything else",
+      "files": {
+        "": "/*\n!/src\n"
+      },
+      "path": "other.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "middle slash anchors",
+      "files": {
+        "": "a/b\n"
+      },
+      "path": "a/b",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "middle slash is not at any depth",
+      "files": {
+        "": "a/b\n"
+      },
+      "path": "x/a/b",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "leading globstar at root",
+      "files": {
+        "": "**/a\n"
+      },
+      "path": "a",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "leading globstar at depth",
+      "files": {
+        "": "**/a\n"
+      },
+      "path": "x/y/a",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "trailing globstar inside",
+      "files": {
+        "": "a/**\n"
+      },
+      "path": "a/x",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "trailing globstar deep inside",
+      "files": {
+        "": "a/**\n"
+      },
+      "path": "a/x/y",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "trailing globstar not the folder itself",
+      "files": {
+        "": "a/**\n"
+      },
+      "path": "a",
+      "isDirectory": true,
+      "ignored": false
+    },
+    {
+      "name": "middle globstar zero folders",
+      "files": {
+        "": "a/**/b\n"
+      },
+      "path": "a/b",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "middle globstar many folders",
+      "files": {
+        "": "a/**/b\n"
+      },
+      "path": "a/x/y/b",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "double globstar matches everything",
+      "files": {
+        "": "**/**\n"
+      },
+      "path": "x/y",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "double globstar at top level",
+      "files": {
+        "": "**/**\n"
+      },
+      "path": "x",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "triple star is a star",
+      "files": {
+        "": "***\n"
+      },
+      "path": "a",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "double star mid-name is a star",
+      "files": {
+        "": "a**b\n"
+      },
+      "path": "axxb",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "empty segment matches nothing",
+      "files": {
+        "": "a//b\n"
+      },
+      "path": "a/b",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "? matches one byte, not one character",
+      "files": {
+        "": "a?b\n"
+      },
+      "path": "aéb",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "?? matches a two-byte character",
+      "files": {
+        "": "a??b\n"
+      },
+      "path": "aéb",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "nested negation wins",
+      "files": {
+        "": "*.log\n",
+        "sub": "!keep.log\n"
+      },
+      "path": "sub/keep.log",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "nested file does not reach the root",
+      "files": {
+        "": "*.log\n",
+        "sub": "!keep.log\n"
+      },
+      "path": "keep.log",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "nested anchored rule",
+      "files": {
+        "sub": "/x.js\n"
+      },
+      "path": "sub/x.js",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "nested anchored rule not deeper",
+      "files": {
+        "sub": "/x.js\n"
+      },
+      "path": "sub/y/x.js",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "nested rule stays in its folder",
+      "files": {
+        "sub": "*.tmp\n"
+      },
+      "path": "other/a.tmp",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "nested rule reaches deeper",
+      "files": {
+        "sub": "*.tmp\n"
+      },
+      "path": "sub/deep/a.tmp",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "excluded parent cannot be re-included",
+      "files": {
+        "": "dir/\n!dir/keep.txt\n"
+      },
+      "path": "dir/keep.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "children of a parent can be re-included",
+      "files": {
+        "": "dir/*\n!dir/keep.txt\n"
+      },
+      "path": "dir/keep.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "star excludes folders, so their files stay out",
+      "files": {
+        "": "*\n!*.js\n"
+      },
+      "path": "dir/x.js",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "star and re-include at top level",
+      "files": {
+        "": "*\n!*.js\n"
+      },
+      "path": "x.js",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "CRLF line endings",
+      "files": {
+        "": "a.txt\r\nb.txt\r\n"
+      },
+      "path": "b.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "lone CR does not split lines (first)",
+      "files": {
+        "": "a.txt\rb.txt\n"
+      },
+      "path": "a.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "lone CR does not split lines (second)",
+      "files": {
+        "": "a.txt\rb.txt\n"
+      },
+      "path": "b.txt",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "byte order mark is skipped",
+      "files": {
+        "": "﻿a.txt\n"
+      },
+      "path": "a.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "blank and whitespace lines",
+      "files": {
+        "": "\n   \n\t\n"
+      },
+      "path": "x",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "slash alone matches nothing",
+      "files": {
+        "": "/\n"
+      },
+      "path": "x",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "case-sensitive",
+      "files": {
+        "": "*.LOG\n"
+      },
+      "path": "a.log",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
+      "name": "last match wins",
+      "files": {
+        "": "!a.txt\na.txt\n"
+      },
+      "path": "a.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "no rules",
+      "files": {
+        "": ""
+      },
+      "path": "a.txt",
+      "isDirectory": false,
+      "ignored": false
+    }
+  ]
+}
