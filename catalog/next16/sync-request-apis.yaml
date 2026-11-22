@@ -12,8 +12,9 @@ message: >-
   metadata image routes) and searchParams (in pages) can only be accessed asynchronously.
   Next.js 15 kept temporary synchronous compatibility; Next.js 16 removes it.
 fix: >-
-  Run `npx @next/codemod@canary next-async-request-api .`, then await the remaining call sites
-  (or use React's use() in synchronous Client Components).
+  Run `npx @next/codemod@canary next-async-request-api .`, then resolve the codemod's error
+  comments and `UnsafeUnwrapped` casts. In synchronous Client Components, use React's `use` where
+  appropriate.
 sourceUrl: https://nextjs.org/docs/app/guides/upgrading/version-16#async-request-apis-breaking-change
 fixtures:
   positive: fixtures/rules/next16-sync-request-apis/positive

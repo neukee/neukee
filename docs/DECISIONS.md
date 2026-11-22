@@ -4,6 +4,25 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-014 · Catalog layout and loader rules (2026-11-22)
+
+- **Context:** T-003 builds `loadCatalog`. The task says "id matches file path", and catalog/README.md had suggested `catalog/<tool>/<name>.yaml`. With that layout one id could live in two folders, and `node24/x` and `node26/x` would collide. The reviewer subagent also found that the loader crashed on one bad file and that a runtime check for fixture folders would fail in the npm package.
+- **Decision:**
+  - **Path = id:** an entry lives at `catalog/<id>.yaml` (`catalog/next16/sync-request-apis.yaml`). Duplicate ids are impossible, and ids with three or more segments map to nested folders.
+  - **Official hosts:** `nextjs.org`, `nodejs.org`, `react.dev`, `www.prisma.io`, over https. Adding a host needs a line in this ADR, approved through its PR.
+  - **Closed fields:** unknown keys are errors. Required: `id`, `title` (one line), `applies.tool`, `applies.introducedIn` (`x.y.z`), `severity`, `detector`, `message`, `sourceUrl`, `fixtures.positive`, `fixtures.negative`. Optional: `fix`.
+  - **Fixtures:** the loader checks that both paths sit under the top-level `fixtures/` folder. The real-catalog test checks that the folders exist, because the npm package ships the catalog without fixtures.
+  - **YAML as untrusted input:**
+    - The catalog is ours, but the guards cost little: core schema only, and any parser warning is fatal, which rejects custom tags (`!!js/function`, YAML 1.1 `!!binary`) and merge keys.
+    - The library caps aliases, which stops alias bombs.
+    - Files over 64 KiB are rejected, symlinks are not followed, and the extension must be lowercase `.yaml`.
+  - **One bad file never stops the load.** It becomes one error naming the file (the first problem found), and the other entries still load. Entries are sorted by id and errors by file.
+  - **Everything under `catalog/` is an entry,** so other data, such as Node release dates for T-014, lives elsewhere.
+- **Consequences:**
+  - catalog/README.md and ARCHITECTURE §3 and §6 describe the new layout.
+  - ARCHITECTURE §6's example is now the real entry, whose text was checked against the Next.js 16 guide.
+  - T-014 picks a location outside `catalog/` for release data.
+
 ## ADR-013 · Launch scope and date: Option A, launch Tuesday Dec 8 (2026-11-22)
 
 - **Context:** at the 2026-11-22 wrap, 33 tasks remained up to the Dec 5 validation checkpoint, with 13 days left. The measured pace was about 1 task per session. The full plan didn't fit.

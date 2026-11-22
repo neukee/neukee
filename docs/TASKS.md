@@ -40,13 +40,13 @@
 
 ### T-003 · Catalog format, loader and validator
 
-- Status: todo
+- Status: done
 - Depends on: T-002
 - Human review: no
 - Build: `loadCatalog(dir)` in `packages/core` reads `catalog/**/*.yaml`, validates each entry (required fields, `id` matches file path, `sourceUrl` is https and on an allowed official domain list, severity valid, fixture paths exist), returns typed entries. Validate `id` with the same grammar as the report's `ruleId` (ADR-011); share one pattern from core rather than copying it. Add one real entry: `next16/sync-request-apis` (verify its text against the Next.js 16 upgrade guide; paste the exact URL).
 - Done when:
-  - [ ] Invalid entries (missing source, unknown severity, missing fixture) produce clear errors naming the file.
-  - [ ] A test fails if any entry in `catalog/` lacks a source or fixtures.
+  - [x] Invalid entries (missing source, unknown severity, missing fixture) produce clear errors naming the file.
+  - [x] A test fails if any entry in `catalog/` lacks a source or fixtures. The real-catalog test checks that sources are official and that fixture folders exist (ADR-014).
 
 ### T-004 · Fixture harness, snapshots and dependency rule
 
@@ -108,7 +108,7 @@
 - Status: todo
 - Depends on: T-011, T-012, T-013
 - Human review: no
-- Build: `catalog/node/releases.yaml` with each Node major's end-of-life date (source: the official Node.js release schedule). Findings: `runtime/below-target`, `runtime/sources-disagree`, `runtime/end-of-life`.
+- Build: Node release data (not under `catalog/`, where every `*.yaml` is an entry, ADR-014; for example `packages/core/data/node-releases.yaml`) with each Node major's end-of-life date (source: the official Node.js release schedule). Findings: `runtime/below-target`, `runtime/sources-disagree`, `runtime/end-of-life`.
 - Done when: a fixture where `.nvmrc` says 24 but the Dockerfile says 20 produces `sources-disagree` pointing at both lines.
 
 ### T-015 · Lockfile: package-lock.json
