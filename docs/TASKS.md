@@ -61,12 +61,12 @@
 
 ### T-005 · File discovery
 
-- Status: todo
+- Status: in progress
 - Depends on: T-004
 - Human review: no
 - Build: Walk the repo: respect `.gitignore` (nested too), always skip `node_modules`, `.git`, `.next`, `dist`, `build`, `coverage`; skip files over 1 MB (record as skipped); never follow symlinks outside the root; return repo-relative paths with forward slashes on all OSes. A path that fails the report schema's `RepoPath` pattern (ADR-011; test against the pattern itself, exported from core, rather than restating its rules) is skipped with a diagnostic that has no `file`.
 - Done when:
-  - [ ] Fixture with nested `.gitignore`, a symlink pointing outside, a 2 MB file and a `node_modules` folder gives exactly the expected file list.
+  - [x] Fixture with nested `.gitignore`, a symlink pointing outside, a 2 MB file and a `node_modules` folder gives exactly the expected file list.
   - [ ] Test passes on Windows in CI (paths use `/`).
   - [ ] Each scanned file is read through a single handle: open it, `fstat` that handle, and read at most the size cap from it. Anything that isn't a regular file is skipped. Use no-follow where the platform supports it (`O_NOFOLLOW`); otherwise `lstat` plus `realpath` containment inside the scan root. Tests run in Linux and Windows CI. (Scanned repos are hostile; ARCHITECTURE §7.)
 

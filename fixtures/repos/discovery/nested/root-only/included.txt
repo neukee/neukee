@@ -1,0 +1,1 @@
+The root-anchored ignore does not match this nested directory.

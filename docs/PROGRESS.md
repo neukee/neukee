@@ -4,18 +4,18 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, night IST (T-004 PR open)
-- **Branch:** `t-004-fixture-harness` (PR waiting for merge approval)
-- **Last finished:** T-004 (fixture harness, golden reports, dependency rule). Merged today: PR #6 (T-003).
-- **In progress:** nothing.
-- **Exact next step:** merge the T-004 PR once approved, then `/next` → T-005 (file discovery). T-005 is foundational: it's the first reader of hostile input. After T-005 merges, run `/checkpoint`.
+- **Last updated:** 2026-11-23 (T-005 local quality gates pass; PR not opened)
+- **Branch:** `t-005-file-discovery`
+- **Last finished:** T-004 (fixture harness, golden reports, dependency rule). PR #7 merged at `a1ee2c1`.
+- **In progress:** T-005 (file discovery), foundational: first reader of hostile input.
+- **Exact next step:** complete independent review, push/open T-005 PR, request CodeRabbit and verify Linux/Windows CI. Do not start T-006. After T-005 merges, run `/checkpoint`.
 - **Standing instructions (Sreeram, 2026-11-22) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - After T-005 merges, run `/checkpoint` before the next task and report the pace against the Dec 7 checkpoint.
 - **Blocked / waiting on Sreeram:**
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (15 days). Launch Tuesday, Dec 8 (16 days). 25 tasks to launch after T-004 (ADR-013).
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (14 days). Launch Tuesday, Dec 8 (15 days). Re-measure pace after T-005 merges.
 
 ## Dated checkpoints
 
@@ -34,7 +34,7 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 ## Current state
 
 - **Phase:** 0 — Foundation
-- **Current task:** T-003 (Claude), next session
+- **Current task:** T-005 — file discovery
 - **Scanner launch target:** Tuesday, December 8, 2026 (ADR-013)
 - **On track?** Not yet measured. Run `/checkpoint` after T-005.
 
@@ -112,6 +112,15 @@ Sreeram's notes and each session's summary. Newest first.
 - New tasks: T-006 change-signature schema, T-027 MergeWarden comparison, T-037 corpus job, T-038 mutation score target, T-056 UpgradeBench; E-001 reframed as the competitive spike.
 
 ## Log (task entries)
+
+### 2026-11-23 · T-005 · File discovery — in progress
+
+- Added bounded repository discovery with nested `.gitignore` rules, deterministic forward-slash RepoPaths, generated-directory and symlink skips, size limits, and single-handle reads with `fstat`.
+- Exported the RepoPath pattern from core as required by T-005, rather than duplicating schema validation.
+- Tests cover an exact file list, nested ignore rules and negation, CRLF/empty lines, character classes, empty and oversized files, an external symlink, invalid paths without `Diagnostic.file`, and report statistics.
+- Updated `fixtures/expected/empty.json` intentionally: the empty fixture contains a README, so discovery now reports one scanned file instead of zero.
+- A failing regression test caught and fixed `dir/**` incorrectly excluding `dir` itself, which prevented a nested negation from re-including a file.
+- `pnpm check:all` passes locally on macOS (391 tests). Linux/Windows CI and CodeRabbit review are pending. The independent reviewer agent timed out before returning a result.
 
 ### 2026-11-22 · T-004 · Fixture harness, snapshots and dependency rule — done
 

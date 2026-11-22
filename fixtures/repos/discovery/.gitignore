@@ -1,0 +1,6 @@
+# Ignore common generated files.
+ignored-root.txt
+*.log
+*.tmp
+/root-only/
+[0-9].cache

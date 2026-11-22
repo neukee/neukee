@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { Diagnostic, Finding, Location, ScanReport, Target } from "./index.js";
-import { validateReport } from "./index.js";
+import { repoPathPattern, validateReport } from "./index.js";
 import {
   type SchemaNode,
   SUPPORTED_FORMATS,
@@ -115,6 +115,10 @@ describe("validateReport: valid reports", () => {
     "my dir/a b.ts",
   ])("accepts the real repo path %j", (file) => {
     expect(validateReport(changed(["findings", 0, "locations", 0, "file"], file)).valid).toBe(true);
+  });
+
+  it("exports the RepoPath pattern from the report schema", () => {
+    expect(repoPathPattern()).toBe(def("RepoPath").pattern);
   });
 
   it.each([

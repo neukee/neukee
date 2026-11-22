@@ -1,0 +1,1 @@
+A file that must not match the anchored directory ignore.
