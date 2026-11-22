@@ -1,0 +1,13 @@
+# Keep LF line endings everywhere so Biome and the tests behave the same on Linux, macOS and Windows.
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tgz binary
+
+# Fixtures that test Windows line endings keep CRLF exactly as committed.
+fixtures/**/crlf/** -text
