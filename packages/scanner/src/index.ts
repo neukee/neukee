@@ -1,4 +1,7 @@
 import type { Diagnostic } from "@neukee/core";
+
+export { scan } from "./scan.js";
+
 import { parseSync } from "oxc-parser";
 
 export interface SyntaxCheck {
