@@ -6,10 +6,9 @@ Work that a qualified person must look at. Claude adds items when a task is mark
 
 ## Waiting for review
 
-_Nothing waiting._
-
-| Added | Task | What to check | Files | Risk if wrong |
-| ----- | ---- | ------------- | ----- | ------------- |
+| Added      | Task   | What to check                                                                                                                                                                                                                                                                                | Files                               | Risk if wrong                                                                                      |
+| ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 2026-11-23 | T-005a | Sreeram: confirm the work budget of 1,000,000 matching steps per path (ADR-015, default). Worst hostile case ≈ 10 ms per path; a heavy real `.gitignore` uses ≈ 1.2 ms. Also decide whether a total budget for the whole scan is needed (≈ 100 s worst case for 10,000 hostile paths today). | `packages/scanner/src/gitignore.ts` | Too low: real repos get "too-costly" and scan files they ignore. Too high: hostile repos stall CI. |
 
 ## Follow-ups (logged, not fixed)
 
@@ -21,6 +20,9 @@ Minor findings deliberately left for later (CLAUDE.md "Merging": after the third
 | 2026-11-22 | PR #4, CodeRabbit | The untracked-file count splits names with spaces at `xargs`. Use NUL-delimited paths (`git ls-files -z`, `grep -z`, `xargs -0`) if such files ever appear.                                                                                                                                                                                        | `.claude/agents/reviewer.md`        |
 | 2026-11-22 | T-004 review      | `packages/cli/src/run.ts` reads `package.json` with an unchecked `as` (T-000 code), which the Quality bar forbids for runtime reads. Validate the parsed value when T-033 rewrites the CLI.                                                                                                                                                        | `packages/cli/src/run.ts`           |
 | 2026-11-23 | PR #7, CodeRabbit | The dependency-direction test's trivia matcher handles CR/LF but not U+2028/U+2029 line terminators or all ECMAScript whitespace. A forbidden import after a line comment using those separators may evade the test guard; revisit with explicit regressions if this guard is expanded. Deferred after the third minor review round per CLAUDE.md. | `test/dependency-direction.test.ts` |
+| 2026-11-23 | T-005a review     | `fixtures/gitignore/generate.mjs` starts processes and deletes folders, but Biome, typecheck and Knip skip `fixtures/` (Biome can't re-include one file from an excluded folder). Move the `CASES` data to a JSON file beside it and the ~50-line script to `scripts/`, so it is linted.                                                           | `fixtures/gitignore/generate.mjs`   |
+| 2026-11-23 | T-005a review     | Invalid UTF-8 in a `.gitignore` or a file name decodes to U+FFFD on both sides, so a rule could match a name it shouldn't (the unsafe direction). Git cuts a rule at a NUL byte; we keep it (safe direction). Decide in T-005b follow-up whether to compare raw bytes.                                                                             | `packages/scanner/src/discover.ts`  |
+| 2026-11-23 | T-005a review     | macOS may store a file name decomposed (NFD) while the rule is composed (NFC), so the rule doesn't match and the file is scanned (fail open). Revisit if users report noise from ignored files with accented names.                                                                                                                                | `packages/scanner/src/gitignore.ts` |
 
 ## Reviewed
 

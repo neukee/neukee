@@ -124,12 +124,17 @@ Sreeram's notes and each session's summary. Newest first.
   - rules are parsed once into tokens, with no regular expressions built from rule text;
   - matching works on UTF-8 bytes;
   - repeated `**` segments collapse;
-  - classes are merged ranges searched by bisection.
+  - classes are 256-bit sets.
 - Tests:
-  - It agrees with **real git** on all 90 cases of `fixtures/gitignore/cases.json` (generated once by `fixtures/gitignore/generate.mjs` with git 2.56.1; git never runs in tests).
+  - It agrees with **real git** on all 103 cases of `fixtures/gitignore/cases.json` (generated once by `fixtures/gitignore/generate.mjs` with git 2.56.1, in an environment cut off from the developer's git config; git never runs in tests). The generator passes paths as `./path`, so a leading `:` isn't read as pathspec magic; that changed only the newest case, no earlier one.
   - Over-long, POSIX-class, unclosed, trailing-backslash, empty, CRLF and BOM input is covered.
-  - Six hostile shapes from the review, 2,000 maximal rules each, take about 0.1–0.4 s per file.
-- Mutation score of `gitignore.ts`: 89.8% (the old matcher scored 46%). The remaining survivors are equivalent or only change speed.
+- CodeRabbit (PR #9), fixed: generator isolation, `***/` as a globstar, escaped `\/` as a separator, and `a/**\/b` needing at least one folder (git's zero-folder shortcut needs a plain `/`). CodeRabbit approved `eb45eb0`.
+- Reviewer subagent: **CHANGES REQUIRED**, now fixed:
+  - Segment-heavy rules at the caps took 3–19 s per path; the earlier "0.1–0.4 s per file" claim was wrong. Each path now gets a work budget of 1,000,000 steps; past it the answer is "too-costly" and the caller keeps the path (fail open). The worst hostile shapes now take about 10 ms per path; a heavy real-world `.gitignore` takes about 1.2 ms and never reaches the budget. The budget number is a default waiting for Sreeram (REVIEW-QUEUE, ADR-015).
+  - The hostile-input tests now include the reviewer's shapes (512-segment rules, 1,100-segment paths, 255-byte names).
+  - `cases.json` is shape-checked before use (no `any` from a runtime read).
+  - Also: shared tokens (memory), class bitmap (simpler), BOM written as an escape, accurate problem reasons for `[:` and for a class split by `/`. Three items logged as follow-ups.
+- Mutation score of `gitignore.ts`: 89.0%, measured before the six newest git cases, which target several of the survivors (trailing `*`, class member order, `[` and `:` inside a class, escaped space before a trailing space, a rule matching only a parent). Most of the rest are guards whose removal changes no answer: the empty-line check, and the depth reject and early exit, which only save time.
 - TASKS: T-005 is now T-005a (done) and T-005b (the walker; PR #8 reworked next). T-010, T-015 and T-021 now depend on T-005b.
 
 ### 2026-11-22 · T-004 · Fixture harness, snapshots and dependency rule — done
