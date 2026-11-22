@@ -38,6 +38,7 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 - **Every merge needs Sreeram's approval.** He may give it in advance for a specific PR, with conditions.
 - **Merge only when** every CI check is green, CodeRabbit has reviewed the latest commit, and every review thread is resolved. Squash-merge and delete the branch (`gh pr merge <n> --squash --delete-branch`), then `git switch main` and `git pull`.
 - **Minor CodeRabbit findings** in docs, comments, tests or tooling: fix them, reply on the thread, and continue under the existing approval. List each one in the merge summary.
+- **If a PR gets a third round of minor findings, stop fixing.** Log the rest as follow-ups in `docs/REVIEW-QUEUE.md`, resolve each thread with a short reply, and merge under the existing approval.
 - **Stop and ask Sreeram** if a finding touches product code behavior, core types or the report schema, security, CI workflows or permissions, or dependencies, or if you disagree with CodeRabbit.
 
 ## Rules (non-negotiable)
