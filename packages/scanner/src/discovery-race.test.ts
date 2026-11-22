@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, join as joinPath } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const race = vi.hoisted(() => ({
@@ -18,6 +18,12 @@ vi.mock("node:fs", async (importOriginal) => {
   return {
     ...actual,
     openSync: (...args: Parameters<typeof actual.openSync>) => {
+      if (race.mode === "file-link" && !race.didSwap && args[0] === race.target) {
+        race.didSwap = true;
+        actual.unlinkSync(race.target);
+        actual.symlinkSync(join(race.outside, "secret.txt"), race.target);
+        return actual.openSync(...args);
+      }
       if (race.mode === "open-persist" && !race.didSwap && args[0] === race.target) {
         race.didSwap = true;
         actual.renameSync(race.nested, race.moved);
@@ -39,6 +45,9 @@ vi.mock("node:fs", async (importOriginal) => {
     },
     readdirSync: (...args: Parameters<typeof actual.readdirSync>) => {
       const entries = actual.readdirSync(...args);
+      if (race.mode === "reverse" && args[0] === race.root && Array.isArray(entries)) {
+        return [...entries].reverse() as typeof entries;
+      }
       if (race.mode === "readdir" && !race.didSwap && args[0] === race.root) {
         race.didSwap = true;
         actual.renameSync(race.nested, race.moved);
@@ -128,5 +137,40 @@ describe("discovery path races", () => {
     expect(race.didSwap).toBe(true);
     expect(files.some((file) => file.content === "outside")).toBe(false);
     expect(events.some((event) => event.type === "skipped")).toBe(true);
+  });
+
+  // Creating a file symlink on Windows needs extra privileges, and there O_NOFOLLOW doesn't exist;
+  // the lstat pre-check covers it instead.
+  it.skipIf(process.platform === "win32")(
+    "refuses a file swapped for a link to an outside file just before it is opened",
+    async () => {
+      await setupRace();
+      race.mode = "file-link";
+
+      const events = Array.from(discoverFiles(race.root));
+      const files = events.flatMap((event) => (event.type === "file" ? [event.file] : []));
+      expect(race.didSwap).toBe(true);
+      expect(files.some((file) => file.content === "outside")).toBe(false);
+      expect(events).toContainEqual({
+        type: "diagnostic",
+        diagnostic: {
+          level: "warning",
+          message: "Could not read file.",
+          file: "nested/secret.txt",
+        },
+      });
+    },
+  );
+
+  it("returns files in name order whatever order the file system lists them", async () => {
+    await setupRace();
+    await writeFile(joinPath(race.root, "a.txt"), "a");
+    await writeFile(joinPath(race.root, "z.txt"), "z");
+    race.mode = "reverse";
+
+    const files = Array.from(discoverFiles(race.root)).flatMap((event) =>
+      event.type === "file" ? [event.file.path] : [],
+    );
+    expect(files).toEqual(["a.txt", "nested/secret.txt", "z.txt"]);
   });
 });
