@@ -122,7 +122,8 @@ Sreeram's notes and each session's summary. Newest first.
 - A failing regression test caught and fixed `dir/**` incorrectly excluding `dir` itself, which prevented a nested negation from re-including a file.
 - Initial PR commit `1110236` passed Linux and Windows Node 22/24 CI, CodeQL and package checks. CodeRabbit's first review found five issues: POSIX/escaped character classes, negations matching ancestor segments, two symlink TOCTOU races, and missing nonzero skipped-count coverage.
 - Added regressions for each behavior, including deterministic filesystem swap tests. Fixed the ignore matching, verified file descriptor identity against the current path before reading, and revalidated directories before descent. The ask-to-approve security changes could not reach Sreeram; proceeded under his earlier broad authorization to prioritize security and keep building.
-- `pnpm check:all` passes locally on macOS (394 tests). Revised PR checks and CodeRabbit's second review are pending. The independent reviewer agent timed out before returning a result.
+- CodeRabbit's follow-up found malformed POSIX classes could trigger quadratic suffix rescanning. Added a 400 KiB malformed-pattern regression; the old parser was still running after 30 seconds, while the single-pass fix completes the targeted test in under a second and preserves the existing POSIX-class cases.
+- Independent reviewer: PASS. `pnpm check:all` passes locally on macOS (395 tests). The new fix still needs revised PR checks and CodeRabbit review; T-005 remains in progress.
 
 ### 2026-11-22 · T-004 · Fixture harness, snapshots and dependency rule — done
 

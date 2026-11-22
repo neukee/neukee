@@ -83,29 +83,6 @@ function parseIgnoreRules(contents: string, basePath: string): IgnoreRule[] {
   return rules;
 }
 
-function classEnd(pattern: string, start: number): number {
-  let index = start + 1;
-  if (pattern[index] === "!" || pattern[index] === "^") index++;
-  if (pattern[index] === "]") index++;
-
-  while (index < pattern.length) {
-    if (pattern[index] === "\\") {
-      index += 2;
-      continue;
-    }
-    if (pattern[index] === "[" && pattern[index + 1] === ":") {
-      const end = pattern.indexOf(":]", index + 2);
-      if (end >= 0) {
-        index = end + 2;
-        continue;
-      }
-    }
-    if (pattern[index] === "]") return index;
-    index++;
-  }
-  return -1;
-}
-
 function matchesPosixClass(name: string, value: string): boolean {
   const code = value.charCodeAt(0);
   const alpha = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
@@ -145,45 +122,84 @@ function matchesPosixClass(name: string, value: string): boolean {
   }
 }
 
-function classMatch(
+function matchesClassCharacters(
   pattern: string,
   start: number,
+  end: number,
   value: string,
-): { end: number; matches: boolean } | undefined {
-  const end = classEnd(pattern, start);
-  if (end < 0) return undefined;
-  let index = start + 1;
-  const negated = pattern[index] === "!" || pattern[index] === "^";
-  if (negated) index++;
+): boolean {
   let matched = false;
-
+  let index = start;
   while (index < end) {
     if (pattern[index] === "\\") {
       if (pattern[index + 1] === value) matched = true;
       index += 2;
       continue;
     }
-    if (pattern[index] === "[" && pattern[index + 1] === ":") {
-      const posixEnd = pattern.indexOf(":]", index + 2);
-      if (posixEnd >= 0 && posixEnd < end) {
-        matched ||= matchesPosixClass(pattern.slice(index + 2, posixEnd), value);
-        index = posixEnd + 2;
-        continue;
-      }
-    }
     const first = pattern[index] ?? "";
     if (pattern[index + 1] === "-" && index + 2 < end) {
       const last = pattern[index + 2] ?? "";
       if (first <= value && value <= last) matched = true;
       index += 3;
-    } else if (first === value) {
-      matched = true;
-      index++;
     } else {
+      if (first === value) matched = true;
       index++;
     }
   }
-  return { end, matches: negated ? !matched : matched };
+  return matched;
+}
+
+function classMatch(
+  pattern: string,
+  start: number,
+  value: string,
+): { end: number; matches: boolean } | undefined {
+  let index = start + 1;
+  const negated = pattern[index] === "!" || pattern[index] === "^";
+  if (negated) index++;
+  let matched = false;
+  if (pattern[index] === "]") {
+    if (value === "]") matched = true;
+    index++;
+  }
+  let charactersStart = index;
+
+  while (index < pattern.length) {
+    if (pattern[index] === "\\") {
+      index += 2;
+      continue;
+    }
+    if (pattern[index] === "[" && pattern[index + 1] === ":") {
+      matched ||= matchesClassCharacters(pattern, charactersStart, index, value);
+      const posixStart = index;
+      index += 2;
+      while (index < pattern.length) {
+        if (pattern[index] === "\\") {
+          index += 2;
+          continue;
+        }
+        if (pattern[index] === "]") {
+          if (pattern[index - 1] === ":") {
+            matched ||= matchesPosixClass(pattern.slice(posixStart + 2, index - 1), value);
+            index++;
+            charactersStart = index;
+            break;
+          }
+          matched ||= matchesClassCharacters(pattern, posixStart, index, value);
+          return { end: index, matches: negated ? !matched : matched };
+        }
+        index++;
+      }
+      if (index >= pattern.length) return undefined;
+      continue;
+    }
+    if (pattern[index] === "]") {
+      matched ||= matchesClassCharacters(pattern, charactersStart, index, value);
+      return { end: index, matches: negated ? !matched : matched };
+    }
+    index++;
+  }
+  return undefined;
 }
 
 function matchesSegment(pattern: string, value: string): boolean {

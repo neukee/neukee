@@ -116,4 +116,15 @@ describe("file discovery", () => {
     expect(report.stats).toEqual({ filesScanned: 8, filesSkipped: 0 });
     expect(report.diagnostics).toEqual([]);
   });
+
+  it("handles malformed POSIX classes without rescanning their suffixes", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), `[${"[:".repeat(200_000)}x]`);
+    writeFileSync(join(root, "included.txt"), "included");
+
+    const files = Array.from(discoverFiles(root)).flatMap((event) =>
+      event.type === "file" ? [event.file.path] : [],
+    );
+    expect(files).toContain("included.txt");
+  });
 });
