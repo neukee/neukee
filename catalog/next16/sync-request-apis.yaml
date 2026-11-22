@@ -1,0 +1,21 @@
+# Source: Next.js 16 upgrade guide, "Async Request APIs (Breaking change)".
+# "Starting with Next.js 16, synchronous access is fully removed. These APIs can only be accessed asynchronously."
+id: next16/sync-request-apis
+title: Synchronous request APIs are removed
+applies:
+  tool: next
+  introducedIn: "16.0.0"
+severity: action-required
+detector: ast/sync-request-api
+message: >-
+  cookies(), headers() and draftMode(), params (in layouts, pages, route handlers, default.js and
+  metadata image routes) and searchParams (in pages) can only be accessed asynchronously.
+  Next.js 15 kept temporary synchronous compatibility; Next.js 16 removes it.
+fix: >-
+  Run `npx @next/codemod@canary next-async-request-api .`, then resolve the codemod's error
+  comments and `UnsafeUnwrapped` casts. In synchronous Client Components, use React's `use` where
+  appropriate.
+sourceUrl: https://nextjs.org/docs/app/guides/upgrading/version-16#async-request-apis-breaking-change
+fixtures:
+  positive: fixtures/rules/next16-sync-request-apis/positive
+  negative: fixtures/rules/next16-sync-request-apis/negative

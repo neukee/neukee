@@ -55,7 +55,7 @@ Every place that declares which Node.js version runs the app:
 
 ### 2.3 Native addons — `native/*`
 
-Packages with compiled code break across Node majors when they lack builds for the new version. **At launch (ADR-013, T-020)** the only signal is the lockfile's install-script flag (`hasInstallScript` in npm, and pnpm's equivalent if its format records one), with no version table and no network lookups. **Finding:** this dependency runs an install script, usually a native build, so check it before the Node major upgrade. A per-package table of first compatible versions (`catalog/native-addons.yaml`, each row with a source link) is a possible later addition, not part of v0a.
+Packages with compiled code break across Node majors when they lack builds for the new version. **At launch (ADR-013, T-020)** the only signal is the lockfile's install-script flag (`hasInstallScript` in npm, and pnpm's equivalent if its format records one), with no version table and no network lookups. **Finding:** this dependency runs an install script, usually a native build, so check it before the Node major upgrade. A per-package table of first compatible versions (each row with a source link, kept outside `catalog/`, where every file is an entry) is a possible later addition, not part of v0a.
 
 ### 2.4 Source code rules — `ast/*`
 

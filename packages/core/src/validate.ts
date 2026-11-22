@@ -102,6 +102,18 @@ export function validateReport(value: unknown): ReportValidation {
     : { valid: false, errors };
 }
 
+/**
+ * The report schema's rule-id grammar (ADR-011), so the catalog loader checks entry ids against
+ * the same pattern instead of a copy.
+ */
+export function isRuleId(value: string): boolean {
+  const pattern = reportSchema().$defs?.Finding?.properties?.ruleId?.pattern;
+  if (pattern === undefined) {
+    throw new Error("scan-report schema has no ruleId pattern. Reinstall @neukee/core.");
+  }
+  return compiled(pattern).test(value);
+}
+
 /** The interpreter on its own, for testing the JSON Schema semantics the report schema relies on. */
 export function validateWithSchema(value: unknown, schema: SchemaNode): ValidationError[] {
   const errors: ValidationError[] = [];
@@ -256,7 +268,7 @@ function isRealDateTime(value: string): boolean {
   );
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -278,7 +290,7 @@ function childPath(path: string, key: string): string {
 }
 
 /** A short, safe rendering of a value for an error message. */
-function describe(value: unknown): string {
+export function describe(value: unknown): string {
   if (value === null) return "null";
   if (Array.isArray(value)) return "an array";
   if (typeof value === "object") return "an object";
@@ -293,6 +305,11 @@ function describe(value: unknown): string {
 }
 
 /** ["a", "b", "c"] → `a, b or c` */
-function listOf(items: string[]): string {
+export function listOf(items: string[]): string {
   return items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} or ${items.at(-1)}`;
+}
+
+/** Code-unit order, so a sort never depends on the machine's locale. */
+export function byText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }

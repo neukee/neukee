@@ -43,9 +43,7 @@ neukee/
 ├── CLAUDE.md                 # Project memory for Claude Code (read every session)
 ├── docs/                     # Architecture, specs, tasks, progress, decisions
 ├── catalog/                  # Versioned knowledge: what breaks in each release
-│   ├── node/                 #   one YAML file per entry
-│   ├── next/
-│   └── native-addons.yaml    #   known native packages and their first compatible versions
+│   └── <id>.yaml             #   one YAML file per entry, path = id (e.g. next16/sync-request-apis.yaml)
 ├── packages/
 │   ├── core/                 # Types, report schema, catalog loader. Depends on nothing internal.
 │   ├── scanner/              # Detectors and the scan pipeline. Depends on core.
@@ -163,7 +161,7 @@ The JSON Schema is hand-written (draft 2020-12) and published with `@neukee/core
 
 ## 6. The catalog
 
-The catalog is the product's knowledge and its long-term moat. Each entry is one YAML file:
+The catalog is the product's knowledge and its long-term moat. Each entry is one YAML file at `catalog/<id>.yaml`, where the path is the id (ADR-014). The real first entry, `catalog/next16/sync-request-apis.yaml`:
 
 ```yaml
 id: next16/sync-request-apis
@@ -173,20 +171,27 @@ applies:
   introducedIn: "16.0.0" # the version where this starts to apply
 severity: action-required
 detector: ast/sync-request-api # which code-level detector produces the facts
-message: >
-  `cookies()`, `headers()`, `draftMode()`, `params` and `searchParams` must be awaited.
-  Next.js 15 allowed synchronous access with a warning; Next.js 16 removes it.
-fix: Run `npx @next/codemod@canary upgrade latest`, then fix the call sites it reports.
-sourceUrl: https://nextjs.org/docs/app/guides/upgrading/version-16
+message: >-
+  cookies(), headers() and draftMode(), params (in layouts, pages, route handlers, default.js and
+  metadata image routes) and searchParams (in pages) can only be accessed asynchronously.
+  Next.js 15 kept temporary synchronous compatibility; Next.js 16 removes it.
+fix: >-
+  Run `npx @next/codemod@canary next-async-request-api .`, then resolve the codemod's error
+  comments and `UnsafeUnwrapped` casts. In synchronous Client Components, use React's `use` where
+  appropriate.
+sourceUrl: https://nextjs.org/docs/app/guides/upgrading/version-16#async-request-apis-breaking-change
 fixtures:
   positive: fixtures/rules/next16-sync-request-apis/positive
   negative: fixtures/rules/next16-sync-request-apis/negative
 ```
 
-**Catalog rules (enforced by tests):**
+**Catalog rules (enforced by `loadCatalog` and its tests, ADR-003, ADR-014):**
 
-- Every entry has a `sourceUrl` pointing to an official source. No entry is written from memory.
-- Every entry has a positive fixture (must produce the finding) and a negative fixture (must not).
+- Every entry has a `sourceUrl` on an official host: `nextjs.org`, `nodejs.org`, `react.dev` or `www.prisma.io`. It must be a canonical https URL (unchanged by `new URL()`) with no credentials or port, and the hostname must equal an official host exactly. Adding a host needs an ADR line. No entry is written from memory.
+- Every entry has a positive fixture (must produce the finding) and a negative fixture (must not), both folders under the top-level `fixtures/`. The loader checks the paths; the tests check the folders exist, because the npm package ships the catalog without fixtures.
+- The file path is the id, with the lowercase `.yaml` extension. Fields are closed (no unknown keys). `applies.introducedIn` is `x.y.z`. `title` is one line.
+- Every `catalog/**/*.yaml` is an entry, so data that isn't an entry (such as Node release dates for T-014) lives somewhere else.
+- The loader treats YAML as untrusted even though the catalog is ours: core schema only, any parser warning is fatal (no custom tags), aliases are capped, there's a 64 KiB size limit, and it follows no symlinks. One bad file is an error naming it; the rest still load.
 - Severity is `action-required` only when the change breaks the build or the running app; `warning` for deprecations; `info` for behavior changes worth knowing.
 
 ## 7. Security model
@@ -198,6 +203,7 @@ The scanner reads code that belongs to someone else. Its guarantees:
 3. **No absolute paths or secrets in output.** Paths are repo-relative. File contents are never copied into reports beyond the single line needed to locate a finding.
 4. **Minimal Action permissions.** `contents: read`; `security-events: write` only when the user enables SARIF upload.
 5. **Supply chain.** Few dependencies, pinned Actions, npm provenance, a lockfile committed, Renovate/Dependabot on our own repo.
+6. **Trust boundary.** Catalog files are trusted package content. Every file in a scanned repository is hostile. Readers of scanned files get the full defenses (T-005: one file handle per read, a size cap, regular files only, no-follow or realpath containment). The catalog loader keeps only cheap guards (safe YAML, a size cap, no symlinks); races that need write access to the package folder are out of scope, because that access already allows editing the entries (ADR-014).
 
 ## 8. Quality gate (every change, no exceptions)
 

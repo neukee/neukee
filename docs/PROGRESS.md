@@ -4,21 +4,18 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, 21:45 IST (session wrapped)
-- **Branch:** `chore/session-rules`. It holds Sreeram's CLAUDE.md rules 1–3, the wrap and the ADR-013 scope change, and goes out as one docs-only PR.
-- **Last finished:** T-002 (PR #3, merged). Also merged: PR #2 (Claude runs the PR loop, ADR-010) and PR #4 (Quality bar, ADR-012).
+- **Last updated:** 2026-11-22, late evening IST (T-003 PR open)
+- **Branch:** `t-003-catalog-loader` (PR waiting for merge approval)
+- **Last finished:** T-003 (catalog loader, first entry). Merged today: PR #5 (session rules, wrap, ADR-013 launch scope).
 - **In progress:** nothing.
-- **Exact next step:**
-  1. `/status`.
-  2. On `chore/session-rules`: `git push -u origin HEAD`, then `gh pr create --fill`. It changes only Markdown docs, so merge it under the Merging rules without asking.
-  3. `/next` → T-003 (catalog loader plus the `next16/sync-request-apis` entry). The source read on 2026-11-22: section "Async Request APIs (Breaking change)" at https://nextjs.org/docs/app/guides/upgrading/version-16#async-request-apis-breaking-change, codemod `npx @next/codemod@canary next-async-request-api .`. Re-fetch and confirm it before writing the entry.
+- **Exact next step:** merge the T-003 PR once approved, then `/next` → T-004 (fixture harness, snapshots, dependency rule).
 - **Standing instructions (Sreeram, 2026-11-22) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - After T-005 merges, run `/checkpoint` before the next task and report the pace against the Dec 7 checkpoint.
 - **Blocked / waiting on Sreeram:**
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (15 days). Launch Tuesday, Dec 8 (16 days). 27 tasks to launch (ADR-013).
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (15 days). Launch Tuesday, Dec 8 (16 days). 26 tasks to launch after T-003 (ADR-013).
 
 ## Dated checkpoints
 
@@ -65,6 +62,7 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 | 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                                                                            |
 | 2026-11-22 | T-001 | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI                                           |
 | 2026-11-22 | T-002 | M    | 1               | —             | done   | Schema + validator; reviewer 1 must-fix + 4 should-fix; ~8 CodeRabbit rounds; 3 changes from Sreeram before merge |
+| 2026-11-22 | T-003 | S    | 1               | —             | done   | Catalog loader + first entry; reviewer 3 must-fix + 5 should-fix, all fixed                                       |
 
 ## Daily log
 
@@ -113,6 +111,36 @@ Sreeram's notes and each session's summary. Newest first.
 - New tasks: T-006 change-signature schema, T-027 MergeWarden comparison, T-037 corpus job, T-038 mutation score target, T-056 UpgradeBench; E-001 reframed as the competitive spike.
 
 ## Log (task entries)
+
+### 2026-11-22 · T-003 · Catalog format, loader and validator — done
+
+- `loadCatalog(dir)` in `packages/core` reads `catalog/**/*.yaml` and returns typed entries plus errors naming each bad file. One bad file never stops the load.
+- Rules (ADR-014):
+  - the file path is the id;
+  - closed fields; one-line title; `introducedIn` is `x.y.z`;
+  - official https sources only (nextjs.org, nodejs.org, react.dev, www.prisma.io);
+  - fixture paths under `fixtures/`;
+  - YAML in core schema, with every parser warning fatal; 64 KiB cap; no symlinks; lowercase `.yaml` only.
+- The id grammar comes from the report schema through `isRuleId`, so there is no copy.
+- First entry: `catalog/next16/sync-request-apis.yaml`, checked against the Next.js 16 upgrade guide ("Async Request APIs (Breaking change)"), with minimal positive and negative fixtures for T-022 to extend.
+- Dependency: `yaml` 2.9.1, allowed by ADR-004; zero dependencies, ISC license. Knip now ignores `fixtures/`.
+- Reviewer, first pass, all fixed:
+  - must-fix: a single bad file crashed the whole load (alias bomb, unreadable file);
+  - must-fix: no size cap;
+  - must-fix: duplicate ids were possible. Fixed by making the path the id.
+  - should-fix: untested branches; untested YAML-1.1 guards; copied helpers; symlinks followed; undocumented decisions.
+- Also from the review: fixture-folder existence moved from the loader to the real-catalog test, because the npm package won't ship `fixtures/`. The entry's fix text was trimmed to what the source says. ARCHITECTURE §6's example is now the real entry.
+- Reviewer, second pass: PASS. I took its three optional suggestions:
+  - file-system errors show only their code, never an absolute path;
+  - an unreadable folder is an error, not a crash;
+  - symlinked folders and special files are reported, not skipped.
+- Sreeram confirmed ADR-014, adding two requirements:
+  - duplicate ids are rejected: pinned by a test, since the path rule makes them impossible;
+  - the fixture check requires non-empty folders: a new test-side check, itself tested on temp repos, and shown to fail when a real fixture folder is emptied.
+- CodeRabbit on PR #6:
+  - CodeQL flagged the regex built from host names (a false positive). Replaced with the URL API: canonical https, no credentials or port, exact host. Ten rejection tests cover look-alike suffixes, `host@evil`, credentials, ports including `:443`, http, trailing whitespace, uppercase host, an unofficial host, and a non-URL.
+  - File-swap race hardening declined for the catalog (trusted content, ADR-014) and moved into T-005's done-when for scanned files. ARCHITECTURE §7 now states the trust boundary.
+- Tests: 68 catalog tests; 368 in the whole repo. `pnpm check:all` passes. Source size is 322 lines, about 7% over the ~300 guideline, mostly the robustness fixes.
 
 ### 2026-11-22 · chore · Quality bar (ADR-012)
 
