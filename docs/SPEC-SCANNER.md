@@ -44,18 +44,18 @@ Every place that declares which Node.js version runs the app:
 
 ### 2.2 Lockfiles — `lockfile/*`
 
-| Lockfile                  | Notes                                                                  |
-| ------------------------- | ---------------------------------------------------------------------- |
-| `package-lock.json` v2/v3 | `packages` map; `hasInstallScript` marks packages with install scripts |
-| `pnpm-lock.yaml` (v6–v9)  | Parse with `yaml`; package keys differ between lockfile versions       |
-| `yarn.lock` v1            | Custom text format; use a small hand-written parser with fixtures      |
-| `yarn.lock` Berry (v2+)   | YAML with `__metadata`; ignore Plug'n'Play specifics in v0a            |
+| Lockfile                  | Notes                                                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| `package-lock.json` v2/v3 | `packages` map; `hasInstallScript` marks packages with install scripts                |
+| `pnpm-lock.yaml` (v6–v9)  | Parse with `yaml`; package keys differ between lockfile versions                      |
+| `yarn.lock` v1            | Post-launch (T-017). At launch: a diagnostic, and versions from `package.json` ranges |
+| `yarn.lock` Berry (v2+)   | Post-launch (T-018). At launch: same diagnostic and fallback as v1                    |
 
 **Produces:** resolved versions of every package (direct and transitive) and which are direct dependencies. **Feeds:** framework versions (`next`, `react`, `react-dom`, `prisma`, `@prisma/client`, `express`) and the native-addon detector. A missing lockfile is a diagnostic, not a failure; fall back to `package.json` ranges and say so in the report.
 
 ### 2.3 Native addons — `native/*`
 
-Packages with compiled code break across Node majors when they lack builds for the new version. Signals: `hasInstallScript` (npm), known native packages listed in `catalog/native-addons.yaml` with the first version that supports each Node major (e.g. `sharp`, `bcrypt`, `better-sqlite3`, `canvas`, `node-sass` (unsupported, migrate to `sass`)). **Finding:** installed version below the first compatible version for the target. Every row of `native-addons.yaml` needs a source link (the package's changelog or release notes).
+Packages with compiled code break across Node majors when they lack builds for the new version. **At launch (ADR-013, T-020)** the only signal is the lockfile's install-script flag (`hasInstallScript` in npm, and pnpm's equivalent if its format records one), with no version table and no network lookups. **Finding:** this dependency runs an install script, usually a native build, so check it before the Node major upgrade. A per-package table of first compatible versions (`catalog/native-addons.yaml`, each row with a source link) is a possible later addition, not part of v0a.
 
 ### 2.4 Source code rules — `ast/*`
 

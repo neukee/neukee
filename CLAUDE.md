@@ -62,7 +62,7 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 - **Respect the dependency direction:** `action → cli → scanner → core`; `core` imports nothing internal.
 - **Deterministic output:** sort findings; no timestamps except `scannedAt`; no `Math.random`.
 - **Detectors never throw.** Errors become `Diagnostic` entries; one bad file never stops a scan.
-- **Stop and ask the person** before: changing core types or the report schema, changing CI or release workflows, changing Action permissions, deleting files outside the current task, merging a PR, pushing to `main`, force-pushing, publishing, or deleting branches. Pushing a task branch and opening, commenting on and watching its PR are routine and need no approval (ADR-010).
+- **Stop and ask the person** before: changing core types or the report schema, changing CI or release workflows, changing Action permissions, deleting files outside the current task, merging a PR (except as "Merging" allows: an advance approval, or a PR that changes only Markdown docs or code comments), pushing to `main`, force-pushing, publishing, or deleting branches. Pushing a task branch and opening, commenting on and watching its PR are routine and need no approval (ADR-010).
 
 ## Quality bar (non-negotiable)
 
