@@ -5,11 +5,20 @@ export default defineConfig({
   resolve: {
     // Resolve workspace packages to their TypeScript source during tests.
     conditions: ["@neukee/source"],
-    alias: {
-      "@neukee/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
-      "@neukee/scanner": fileURLToPath(new URL("./packages/scanner/src/index.ts", import.meta.url)),
-      "@neukee/cli": fileURLToPath(new URL("./packages/cli/src/index.ts", import.meta.url)),
-    },
+    alias: [
+      {
+        find: /^@neukee\/core$/,
+        replacement: fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
+      },
+      {
+        find: /^@neukee\/scanner$/,
+        replacement: fileURLToPath(new URL("./packages/scanner/src/index.ts", import.meta.url)),
+      },
+      {
+        find: /^@neukee\/cli$/,
+        replacement: fileURLToPath(new URL("./packages/cli/src/index.ts", import.meta.url)),
+      },
+    ],
   },
   test: {
     include: ["packages/*/src/**/*.test.ts", "test/**/*.test.ts"],
