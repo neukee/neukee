@@ -1,6 +1,6 @@
 # Neukee: Operating Brief for Claude
 
-**Version 1.3 · 2026-11-22 · Owner: Sreeram Venugopal**
+**Version 1.4 · 2026-11-22 · Owner: Sreeram Venugopal**
 
 Read this before doing any work on Neukee, in any session (Claude Code in VS Code, or a Claude chat). The repository copy at `docs/BRIEF.md` is the source of truth. If the copy you are reading has an older version number than the one in the repo, ask for the latest before making decisions.
 
@@ -28,7 +28,7 @@ Claude works on two surfaces, and the repository is the shared memory between th
 
 Neukee is local-first verification for Node.js and Next.js upgrades. It ships as four products:
 
-1. **Free open-source scanner** (launch December 6, 2026). Static analysis of lockfiles, runtime config and code against a sourced catalog of breaking changes. Delivered as a CLI and a GitHub Action.
+1. **Free open-source scanner** (launch Tuesday, December 8, 2026). Static analysis of lockfiles, runtime config and code against a sourced catalog of breaking changes. Delivered as a CLI, with a copy-paste GitHub workflow that uploads SARIF to code scanning. A packaged GitHub Action follows in the first two weeks after launch (ADR-013).
 2. **Paid upgrade audits** (from January).
 3. **Readiness subscription.** Re-scan on every new release, with a fleet report.
 4. **Behavioral engine** (paid pilots February–April). It runs the old and new dependency versions on the customer's own tests, inside their CI. Every observed difference is labeled _expected_, _action required_ or _unexpected_ against the catalog, and each upgrade gets signed evidence for audits.
@@ -90,8 +90,8 @@ We are the **independent verifier**. Tools like Dependabot, Renovate, coding age
 
 | Date       | Must be true                                                                          | If it isn't                                               |
 | ---------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Dec 5      | The scanner runs on 10 public repos and finds real blockers                           | Cut the catalog to the top 10 changes and ship anyway     |
-| **Dec 6**  | **Scanner v0.1.0 launched** (npm, Action, README, launch posts)                       | —                                                         |
+| Dec 7      | The scanner runs on 10 public repos and finds real blockers                           | Cut the catalog to the top 10 changes and ship anyway     |
+| **Dec 8**  | **Scanner v0.1.0 launched** (npm, README with copy-paste workflow, launch posts)      | —                                                         |
 | Dec 31     | 15–20 discovery calls held; engine core runs end to end; E-001 competitive spike done | Move engine work back two weeks; keep selling             |
 | Jan 31     | At least 2 paid audits                                                                | Rework the offer and price from what calls said           |
 | Feb 28     | Precision on validation apps is good enough that design partners keep the check on    | April becomes scanner, audits and subscriptions only      |
@@ -100,7 +100,7 @@ We are the **independent verifier**. Tools like Dependabot, Renovate, coding age
 
 After April (v1, only once pilots prove the catch rate): auto-merge policy, pg and Prisma hooks, MCP server for agents, compliance export, Behavior Confidence, reading other scanners' output. Later (v2): Postgres logical decoding, more ecosystems, a crowd-data product.
 
-**Honest pace note:** there are 17 days from Nov 19 to Dec 6 and about 35 tasks before launch. The first `/checkpoint` (after T-005) decides whether to use the Dec 5 fallback early.
+**Scope decision (2026-11-22, ADR-013):** at about 1 task per session the full plan didn't fit, so launch scope was cut (Option A) and launch moved to Tuesday, Dec 8. That leaves 27 tasks to launch, 23 of them before the Dec 7 validation checkpoint: about 1.5 tasks a day. Yarn lockfiles, the Node 26 rules, the packaged Action, the corpus job, fleet mode and the change-signature schema move to a post-launch phase, in the first two weeks after launch. A minimal native-addon detector stays in, because it's the headline of the outreach pitch. The first `/checkpoint` after T-005 re-measures the pace.
 
 ## 8. When Claude must stop and ask Sreeram
 
@@ -109,7 +109,7 @@ After April (v1, only once pilots prove the catch rate): auto-merge policy, pg a
 - Messages to real people: Claude drafts them; Sreeram sends.
 - Accounts, secrets, tokens, permissions.
 - Changes to core types, the report schema, CI or release workflows, or Action permissions.
-- Deleting anything outside the current task; merging a PR; pushing to `main`; force-anything. (Pushing a task branch and running its PR through CI and CodeRabbit is routine, ADR-010.)
+- Deleting anything outside the current task; merging a PR (except a PR that changes only Markdown docs or code comments, or one Sreeram approved in advance; CLAUDE.md, "Merging"); pushing to `main`; force-anything. (Pushing a task branch and running its PR through CI and CodeRabbit is routine, ADR-010.)
 - Any checkpoint date at risk by more than 3 days. Say so the same day, with options.
 
 Everything else, Claude does without asking and reports afterwards.

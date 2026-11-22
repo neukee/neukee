@@ -4,33 +4,41 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, evening IST (T-002 merged via PR #3; quality-bar chore PR open)
-- **Branch:** `chore/quality-bar` (PR waiting for merge approval)
-- **Last finished:** T-002 (report JSON Schema and `validateReport`)
-- **In progress:** nothing
-- **Exact next step:** merge the quality-bar PR once approved, then `/next` → T-003 (catalog loader).
-- **Blocked / waiting on Sreeram:** NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Open item: decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (13 days). Launch Dec 6 (14 days).
+- **Last updated:** 2026-11-22, 21:45 IST (session wrapped)
+- **Branch:** `chore/session-rules`. It holds Sreeram's CLAUDE.md rules 1–3, the wrap and the ADR-013 scope change, and goes out as one docs-only PR.
+- **Last finished:** T-002 (PR #3, merged). Also merged: PR #2 (Claude runs the PR loop, ADR-010) and PR #4 (Quality bar, ADR-012).
+- **In progress:** nothing.
+- **Exact next step:**
+  1. `/status`.
+  2. On `chore/session-rules`: `git push -u origin HEAD`, then `gh pr create --fill`. It changes only Markdown docs, so merge it under the Merging rules without asking.
+  3. `/next` → T-003 (catalog loader plus the `next16/sync-request-apis` entry). The source read on 2026-11-22: section "Async Request APIs (Breaking change)" at https://nextjs.org/docs/app/guides/upgrading/version-16#async-request-apis-breaking-change, codemod `npx @next/codemod@canary next-async-request-api .`. Re-fetch and confirm it before writing the entry.
+- **Standing instructions (Sreeram, 2026-11-22) not in CLAUDE.md:**
+  - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
+  - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
+  - After T-005 merges, run `/checkpoint` before the next task and report the pace against the Dec 7 checkpoint.
+- **Blocked / waiting on Sreeram:**
+  - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (15 days). Launch Tuesday, Dec 8 (16 days). 27 tasks to launch (ADR-013).
 
 ## Dated checkpoints
 
 From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
-| Date       | Must be true                                                                | Status      |
-| ---------- | --------------------------------------------------------------------------- | ----------- |
-| 2026-12-05 | Scanner runs on 10 public repos and finds real blockers                     | not started |
-| 2026-12-06 | Scanner v0.1.0 launched                                                     | not started |
-| 2026-12-31 | 15–20 discovery calls; engine core end to end; E-001 competitive spike done | not started |
-| 2027-01-31 | At least 2 paid audits                                                      | not started |
-| 2027-02-28 | Precision good enough that design partners keep the check on                | not started |
-| 2027-03-31 | At least 2 paid pilots; security review done                                | not started |
-| 2027-04-30 | Three revenue streams live; UpgradeBench published                          | not started |
+| Date       | Must be true                                                                | Status                                  |
+| ---------- | --------------------------------------------------------------------------- | --------------------------------------- |
+| 2026-12-07 | Scanner runs on 10 public repos and finds real blockers                     | not started (moved from Dec 5, ADR-013) |
+| 2026-12-08 | Scanner v0.1.0 launched (npm, README with copy-paste workflow)              | not started (moved from Dec 6, ADR-013) |
+| 2026-12-31 | 15–20 discovery calls; engine core end to end; E-001 competitive spike done | not started                             |
+| 2027-01-31 | At least 2 paid audits                                                      | not started                             |
+| 2027-02-28 | Precision good enough that design partners keep the check on                | not started                             |
+| 2027-03-31 | At least 2 paid pilots; security review done                                | not started                             |
+| 2027-04-30 | Three revenue streams live; UpgradeBench published                          | not started                             |
 
 ## Current state
 
 - **Phase:** 0 — Foundation
-- **Current task:** T-003 (Claude)
-- **Scanner launch target:** December 6, 2026
+- **Current task:** T-003 (Claude), next session
+- **Scanner launch target:** Tuesday, December 8, 2026 (ADR-013)
 - **On track?** Not yet measured. Run `/checkpoint` after T-005.
 
 ## Launch targets
@@ -52,15 +60,43 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
 One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+). Sreeram's hours only when he gives them.
 
-| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                                                                    |
-| ---------- | ----- | ---- | --------------- | ------------- | ------ | ----------------------------------------------------------------------- |
-| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                                  |
-| 2026-11-22 | T-001 | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI |
-| 2026-11-22 | T-002 | S    | 1               | —             | done   | Schema + validator; reviewer found 1 must-fix, 4 should-fix             |
+| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                                                                                                              |
+| ---------- | ----- | ---- | --------------- | ------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                                                                            |
+| 2026-11-22 | T-001 | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI                                           |
+| 2026-11-22 | T-002 | M    | 1               | —             | done   | Schema + validator; reviewer 1 must-fix + 4 should-fix; ~8 CodeRabbit rounds; 3 changes from Sreeram before merge |
 
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
+
+### 2026-11-22 · T-002 merged; PR loop, Quality bar and merge rules
+
+- **Merged:**
+  - PR #1: T-001, already merged when the session began.
+  - PR #2: Claude runs the PR loop (ADR-010); the only pre-approved push is `git push -u origin HEAD`.
+  - PR #3: T-002, report schema and `validateReport` (ADR-011).
+  - PR #4: Quality bar (ADR-012). Biome `noExplicitAny` and `noNonNullAssertion` are errors, and the reviewer enforces the rest.
+- **Decisions:**
+  - Report v1 is strict and deterministic: `durationMs` removed, a total order for findings.
+  - Compatibility policy: optional fields may be added within v1; anything else bumps `schemaVersion`.
+  - Cast exception: allowed only for a file bundled in our own package with a test that pins its shape.
+  - Fixtures live only in the top-level `fixtures/` folder.
+  - Merging rules: advance approvals; fix minor findings and continue; log instead of fixing after the third round; docs-only PRs merge without asking.
+- **Sreeram confirmed:** columns in UTF-16 code units, https-only sources, lowercase rule ids.
+- **Remember:** the standing instructions under "Resume here": model choice per task, the source sentence in catalog PRs, and `/checkpoint` after T-005.
+- **Lesson:** CodeRabbit rounds were the biggest time cost (PR #2: 6 rounds, PR #3: about 8, PR #4: 5). The new Merging rules cap this.
+- **Pace: the Dec 5 checkpoint is at risk by well over 3 days.**
+  - 33 tasks remain up to and including T-050 (validation on 10 repos), with 13 days left: about 2.5 tasks a day.
+  - Measured so far: about 1 task per session (T-000, T-002).
+  - **Option A (recommended): use the brief's fallback now.** Cut to a minimum launch path: T-003–T-005, T-010–T-016, T-019, T-021–T-023, T-030–T-033, T-050, T-051, T-053, T-054, T-055, about 23 tasks. Defer Yarn lockfiles (T-017/T-018), native addons (T-020), the Node 26 rules (T-024/T-025), T-026, fleet (T-034), the corpus job (T-037), the mutation target (T-038), the change-signature schema (T-006) and the Action (T-040) to after launch. The security review (T-052) is already due by Mar 31. That still needs about 1.8 tasks a day.
+  - **Option B: keep the full scope and move launch about 2 weeks,** to about Dec 18–20. Discovery calls continue in parallel; the Dec 31 engine checkpoint gets tighter.
+  - The first `/checkpoint` after T-005 re-measures the pace either way.
+- **Decision (Sreeram, same evening): Option A, with three changes (ADR-013).**
+  - Keep a minimal native-addon detector, from lockfile install-script flags with no network: it's the headline finding in the outreach pitch.
+  - Defer the packaged Action; ship a copy-paste README workflow (CLI plus SARIF upload) instead.
+  - Launch moves to Tuesday, Dec 8, and the validation checkpoint to Dec 7.
+  - Deferred work is now in TASKS "Phase 5 — Post-launch (first 2 weeks)". That leaves 27 tasks to launch, 23 by Dec 7.
 
 ### 2026-11-21 · Name decided, Step 1 done
 
