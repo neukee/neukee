@@ -10,11 +10,22 @@
       "Bash(pnpm build)",
       "Bash(git status)",
       "Bash(git diff *)",
-      "Bash(git log *)"
+      "Bash(git log *)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr comment *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh pr view *)",
+      "Bash(gh run list *)",
+      "Bash(gh run view *)"
     ],
+    "ask": ["Bash(gh pr merge *)"],
     "deny": [
       "Bash(git push --force *)",
       "Bash(git push -f *)",
+      "Bash(git push *--force*)",
+      "Bash(git push * -f*)",
       "Bash(npm publish *)",
       "Bash(pnpm publish *)",
       "Bash(rm -rf *)",

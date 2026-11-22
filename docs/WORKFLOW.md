@@ -20,8 +20,8 @@ This is different from a web app: there is no backend, database or hosting for t
 1. Open the repo in VS Code and start Claude Code.
 2. Type `/status` to see where things stand and what is next.
 3. Type `/next`. Claude picks the next task from `docs/TASKS.md`, restates what "done" means, writes the tests first, builds, runs `pnpm verify`, asks the reviewer subagent to check its work, fixes what the review finds, updates the docs and commits on a task branch.
-4. Read Claude's summary. If it is right, run `pnpm check:all`, push the branch and open a pull request; CI runs the same gate and CodeRabbit reviews it (comment `@coderabbitai review` while the repo has fewer than 10 stars).
-5. Merge when CI is green and review comments are resolved. Repeat `/next` as many times as your day allows. Fast days do more tasks; slow days do fewer. The order never changes.
+4. Claude then handles the GitHub side: it runs `pnpm check:all`, pushes the task branch, opens the pull request with `gh pr create --fill`, comments `@coderabbitai review` (needed while the repo has fewer than 10 stars), and watches the checks with `gh pr checks --watch`. It fixes any CI failure and any real CodeRabbit finding, and pushes the fixes.
+5. When CI is green and the review comments are resolved, Claude asks you to approve the merge. You say yes, and Claude squash-merges and deletes the branch (`gh pr merge --squash --delete-branch`), then switches to `main` and pulls. Claude never merges without your yes. Repeat `/next` as many times as your day allows. Fast days do more tasks; slow days do fewer. The order never changes.
 6. End the session with `/wrap`. Next time, `/status` picks up exactly there.
 
 **Claude cannot finish a turn with a failing gate:** a stop hook runs typecheck, lint and tests whenever files have changed, and sends failures back to Claude to fix.

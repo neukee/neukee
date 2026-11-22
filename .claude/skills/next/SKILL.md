@@ -3,7 +3,7 @@
 name: next
 description: Pick the next task from docs/TASKS.md and build it end to end, test-first, with review and the full quality gate.
 disable-model-invocation: true
-allowed-tools: Bash(pnpm *) Bash(git status) Bash(git diff *) Bash(git log *) Bash(git add *) Bash(git commit *) Bash(git switch *) Bash(git checkout -b *)
+allowed-tools: Bash(pnpm *) Bash(git status) Bash(git diff *) Bash(git log *) Bash(git add *) Bash(git commit *) Bash(git switch *) Bash(git checkout -b *) Bash(git push *) Bash(gh pr create *) Bash(gh pr comment *) Bash(gh pr checks *) Bash(gh pr view *) Bash(gh run list *) Bash(gh run view *)
 ---
 
 Build exactly one task from `docs/TASKS.md`, completely.
@@ -17,5 +17,12 @@ Build exactly one task from `docs/TASKS.md`, completely.
 7. **Gate.** Run `pnpm verify` until it passes. Fix causes, not symptoms. Never weaken, skip or delete a test.
 8. **Independent review.** Delegate to the `reviewer` subagent with: the task text, the list of changed files, and the relevant spec sections. Fix every issue it marks as must-fix, re-run `pnpm verify`, and repeat until it returns PASS.
 9. **Record.** Update `docs/TASKS.md` (status and ticked criteria), add a `docs/PROGRESS.md` log entry (what changed, verify result, anything learned), add to `docs/REVIEW-QUEUE.md` if the task says `Human review: yes` or anything is uncertain, and add a `docs/DECISIONS.md` entry if architecture, schema, dependencies or targets changed.
-10. **Commit.** `git add` the changed files and commit with `T-XXX: <what changed>`. Do not push.
-11. **Report** in five lines or fewer: what was built, the verify result, what the reviewer flagged, anything waiting for a person, and the next task.
+10. **Commit.** `git add` the changed files and commit with `T-XXX: <what changed>`.
+11. **Pull request.** Run `pnpm check:all`, then:
+    1. `git push -u origin <task-branch>` (never force-push; never push to `main`).
+    2. `gh pr create --fill`.
+    3. `gh pr comment <number> --body "@coderabbitai review"`.
+    4. `gh pr checks <number> --watch`.
+    5. If a check fails, read the log (`gh run view <run-id> --log-failed`), fix the cause, commit, push and watch again. Read CodeRabbit's comments; fix each real finding, and for one you disagree with, reply with the reason. Never weaken a test to turn a check green.
+12. **Ask for the merge.** When every check is green and the review comments are resolved, tell the person the PR link and the result, and ask them to approve the merge. Only after a yes: `gh pr merge <number> --squash --delete-branch`, `git switch main`, `git pull`. `gh pr merge` always needs the person's approval.
+13. **Report** in five lines or fewer: what was built, the verify result, what the reviewer and CodeRabbit flagged, the PR link and its check status, anything waiting for a person, and the next task.

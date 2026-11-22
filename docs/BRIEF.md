@@ -1,6 +1,6 @@
 # Neukee: Operating Brief for Claude
 
-**Version 1.2 · 2026-11-22 · Owner: Sreeram Venugopal**
+**Version 1.3 · 2026-11-22 · Owner: Sreeram Venugopal**
 
 Read this before doing any work on Neukee, in any session (Claude Code in VS Code, or a Claude chat). The repository copy at `docs/BRIEF.md` is the source of truth. If the copy you are reading has an older version number than the one in the repo, ask for the latest before making decisions.
 
@@ -67,7 +67,7 @@ We are the **independent verifier**. Tools like Dependabot, Renovate, coding age
 | Public monorepo from day one; scanner, core, CLI and Action under Apache-2.0; engine under the Functional Source License (FSL-1.1, converting to Apache-2.0) (ADR-005) | Final (confirmed 2026-11-22)                               |
 | Crowd signatures: an explicit, opt-in command only, never automatic (ADR-006)                                                                                          | Final                                                      |
 | Extra quality gates: Stryker, Knip, publint, Are the Types Wrong, Scorecard, SHA-pinned Actions (ADR-007)                                                              | Final                                                      |
-| Target customer: companies with 20–200 engineers on Node.js or Next.js, with integration tests, selling to enterprises (so SOC 2 matters)                              | **Default, waiting for Sreeram to confirm**                |
+| Target customer: companies with 20–200 engineers on Node.js or Next.js, with integration tests, selling to enterprises (so SOC 2 matters)                              | Final (confirmed 2026-11-22)                               |
 | Price assumptions: audit about $800 (range $300–1,500); subscription about $200/month ($99–499); pilot about $1,000/month ($500–2,000)                                 | Assumptions, to be tested in calls                         |
 | Name: product **Neukee** (`neukee` CLI, `@neukee/*` packages); company **GOkit4dev**. "Valore" was dropped because of a live VALORE registration in Class 9 (ADR-008)  | Product name final; trademark search before launch (T-053) |
 
