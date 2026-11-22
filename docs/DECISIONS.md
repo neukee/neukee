@@ -4,11 +4,16 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
-## ADR-011 · Report schema v1 is strict (2026-11-22)
+## ADR-011 · Report schema v1: strict validator, deterministic report, compatibility policy (2026-11-22)
 
-- **Context:** T-002 adds the hand-written JSON Schema for `ScanReport` and `validateReport`. ARCHITECTURE §5 gives field types only. The task doesn't say how strict the schema is, what the validator returns, or how the schema ships. A schema that accepts anything the types allow would let absolute paths, control characters from untrusted file names, or typos reach reports, terminals and PR comments unnoticed. The types themselves are unchanged.
+- **Context:** T-002 adds the hand-written JSON Schema for `ScanReport` and `validateReport`. ARCHITECTURE §5 gives field types only. The task doesn't say how strict the schema is, what the validator returns, how the schema ships or evolves, or how findings are fully ordered. A schema that accepts anything the types allow would let absolute paths, control characters from untrusted file names, or typos reach reports, terminals and PR comments unnoticed.
+- **Decision: the report is deterministic** (Sreeram, 2026-11-22).
+  - `stats.durationMs` is removed from the type and the schema. It changed on every run, which broke SPEC-SCANNER target 6 (byte-identical output except `scannedAt`). `stats` now holds counts only.
+  - Timing may come back later behind an opt-in flag (T-033).
+  - v1 has never been published, so it changes in place. Under the compatibility policy below, the same removal after release would bump `schemaVersion`.
+- **Decision: findings have a total order** (Sreeram, 2026-11-22). §4 listed four keys. `compareFindings` now breaks every tie: severity, first location's file, line, column (absent sorts first), `ruleId`, `target.tool`, `target.version`, `message`. Text compares by code unit, never by locale. `target.version` compares as text (`"16"` sorts before `"9"`); the order only has to be stable, not semantic. A test shuffles 256 findings 100 times with a seeded generator and always gets identical output.
 - **Decision: what a valid v1 report is.** Everything below goes beyond §5.
-  - Every object is closed (`additionalProperties: false`).
+  - Every object is closed (`additionalProperties: false`). This is our validator's check on our own output; consumers ignore unknown fields (compatibility policy).
   - Report paths (`Location.file`, `Diagnostic.file`) are canonical repo-relative paths. They never take an absolute, drive-letter, `scheme:`, backslash, `.`/`..`, empty-segment, trailing-slash, control-character (C0, DEL, C1) or bidi-override form. Repos are untrusted, and these characters can disguise a file name in terminal output or PR comments. Directory locations have no trailing slash (`app/@modal`).
   - `line` and `column` are 1-based integers, with columns in UTF-16 code units (JavaScript string indexes, editors).
   - `sourceUrl` is an https URL with a dotted host name, an optional port of 1–65535 with no leading zero, then an optional path, query or fragment. Userinfo and whitespace are rejected.
@@ -28,18 +33,23 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 - **Decision: how the schema ships and changes.**
   - The schema is published with `@neukee/core` (`files`) and exported as `@neukee/core/schema/scan-report.v1.json`.
   - `validateReport` reads it from disk relative to its own module, lazily, on the first call.
-  - Because objects are closed, any change to the schema breaks someone. Adding a field fails existing validators; loosening a rule lets through reports that existing consumers don't expect. So every change, not only loosening, means `schemaVersion: 2` and a new ADR.
-  - A snapshot of every constraint (`packages/core/src/__snapshots__/validate.test.ts.snap`) fails until such a change is made on purpose.
+  - **Compatibility policy** (Sreeram, 2026-11-22; replaces "every change means v2"):
+    - Within `schemaVersion: 1` we may add optional fields. Consumers must ignore unknown fields.
+    - Removing, renaming or retyping a field, changing its meaning, or making an optional field required bumps `schemaVersion`.
+    - Our validator stays strict (closed objects). Any addition updates the schema, the types and the tests in the same PR.
+    - Every schema change needs an ADR, breaking or not.
+  - A snapshot of every constraint (`packages/core/src/__snapshots__/validate.test.ts.snap`) fails until a schema change is made on purpose.
 - **Consequences: later tasks were edited in this PR so the rules are where they'll be read.**
   - T-003: the catalog `id` uses the same grammar, shared from core.
-  - T-004: normalization replaces `scannedAt` and `durationMs` with fixed values (`1970-01-01T00:00:00Z`, `0`) instead of removing them, so normalized reports still validate. This changes T-004's original wording.
+  - T-004: normalization replaces `scannedAt` with a fixed value (`1970-01-01T00:00:00Z`) instead of removing it, so normalized reports still validate. `durationMs` no longer exists. This changes T-004's original wording.
   - T-005: a path that fails the `RepoPath` pattern is skipped with a diagnostic that has no `file`.
   - T-021: columns are 1-based UTF-16 code units.
   - T-031: renderers neutralise control and bidi characters and escape markdown in any repo-derived text.
   - T-032: SARIF sets `columnKind: "utf16CodeUnits"` explicitly, and needs a fallback location for findings with no `locations` if GitHub requires one.
   - T-034: fleet JSON wraps each report as `{ repo, report }`.
   - T-040: if the Action calls `validateReport`, its bundle ships `schema/` beside it.
-- **Waiting for Sreeram (REVIEW-QUEUE):** the column unit, https-only sources, and lowercase rule ids (`node26/slowbuffer`, `native/node-rs-bcrypt`).
+  - T-033: a timing report, if it returns, sits behind an opt-in flag and stays out of the default JSON.
+- **Confirmed by Sreeram (2026-11-22):** columns in UTF-16 code units, https-only sources, and lowercase rule ids (`node26/slowbuffer`, `native/node-rs-bcrypt`).
 
 ## ADR-010 · Claude runs the PR loop; Sreeram approves merges (2026-11-22)
 

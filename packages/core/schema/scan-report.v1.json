@@ -41,10 +41,9 @@
       "type": "object",
       "properties": {
         "filesScanned": { "type": "integer", "minimum": 0 },
-        "filesSkipped": { "type": "integer", "minimum": 0 },
-        "durationMs": { "type": "number", "minimum": 0 }
+        "filesSkipped": { "type": "integer", "minimum": 0 }
       },
-      "required": ["filesScanned", "filesSkipped", "durationMs"],
+      "required": ["filesScanned", "filesSkipped"],
       "additionalProperties": false
     }
   },

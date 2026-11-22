@@ -9,7 +9,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 - **Last finished:** T-002 (report JSON Schema and `validateReport`)
 - **In progress:** nothing
 - **Exact next step:** merge PR #3 once approved, then `/next` → T-003 (catalog loader).
-- **Blocked / waiting on Sreeram:** confirm the three schema defaults in ADR-011 (column unit, https-only, lowercase rule ids). NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Open item: decide the pronunciation and check the registration details before the T-053 trademark search.
+- **Blocked / waiting on Sreeram:** NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Open item: decide the pronunciation and check the registration details before the T-053 trademark search.
 - **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (13 days). Launch Dec 6 (14 days).
 
 ## Dated checkpoints
@@ -82,13 +82,19 @@ Sreeram's notes and each session's summary. Newest first.
 
 - `packages/core/schema/scan-report.v1.json`: hand-written draft 2020-12 schema, published with the package and exported as `@neukee/core/schema/scan-report.v1.json`.
 - `validateReport(value)` returns the typed report or every problem as `{ path, message }`. Messages are full sentences (`report.findings[0].severity must be one of "action-required", "warning" or "info" (got "critical").`). It interprets the schema itself, with no new dependency (ADR-004).
-- The types are unchanged; they already matched §5. ARCHITECTURE §5 now documents what the schema adds (ADR-011): closed objects, canonical repo-relative paths, 1-based UTF-16 columns, https sources, the rule-id grammar, and timestamps with a time zone.
-- Tests (core: 2 → 261; whole repo 269):
+- ARCHITECTURE §5 now documents what the schema adds (ADR-011): closed objects, canonical repo-relative paths, 1-based UTF-16 columns, https sources, the rule-id grammar, and timestamps with a time zone.
+- Sreeram's three changes before merge (ADR-011):
+  - `stats.durationMs` is removed from the type and the schema, so only `scannedAt` varies. This matches SPEC-SCANNER target 6. Timing may return behind an opt-in flag (note on T-033).
+  - `compareFindings` is now a total order: severity, file, line, column, ruleId, target.tool, target.version, message. A seeded test shuffles 256 findings 100 times and gets identical output every time.
+  - New compatibility policy: optional fields may be added within v1, and consumers ignore unknown fields. Removing, renaming, retyping or changing a field's meaning bumps `schemaVersion`. Our validator stays strict, and every schema change needs an ADR.
+  - The validator no longer supports `number` (no field uses it), and its one unchecked `as` tuple cast is gone.
+  - Sreeram confirmed the three schema defaults; the review-queue row is closed.
+- Tests (core: 2 → 282; whole repo 290):
   - 22 broken reports with exact messages.
   - A generated violation for every schema constraint (60+ cases).
   - Real paths the detectors will emit (Next.js route syntax, dotfiles, Unicode) must pass.
   - Fields, required/optional and enums are compared between types and schema both ways.
-  - The constraint inventory is a snapshot (new file `packages/core/src/__snapshots__/validate.test.ts.snap`). A schema change fails until the snapshot is updated on purpose, with a new `schemaVersion` and an ADR.
+  - The constraint inventory is a snapshot (new file `packages/core/src/__snapshots__/validate.test.ts.snap`). A schema change fails until the snapshot is updated on purpose, with an ADR (and a `schemaVersion` bump if the change is breaking).
   - Hand mutation check: deleting a `minLength` and loosening `integer` → `number` both fail it.
 - Reviewer subagent: one must-fix (document the extra constraints, plus an ADR) and four should-fixes. The validator now applies keywords next to `$ref` and object keywords on any object. The path rule now rejects `./`, `.`, empty segments, a trailing `/`, `file:` and control characters. Values and keys are truncated on code points. Every coverage gap is now a test. All fixed. Second pass: PASS. I took its three optional suggestions:
   - Paths also reject C1 controls and bidi overrides (U+202A–202E, U+2066–2069). The snapshot was regenerated before its first commit, because the pattern changed.
@@ -98,7 +104,7 @@ Sreeram's notes and each session's summary. Newest first.
   - `scannedAt` now rejects out-of-range months, days, clock values and offsets. It also rejects dates that don't exist, through `format: "date-time"`, which `validateReport` asserts (`SUPPORTED_FORMATS`). CodeRabbit pointed out that `validateReport` checks arbitrary input, not only our own output.
   - `sourceUrl` must have a dotted host name. Any port must be 1–65535, checked exhaustively for every value from 0 to 70,000.
   - Unknown keys are reported in sorted order.
-  - The constraint snapshot was updated on purpose, three times. First for the two changed patterns, then for the one new `format` line, then for the `sourceUrl` port range. Nothing else changed.
+  - The constraint snapshot was updated on purpose, four times. First for the two changed patterns, then for the one new `format` line, then for the `sourceUrl` port range, and last for the removal of the two `durationMs` lines. Nothing else changed.
   - Every pattern was timed on 100k-character hostile input: all under 5 ms, linear.
 - Follow-ups written into later tasks: T-003 shares the id grammar; T-004 normalizes with fixed values; T-005 skips unrepresentable paths; T-021 column unit; T-031 neutralises control/bidi characters and escapes markdown in repo-derived text; T-032 SARIF fallback location and explicit `columnKind`; T-034 fleet wrapper; T-040 ships `schema/`.
 - `pnpm verify` and `pnpm check:all` pass.

@@ -41,9 +41,8 @@ exports[`every constraint in the schema is enforced > the constraint inventory i
   "report.diagnostics[0].level: enum=["error","warning"]",
   "report.diagnostics[0].message: type="string" minLength=1",
   "report.diagnostics[0].file: type="string" pattern="^(?![A-Za-z][A-Za-z0-9+.-]*:)(?!/)(?!.*[\\\\u0000-\\\\u001F\\\\u007F-\\\\u009F\\\\u202A-\\\\u202E\\\\u2066-\\\\u2069\\\\\\\\])(?!.*//)(?!.*/$)(?!(?:.*/)?\\\\.{1,2}(?:/|$)).+$"",
-  "report.stats: type="object" required=["filesScanned","filesSkipped","durationMs"] additionalProperties=false",
+  "report.stats: type="object" required=["filesScanned","filesSkipped"] additionalProperties=false",
   "report.stats.filesScanned: type="integer" minimum=0",
   "report.stats.filesSkipped: type="integer" minimum=0",
-  "report.stats.durationMs: type="number" minimum=0",
 ]
 `;

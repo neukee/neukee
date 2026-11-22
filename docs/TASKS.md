@@ -53,7 +53,7 @@
 - Status: todo
 - Depends on: T-002
 - Human review: no
-- Build: Test helper `scanFixture(name, targets)` that runs the scan pipeline on `fixtures/repos/<name>` and returns a normalized report (replaces `scannedAt` and `durationMs` with fixed values, `1970-01-01T00:00:00Z` and `0`, so the normalized report still passes `validateReport`; ADR-011). Golden snapshot helper. A test that fails if any package imports from a package to its left in the dependency direction (`docs/ARCHITECTURE.md` §3).
+- Build: Test helper `scanFixture(name, targets)` that runs the scan pipeline on `fixtures/repos/<name>` and returns a normalized report (replaces `scannedAt` with the fixed value `1970-01-01T00:00:00Z`, so the normalized report still passes `validateReport`; it is the only field that varies between runs; ADR-011). Golden snapshot helper. A test that fails if any package imports from a package to its left in the dependency direction (`docs/ARCHITECTURE.md` §3).
 - Done when:
   - [ ] An empty fixture repo produces a stable snapshot.
   - [ ] Introducing a forbidden import (tried in a test) is caught.
@@ -255,6 +255,7 @@
 - Depends on: T-031, T-032
 - Human review: no
 - Build: `neukee scan` with all options in `docs/SPEC-SCANNER.md` §1, exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
+- Note: the report has no timing (ADR-011: only `scannedAt` varies). Timing can return later behind an opt-in flag (for example `--timing`, printed to stderr or as a separate field added under the compatibility policy). It is never part of the default output.
 - Done when: e2e tests run the built CLI as a child process on fixtures and check output and exit codes.
 
 ### T-034 · Fleet mode

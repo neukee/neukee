@@ -54,19 +54,30 @@ export interface ScanReport {
   detected: { node: string[]; packageManager?: string; frameworks: Record<string, string> };
   findings: Finding[];
   diagnostics: Diagnostic[];
-  stats: { filesScanned: number; filesSkipped: number; durationMs: number };
+  /** Counts only: timing would differ on every run (see T-033 for an opt-in flag later). */
+  stats: { filesScanned: number; filesSkipped: number };
 }
 
 const SEVERITY_RANK: Record<Severity, number> = { "action-required": 0, warning: 1, info: 2 };
 
-/** Deterministic order: severity, then first file, then first line, then rule id. */
+/** Code-unit order, so the result never depends on the machine's locale. */
+const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
+/**
+ * Total order for findings: severity, first location's file, line and column (absent sorts
+ * first), rule id, target tool, target version, message. Any input order gives the same output.
+ */
 export function compareFindings(a: Finding, b: Finding): number {
-  const bySeverity = SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity];
-  if (bySeverity !== 0) return bySeverity;
-  const fileA = a.locations[0]?.file ?? "";
-  const fileB = b.locations[0]?.file ?? "";
-  if (fileA !== fileB) return fileA < fileB ? -1 : 1;
-  const lineDiff = (a.locations[0]?.line ?? 0) - (b.locations[0]?.line ?? 0);
-  if (lineDiff !== 0) return lineDiff;
-  return a.ruleId < b.ruleId ? -1 : a.ruleId > b.ruleId ? 1 : 0;
+  const first = a.locations[0];
+  const second = b.locations[0];
+  return (
+    SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+    byText(first?.file ?? "", second?.file ?? "") ||
+    (first?.line ?? 0) - (second?.line ?? 0) ||
+    (first?.column ?? 0) - (second?.column ?? 0) ||
+    byText(a.ruleId, b.ruleId) ||
+    byText(a.target.tool, b.target.tool) ||
+    byText(a.target.version, b.target.version) ||
+    byText(a.message, b.message)
+  );
 }

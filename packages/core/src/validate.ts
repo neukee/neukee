@@ -42,7 +42,7 @@ export const SUPPORTED_KEYWORDS = [
   "format",
 ] as const;
 
-export const SUPPORTED_TYPES = ["object", "array", "string", "integer", "number"] as const;
+export const SUPPORTED_TYPES = ["object", "array", "string", "integer"] as const;
 
 /**
  * Formats checked as assertions. JSON Schema treats `format` as an annotation by default;
@@ -75,7 +75,6 @@ const TYPE_NAMES: Record<JsonType, string> = {
   array: "an array",
   string: "a string",
   integer: "an integer",
-  number: "a number",
 };
 
 const MAX_SHOWN = 60;
@@ -225,8 +224,6 @@ function hasType(value: unknown, type: JsonType): boolean {
       return typeof value === "string";
     case "integer":
       return Number.isInteger(value);
-    case "number":
-      return typeof value === "number" && Number.isFinite(value);
   }
 }
 
@@ -240,14 +237,9 @@ function isRealDateTime(value: string): boolean {
   if (match === null) return false;
   // Absent groups (the offset, for "Z") count as 0.
   const part = (group: number): number => Number(match[group] ?? "0");
-  const [year, month, day, hour, minute, second] = [1, 2, 3, 4, 5, 6].map(part) as [
-    number,
-    number,
-    number,
-    number,
-    number,
-    number,
-  ];
+  const year = part(1);
+  const month = part(2);
+  const day = part(3);
   const offsetHour = part(7);
   const offsetMinute = part(8);
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
@@ -255,9 +247,9 @@ function isRealDateTime(value: string): boolean {
   return (
     day >= 1 &&
     day <= monthDays &&
-    hour <= 23 &&
-    minute <= 59 &&
-    second <= 59 &&
+    part(4) <= 23 &&
+    part(5) <= 59 &&
+    part(6) <= 59 &&
     offsetMinute <= 59 &&
     (offsetHour < 14 || (offsetHour === 14 && offsetMinute === 0))
   );

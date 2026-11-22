@@ -42,11 +42,7 @@ const detected: Required<ScanReport["detected"]> = {
   packageManager: "pnpm",
   frameworks: { next: "15.5.4", "@prisma/client": "6.1.0" },
 };
-const stats: Required<ScanReport["stats"]> = {
-  filesScanned: 42,
-  filesSkipped: 1,
-  durationMs: 812.5,
-};
+const stats: Required<ScanReport["stats"]> = { filesScanned: 42, filesSkipped: 1 };
 const report: Required<ScanReport> = {
   schemaVersion: 1,
   tool,
@@ -70,7 +66,7 @@ const minimalReport: ScanReport = {
   detected: { node: [], frameworks: {} },
   findings: [],
   diagnostics: [],
-  stats: { filesScanned: 0, filesSkipped: 0, durationMs: 0 },
+  stats: { filesScanned: 0, filesSkipped: 0 },
 };
 
 const REMOVE = Symbol("remove");
@@ -241,22 +237,32 @@ describe("validateReport: broken reports fail with clear messages", () => {
       ],
     },
     {
-      name: "a negative duration",
-      input: changed(["stats", "durationMs"], -5),
+      name: "a timing field (reports are deterministic; only scannedAt varies)",
+      input: changed(["stats", "durationMs"], 812.5),
       errors: [
         {
-          path: "report.stats.durationMs",
-          message: "report.stats.durationMs must be at least 0 (got -5).",
+          path: "report.stats",
+          message: 'report.stats has unknown property "durationMs".',
         },
       ],
     },
     {
-      name: "a non-finite duration",
-      input: changed(["stats", "durationMs"], Number.POSITIVE_INFINITY),
+      name: "a negative count",
+      input: changed(["stats", "filesSkipped"], -5),
       errors: [
         {
-          path: "report.stats.durationMs",
-          message: "report.stats.durationMs must be a number (got Infinity).",
+          path: "report.stats.filesSkipped",
+          message: "report.stats.filesSkipped must be at least 0 (got -5).",
+        },
+      ],
+    },
+    {
+      name: "a non-finite count",
+      input: changed(["stats", "filesScanned"], Number.POSITIVE_INFINITY),
+      errors: [
+        {
+          path: "report.stats.filesScanned",
+          message: "report.stats.filesScanned must be an integer (got Infinity).",
         },
       ],
     },
@@ -656,8 +662,7 @@ function violations(node: JsonObject): { keyword: string; value: unknown }[] {
     object: [],
     array: {},
     string: 1,
-    integer: ((node.minimum as number | undefined) ?? 0) + 0.5,
-    number: "1",
+    integer: (typeof node.minimum === "number" ? node.minimum : 0) + 0.5,
   };
   if (typeof node.type === "string") out.push({ keyword: "type", value: typeViolation[node.type] });
   if (typeof node.minimum === "number") out.push({ keyword: "minimum", value: node.minimum - 1 });
@@ -710,7 +715,8 @@ function constraintSummary(node: JsonObject): string {
 describe("every constraint in the schema is enforced", () => {
   // The cases below derive from the schema, so they would quietly shrink if a constraint were
   // deleted. This pins the full inventory: changing the schema fails here until the snapshot is
-  // updated on purpose, with a reason, a new schemaVersion and a decision record (ARCHITECTURE §5).
+  // updated on purpose, with a reason and a decision record, and a schemaVersion bump if the
+  // change is breaking (compatibility policy, ARCHITECTURE §5).
   it("the constraint inventory is pinned", () => {
     const inventory = walk(schema, report, []).map(
       ({ path, node }) => `${formatPath(path)}: ${constraintSummary(node)}`,
