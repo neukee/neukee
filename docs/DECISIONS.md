@@ -9,7 +9,10 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 - **Context:** T-003 builds `loadCatalog`. The task says "id matches file path", and catalog/README.md had suggested `catalog/<tool>/<name>.yaml`. With that layout one id could live in two folders, and `node24/x` and `node26/x` would collide. The reviewer subagent also found that the loader crashed on one bad file and that a runtime check for fixture folders would fail in the npm package.
 - **Decision:**
   - **Path = id:** an entry lives at `catalog/<id>.yaml` (`catalog/next16/sync-request-apis.yaml`). Duplicate ids are impossible, and ids with three or more segments map to nested folders.
-  - **Official hosts:** `nextjs.org`, `nodejs.org`, `react.dev`, `www.prisma.io`, over https. Adding a host needs a line in this ADR, approved through its PR.
+  - **Official hosts:** `nextjs.org`, `nodejs.org`, `react.dev`, `www.prisma.io`. Adding a host needs a line in this ADR, approved through its PR. The check uses the URL API, no regex (Sreeram, after a CodeQL alert on the old regex):
+    - https only, with no username, password or port;
+    - the hostname must equal an official host exactly;
+    - the URL must already be canonical (`new URL(v).href === v`), because the parser silently strips whitespace, drops an explicit `:443` and lowercases the host. So an uppercase host is rejected, not normalized.
   - **Closed fields:** unknown keys are errors. Required: `id`, `title` (one line), `applies.tool`, `applies.introducedIn` (`x.y.z`), `severity`, `detector`, `message`, `sourceUrl`, `fixtures.positive`, `fixtures.negative`. Optional: `fix`.
   - **Fixtures:** the loader checks that both paths sit under the top-level `fixtures/` folder. The real-catalog test checks that the folders exist, because the npm package ships the catalog without fixtures.
   - **YAML as untrusted input:**
@@ -22,6 +25,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - catalog/README.md and ARCHITECTURE §3 and §6 describe the new layout.
   - ARCHITECTURE §6's example is now the real entry, whose text was checked against the Next.js 16 guide.
   - T-014 picks a location outside `catalog/` for release data.
+- **Declined (Sreeram, 2026-11-22):** CodeRabbit's file-swap race (TOCTOU) hardening for the catalog: reading from the checked file descriptor and re-checking folders before descending. Catalog files are trusted package content, and exploiting the race needs write access to the package folder, which already allows editing the entries. The same defenses are required where they matter, for scanned files in T-005 (ARCHITECTURE §7).
 - **Confirmed by Sreeram (2026-11-22):**
   - The `catalog/<id>.yaml` layout. The loader rejects an entry whose id doesn't match its path; that same rule makes duplicate ids impossible, and a test pins it.
   - The fixture check in a test. Every entry needs a non-empty positive and negative fixture folder; the check runs in CI through `pnpm verify`.

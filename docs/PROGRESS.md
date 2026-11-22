@@ -137,7 +137,10 @@ Sreeram's notes and each session's summary. Newest first.
 - Sreeram confirmed ADR-014, adding two requirements:
   - duplicate ids are rejected: pinned by a test, since the path rule makes them impossible;
   - the fixture check requires non-empty folders: a new test-side check, itself tested on temp repos, and shown to fail when a real fixture folder is emptied.
-- Tests: 58 catalog tests; 358 in the whole repo. `pnpm check:all` passes. Source size is 322 lines, about 7% over the ~300 guideline, mostly the robustness fixes.
+- CodeRabbit on PR #6:
+  - CodeQL flagged the regex built from host names (a false positive). Replaced with the URL API: canonical https, no credentials or port, exact host. Ten rejection tests cover look-alike suffixes, `host@evil`, credentials, ports including `:443`, http, trailing whitespace, uppercase host, an unofficial host, and a non-URL.
+  - File-swap race hardening declined for the catalog (trusted content, ADR-014) and moved into T-005's done-when for scanned files. ARCHITECTURE §7 now states the trust boundary.
+- Tests: 68 catalog tests; 368 in the whole repo. `pnpm check:all` passes. Source size is 322 lines, about 7% over the ~300 guideline, mostly the robustness fixes.
 
 ### 2026-11-22 · chore · Quality bar (ADR-012)
 

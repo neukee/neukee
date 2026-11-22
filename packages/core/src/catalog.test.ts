@@ -145,21 +145,6 @@ describe("loadCatalog: invalid entries give clear errors naming the file", () =>
       message: `${at}: severity must be one of "action-required", "warning" or "info" (got "critical").`,
     },
     {
-      name: "a source that isn't official",
-      yaml: VALID.replace(/^sourceUrl: .*$/m, "sourceUrl: https://blog.example.com/x"),
-      message: `${at}: sourceUrl must be an https URL on an official source (nextjs.org, nodejs.org, react.dev, www.prisma.io) (got "https://blog.example.com/x").`,
-    },
-    {
-      name: "a source over http",
-      yaml: VALID.replace("https://nextjs.org", "http://nextjs.org"),
-      message: `${at}: sourceUrl must be an https URL on an official source (nextjs.org, nodejs.org, react.dev, www.prisma.io) (got "http://nextjs.org/docs/app/guides/upgrading/version-16").`,
-    },
-    {
-      name: "a look-alike domain",
-      yaml: VALID.replace(/^sourceUrl: .*$/m, "sourceUrl: https://nextjs.org.evil.com/x"),
-      message: `${at}: sourceUrl must be an https URL on an official source (nextjs.org, nodejs.org, react.dev, www.prisma.io) (got "https://nextjs.org.evil.com/x").`,
-    },
-    {
       name: "an id that isn't a catalog id",
       yaml: VALID.replace("id: next16/sync-request-apis", "id: Next16/Sync"),
       message: `${at}: id "Next16/Sync" is not a catalog id (lowercase segments joined by "/", like "next16/sync-request-apis").`,
@@ -303,6 +288,38 @@ describe("loadCatalog: invalid entries give clear errors naming the file", () =>
       message: `${at} is ${Buffer.byteLength(HUGE)} bytes; catalog entries must be under 64 KiB.`,
     },
   ];
+
+  // The URL must already be canonical (as `new URL()` writes it), so the parser's silent fixes
+  // (stripping whitespace, dropping :443, lowercasing the host) can't hide a bad value.
+  it.each([
+    ["a look-alike suffix", "https://www.prisma.io.evil.com/docs"],
+    ["the host as a username", "https://www.prisma.io@evil.com/docs"],
+    ["credentials", "https://user:secret@nextjs.org/docs"],
+    ["an explicit port", "https://nextjs.org:8443/docs"],
+    ["an explicit default port", "https://nextjs.org:443/docs"],
+    ["http", "http://nextjs.org/docs"],
+    ["trailing whitespace", "https://nextjs.org/docs "],
+    ["an uppercase host", "https://NEXTJS.ORG/docs"],
+    ["an unofficial host", "https://blog.example.com/x"],
+    ["not a URL at all", "nextjs.org/docs"],
+  ])("rejects a source with %s", (_, url) => {
+    const { entries, errors } = one(VALID.replace(/^sourceUrl: .*$/m, `sourceUrl: "${url}"`));
+    expect(entries).toEqual([]);
+    expect(errors).toEqual([
+      {
+        file: at,
+        message: `${at}: sourceUrl must be a canonical https URL on an official host (nextjs.org, nodejs.org, react.dev, www.prisma.io), with no credentials or port (got ${JSON.stringify(url)}).`,
+      },
+    ]);
+  });
+
+  it.each(["https://www.prisma.io/docs/orm", "https://nextjs.org/", "https://react.dev/blog#x"])(
+    "accepts the official source %j",
+    (url) => {
+      const { errors } = one(VALID.replace(/^sourceUrl: .*$/m, `sourceUrl: "${url}"`));
+      expect(errors).toEqual([]);
+    },
+  );
 
   it.each(cases)("$name", ({ yaml, message }) => {
     const { entries, errors } = one(yaml);

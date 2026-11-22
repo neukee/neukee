@@ -37,9 +37,6 @@ const TOOLS: Record<Tool, true> = { node: true, next: true, react: true, prisma:
 
 /** ADR-003, ADR-014: official sources only. Adding a host needs an ADR line. */
 const OFFICIAL_HOSTS = ["nextjs.org", "nodejs.org", "react.dev", "www.prisma.io"];
-const OFFICIAL_SOURCE = new RegExp(
-  `^https://(?:${OFFICIAL_HOSTS.map((host) => host.replaceAll(".", "\\.")).join("|")})/\\S*$`,
-);
 const VERSION = /^\d+\.\d+\.\d+$/;
 /** Real entries are about 1 KB; anything this big is a mistake, not an entry. */
 const MAX_BYTES = 64 * 1024;
@@ -174,8 +171,8 @@ function readEntry(fullPath: string, path: string, file: string): CatalogEntry |
   if (!isText(detector)) return `${file}: detector must be a non-empty string.`;
   if (!isText(message)) return `${file}: message must be a non-empty string.`;
   if (fix !== undefined && !isText(fix)) return `${file}: fix must be a non-empty string.`;
-  if (typeof sourceUrl !== "string" || !OFFICIAL_SOURCE.test(sourceUrl)) {
-    return `${file}: sourceUrl must be an https URL on an official source (${OFFICIAL_HOSTS.join(", ")}) (got ${describe(sourceUrl)}).`;
+  if (!isOfficialSource(sourceUrl)) {
+    return `${file}: sourceUrl must be a canonical https URL on an official host (${OFFICIAL_HOSTS.join(", ")}), with no credentials or port (got ${describe(sourceUrl)}).`;
   }
   const { positive, negative } = fixtures;
   if (!isFixturePath(positive)) {
@@ -196,6 +193,24 @@ function readEntry(fullPath: string, path: string, file: string): CatalogEntry |
     sourceUrl,
     fixtures: { positive, negative },
   };
+}
+
+/**
+ * The URL API, no regex: https, no credentials, no port, hostname exactly an official host. It must
+ * already be canonical (`href` unchanged), because the parser silently strips whitespace, drops
+ * an explicit :443 and lowercases the host, which would otherwise hide a bad value.
+ */
+function isOfficialSource(value: unknown): value is string {
+  if (typeof value !== "string" || !URL.canParse(value)) return false;
+  const url = new URL(value);
+  return (
+    url.href === value &&
+    url.protocol === "https:" &&
+    url.username === "" &&
+    url.password === "" &&
+    url.port === "" &&
+    OFFICIAL_HOSTS.includes(url.hostname)
+  );
 }
 
 /** Under the top-level fixtures/ folder (CLAUDE.md, Quality bar), forward slashes, no `.`/`..`. */

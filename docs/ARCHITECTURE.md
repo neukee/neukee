@@ -187,7 +187,7 @@ fixtures:
 
 **Catalog rules (enforced by `loadCatalog` and its tests, ADR-003, ADR-014):**
 
-- Every entry has a `sourceUrl` on an official host: `nextjs.org`, `nodejs.org`, `react.dev` or `www.prisma.io`. Adding a host needs an ADR line. No entry is written from memory.
+- Every entry has a `sourceUrl` on an official host: `nextjs.org`, `nodejs.org`, `react.dev` or `www.prisma.io`. It must be a canonical https URL (unchanged by `new URL()`) with no credentials or port, and the hostname must equal an official host exactly. Adding a host needs an ADR line. No entry is written from memory.
 - Every entry has a positive fixture (must produce the finding) and a negative fixture (must not), both folders under the top-level `fixtures/`. The loader checks the paths; the tests check the folders exist, because the npm package ships the catalog without fixtures.
 - The file path is the id, with the lowercase `.yaml` extension. Fields are closed (no unknown keys). `applies.introducedIn` is `x.y.z`. `title` is one line.
 - Every `catalog/**/*.yaml` is an entry, so data that isn't an entry (such as Node release dates for T-014) lives somewhere else.
@@ -203,6 +203,7 @@ The scanner reads code that belongs to someone else. Its guarantees:
 3. **No absolute paths or secrets in output.** Paths are repo-relative. File contents are never copied into reports beyond the single line needed to locate a finding.
 4. **Minimal Action permissions.** `contents: read`; `security-events: write` only when the user enables SARIF upload.
 5. **Supply chain.** Few dependencies, pinned Actions, npm provenance, a lockfile committed, Renovate/Dependabot on our own repo.
+6. **Trust boundary.** Catalog files are trusted package content. Every file in a scanned repository is hostile. Readers of scanned files get the full defenses (T-005: one file handle per read, a size cap, regular files only, no-follow or realpath containment). The catalog loader keeps only cheap guards (safe YAML, a size cap, no symlinks); races that need write access to the package folder are out of scope, because that access already allows editing the entries (ADR-014).
 
 ## 8. Quality gate (every change, no exceptions)
 
