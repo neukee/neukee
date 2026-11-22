@@ -4,6 +4,12 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-010 · Claude runs the PR loop; Sreeram approves merges (2026-11-22)
+
+- **Context:** after T-001, `main` is protected by a ruleset (PR required, `verify` and `quality` checks required, no force pushes). Having Sreeram push every task branch and open every PR by hand slows each task without adding safety, because nothing reaches `main` without a green PR and his merge.
+- **Decision:** at the end of every task Claude runs `pnpm check:all`, pushes the task branch, opens the PR (`gh pr create --fill`), requests CodeRabbit, watches the checks, and fixes CI failures and real review findings. Merging still needs Sreeram's explicit yes every time. Pushing to `main`, force-pushing, deleting branches and publishing still need it too. `.claude/settings.json` allows `git push` and the `gh pr`/`gh run` read and comment commands, keeps `gh pr merge` on "ask", and denies force pushes wherever the flag appears.
+- **Consequences:** CLAUDE.md's ask-first rule, the brief §8, the `/next` skill and `docs/WORKFLOW.md` now say the same thing. Task branches are public as soon as they're pushed (the repo is public, ADR-005), so the same rule applies as for any public commit: no secrets, ever.
+
 ## ADR-009 · npm trusted publishing, no stored tokens (2026-11-21)
 
 - **Context:** npm is retiring tokens that bypass 2FA. Since early August 2026 they can't manage accounts or packages, and npm is targeting January 2027 to remove their direct publishing. Our launch (Dec 6) falls just before that date and every later release after it. A security tool that ships with a stealable publish token undercuts its own pitch.

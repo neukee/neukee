@@ -109,7 +109,7 @@ After April (v1, only once pilots prove the catch rate): auto-merge policy, pg a
 - Messages to real people: Claude drafts them; Sreeram sends.
 - Accounts, secrets, tokens, permissions.
 - Changes to core types, the report schema, CI or release workflows, or Action permissions.
-- Deleting anything outside the current task; pushing; force-anything.
+- Deleting anything outside the current task; merging a PR; pushing to `main`; force-anything. (Pushing a task branch and running its PR through CI and CodeRabbit is routine, ADR-010.)
 - Any checkpoint date at risk by more than 3 days. Say so the same day, with options.
 
 Everything else, Claude does without asking and reports afterwards.
