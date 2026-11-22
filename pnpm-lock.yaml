@@ -48,7 +48,11 @@ importers:
         specifier: workspace:*
         version: link:../scanner
 
-  packages/core: {}
+  packages/core:
+    dependencies:
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
 
   packages/scanner:
     dependencies:

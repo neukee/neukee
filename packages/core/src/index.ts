@@ -3,6 +3,7 @@
  * Changing these is a schema change — see docs/ARCHITECTURE.md §5 and add a decision record.
  */
 
+export { type Catalog, type CatalogEntry, type CatalogError, loadCatalog } from "./catalog.js";
 export { type ReportValidation, type ValidationError, validateReport } from "./validate.js";
 
 export const SCHEMA_VERSION = 1 as const;

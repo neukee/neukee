@@ -102,6 +102,18 @@ export function validateReport(value: unknown): ReportValidation {
     : { valid: false, errors };
 }
 
+/**
+ * The report schema's rule-id grammar (ADR-011), so the catalog loader checks entry ids against
+ * the same pattern instead of a copy.
+ */
+export function isRuleId(value: string): boolean {
+  const pattern = reportSchema().$defs?.Finding?.properties?.ruleId?.pattern;
+  if (pattern === undefined) {
+    throw new Error("scan-report schema has no ruleId pattern. Reinstall @neukee/core.");
+  }
+  return compiled(pattern).test(value);
+}
+
 /** The interpreter on its own, for testing the JSON Schema semantics the report schema relies on. */
 export function validateWithSchema(value: unknown, schema: SchemaNode): ValidationError[] {
   const errors: ValidationError[] = [];
