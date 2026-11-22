@@ -5,8 +5,8 @@
 
 export { type Catalog, type CatalogEntry, type CatalogError, loadCatalog } from "./catalog.js";
 export {
+  isRepoPath,
   type ReportValidation,
-  repoPathPattern,
   type ValidationError,
   validateReport,
 } from "./validate.js";

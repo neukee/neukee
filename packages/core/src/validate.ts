@@ -114,13 +114,16 @@ export function isRuleId(value: string): boolean {
   return compiled(pattern).test(value);
 }
 
-/** Returns the RepoPath pattern source from the report schema for producers that emit report paths. */
-export function repoPathPattern(): string {
+/**
+ * The report schema's RepoPath rule (ADR-011), so producers of report paths (file discovery) test
+ * a path against the same pattern instead of a copy. Compiled lazily on first use.
+ */
+export function isRepoPath(value: string): boolean {
   const pattern = reportSchema().$defs?.RepoPath?.pattern;
   if (pattern === undefined) {
     throw new Error("scan-report schema has no RepoPath pattern. Reinstall @neukee/core.");
   }
-  return pattern;
+  return compiled(pattern).test(value);
 }
 
 /** The interpreter on its own, for testing the JSON Schema semantics the report schema relies on. */

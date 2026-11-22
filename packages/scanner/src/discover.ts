@@ -1,7 +1,7 @@
-import type { Dirent } from "node:fs";
 import {
   closeSync,
   constants,
+  type Dirent,
   fstatSync,
   lstatSync,
   openSync,
@@ -11,14 +11,27 @@ import {
   statSync,
 } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
-import { type Diagnostic, repoPathPattern } from "@neukee/core";
+import { type Diagnostic, isRepoPath } from "@neukee/core";
+import { isIgnored, parseIgnoreFile, type ScopedRule } from "./gitignore.js";
+
+/**
+ * File discovery (T-005b). Scanned repositories are hostile (ARCHITECTURE §7): every file is read
+ * through one checked handle, symlinks are never followed, and .gitignore input is capped
+ * (ADR-015). Anything unusual is skipped and counted, with a diagnostic when it needs explaining.
+ */
 
 const MAX_FILE_BYTES = 1024 * 1024;
+/** ADR-015 caps. Over a cap, a .gitignore's rules are skipped (fail open), never the scan. */
+const MAX_IGNORE_FILE_BYTES = 64 * 1024;
+const MAX_RULES_IN_FORCE = 2000;
 const SKIP_DIRECTORIES = new Set(["node_modules", ".next", "dist", "build", "coverage"]);
-const repoPath = new RegExp(repoPathPattern(), "u");
+const INVALID_PATH = "Skipped a path invalid for report output.";
+
+// O_NOFOLLOW makes open() refuse a symlink as the last path component. O_NONBLOCK keeps open()
+// from hanging on a FIFO swapped in under a file's name; fstat then rejects it as not regular.
 const noFollow = constants.O_NOFOLLOW;
 const hasNoFollow = typeof noFollow === "number" && noFollow !== 0;
-const openFlags =
+const OPEN_FLAGS =
   constants.O_RDONLY |
   (hasNoFollow ? noFollow : 0) |
   (typeof constants.O_NONBLOCK === "number" ? constants.O_NONBLOCK : 0);
@@ -33,12 +46,159 @@ export type DiscoveryEvent =
   | { type: "skipped" }
   | { type: "diagnostic"; diagnostic: Diagnostic };
 
-interface IgnoreRule {
-  base: string;
-  pattern: string;
-  negated: boolean;
-  directoryOnly: boolean;
-  anchored: boolean;
+type ReadResult =
+  | { kind: "file"; content: string }
+  | { kind: "too-large" }
+  | { kind: "unsafe" }
+  | { kind: "failed" };
+
+/** Walks a repo and yields bounded file contents one at a time for the detector pipeline. */
+export function discoverFiles(root: string): Generator<DiscoveryEvent> {
+  const canonicalRoot = realpathSync(root);
+  return walk(canonicalRoot, canonicalRoot, "", []);
+}
+
+function* walk(
+  root: string,
+  absoluteDirectory: string,
+  relativeDirectory: string,
+  inheritedRules: readonly ScopedRule[],
+): Generator<DiscoveryEvent> {
+  const where = relativeDirectory === "" ? undefined : relativeDirectory;
+  let entries: Dirent[];
+  try {
+    // Re-check right before reading: the folder may have been swapped for a link since its parent
+    // was listed. Node has no openat/fdopendir, so this narrows the window rather than closing it.
+    const metadata = lstatSync(absoluteDirectory);
+    const resolved = realpathSync(absoluteDirectory);
+    const safe =
+      metadata.isDirectory() &&
+      (where === undefined ? resolved === root : isWithin(root, resolved));
+    if (!safe) {
+      yield { type: "skipped" };
+      yield warning("Skipped a directory that is not safely inside the scan root.", where);
+      return;
+    }
+    entries = readdirSync(absoluteDirectory, { withFileTypes: true }).sort((a, b) =>
+      a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+    );
+  } catch {
+    yield where === undefined
+      ? { type: "diagnostic", diagnostic: { level: "error", message: "Could not read scan root." } }
+      : warning("Could not read directory.", where);
+    return;
+  }
+
+  let rules = inheritedRules;
+  const ignoreEntry = entries.find((entry) => entry.name === ".gitignore" && entry.isFile());
+  if (ignoreEntry !== undefined) {
+    const path = where === undefined ? ".gitignore" : `${where}/.gitignore`;
+    const result = readFileOnce(root, join(absoluteDirectory, ".gitignore"), MAX_IGNORE_FILE_BYTES);
+    if (result.kind === "file") {
+      const parsed = parseIgnoreFile(result.content);
+      for (const { line, reason } of parsed.problems) {
+        yield warning(`Line ${line} of this .gitignore was not applied: it ${reason}.`, path);
+      }
+      if (inheritedRules.length + parsed.rules.length > MAX_RULES_IN_FORCE) {
+        yield warning(
+          `This .gitignore was not applied: it would put more than ${MAX_RULES_IN_FORCE} rules in force.`,
+          path,
+        );
+      } else {
+        rules = [
+          ...inheritedRules,
+          ...parsed.rules.map((rule) => ({ base: relativeDirectory, rule })),
+        ];
+      }
+      if (!isIgnored(path, false, rules))
+        yield { type: "file", file: { path, content: result.content } };
+    } else {
+      yield { type: "skipped" };
+      yield warning(
+        result.kind === "too-large"
+          ? "This .gitignore is larger than 64 KiB, so its rules were not applied."
+          : "This .gitignore could not be read safely, so its rules were not applied.",
+        path,
+      );
+    }
+  }
+
+  for (const entry of entries) {
+    if (entry === ignoreEntry) continue;
+    const path = where === undefined ? entry.name : `${where}/${entry.name}`;
+    if (!isRepoPath(path)) {
+      // The path itself can't go in a report, so the diagnostic doesn't name it.
+      yield { type: "skipped" };
+      yield { type: "diagnostic", diagnostic: { level: "warning", message: INVALID_PATH } };
+      continue;
+    }
+    if (entry.name === ".git" || (entry.isDirectory() && SKIP_DIRECTORIES.has(entry.name)))
+      continue;
+    if (entry.isSymbolicLink()) {
+      yield { type: "skipped" };
+      yield warning("Skipped a symbolic link: the scanner never follows links.", path);
+      continue;
+    }
+    const absolutePath = join(absoluteDirectory, entry.name);
+    if (entry.isDirectory()) {
+      if (!isIgnored(path, true, rules)) yield* walk(root, absolutePath, path, rules);
+      continue;
+    }
+    if (!entry.isFile() || isIgnored(path, false, rules)) {
+      if (!entry.isFile()) yield { type: "skipped" }; // FIFOs, sockets, devices
+      continue;
+    }
+    const result = readFileOnce(root, absolutePath, MAX_FILE_BYTES);
+    if (result.kind === "file") {
+      yield { type: "file", file: { path, content: result.content } };
+    } else {
+      yield { type: "skipped" };
+      if (result.kind === "failed") yield warning("Could not read file.", path);
+    }
+  }
+}
+
+/**
+ * Reads one file through a single handle: open it, fstat that handle, read at most `maxBytes`
+ * from it. Without O_NOFOLLOW (Windows) the path is checked with lstat and realpath first.
+ */
+function readFileOnce(root: string, absolutePath: string, maxBytes: number): ReadResult {
+  let descriptor: number | undefined;
+  try {
+    if (!hasNoFollow) {
+      const before = lstatSync(absolutePath);
+      if (before.isSymbolicLink() || !before.isFile()) return { kind: "unsafe" };
+      if (!isWithin(root, realpathSync(absolutePath))) return { kind: "unsafe" };
+    }
+    descriptor = openSync(absolutePath, OPEN_FLAGS);
+    const opened = fstatSync(descriptor);
+    if (!opened.isFile()) return { kind: "unsafe" };
+    if (opened.size > maxBytes) return { kind: "too-large" };
+    // O_NOFOLLOW only covers the last path component: a parent folder swapped for a link after
+    // the walk checked it would still be followed. So the open file must still be the one at this
+    // path, and the path must still resolve inside the root.
+    const current = statSync(absolutePath);
+    if (opened.dev !== current.dev || opened.ino !== current.ino) return { kind: "unsafe" };
+    if (!isWithin(root, realpathSync(absolutePath))) return { kind: "unsafe" };
+    const buffer = Buffer.alloc(opened.size);
+    let bytesRead = 0;
+    while (bytesRead < buffer.length) {
+      const count = readSync(descriptor, buffer, bytesRead, buffer.length - bytesRead, bytesRead);
+      if (count === 0) break;
+      bytesRead += count;
+    }
+    return { kind: "file", content: buffer.subarray(0, bytesRead).toString("utf8") };
+  } catch {
+    return { kind: "failed" };
+  } finally {
+    if (descriptor !== undefined) {
+      try {
+        closeSync(descriptor);
+      } catch {
+        // A failed close on a read-only handle loses nothing; the content is already read.
+      }
+    }
+  }
 }
 
 function isWithin(root: string, candidate: string): boolean {
@@ -46,464 +206,9 @@ function isWithin(root: string, candidate: string): boolean {
   return path !== "" && path !== ".." && !path.startsWith(`..${sep}`) && !isAbsolute(path);
 }
 
-function parseIgnoreRules(contents: string, basePath: string): IgnoreRule[] {
-  const text = contents.startsWith("\uFEFF") ? contents.slice(1) : contents;
-  const rules: IgnoreRule[] = [];
-
-  for (const rawLine of text.split(/\r\n|\n|\r/)) {
-    let end = rawLine.length;
-    while (end > 0 && rawLine[end - 1] === " ") {
-      let backslashes = 0;
-      for (let index = end - 2; index >= 0 && rawLine[index] === "\\"; index--) backslashes++;
-      if (backslashes % 2 === 1) break;
-      end--;
-    }
-    let pattern = rawLine.slice(0, end);
-    if (pattern === "") continue;
-
-    let negated = false;
-    if (pattern.startsWith("\\#") || pattern.startsWith("\\!")) {
-      pattern = pattern.slice(1);
-    } else if (pattern.startsWith("#")) {
-      continue;
-    } else if (pattern.startsWith("!")) {
-      negated = true;
-      pattern = pattern.slice(1);
-    }
-
-    const anchored = pattern.startsWith("/");
-    if (anchored) pattern = pattern.replace(/^\/+/, "");
-    const directoryOnly = pattern.endsWith("/");
-    if (directoryOnly) pattern = pattern.slice(0, -1);
-    pattern = pattern.replace(/\/+/g, "/");
-    if (pattern === "") continue;
-
-    rules.push({ base: basePath, pattern, negated, directoryOnly, anchored });
-  }
-  return rules;
-}
-
-function matchesPosixClass(name: string, value: string): boolean {
-  const code = value.charCodeAt(0);
-  const alpha = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
-  const digit = code >= 48 && code <= 57;
-  switch (name) {
-    case "alnum":
-      return alpha || digit;
-    case "alpha":
-      return alpha;
-    case "blank":
-      return code === 9 || code === 32;
-    case "cntrl":
-      return code <= 31 || code === 127;
-    case "digit":
-      return digit;
-    case "graph":
-      return code >= 33 && code <= 126;
-    case "lower":
-      return code >= 97 && code <= 122;
-    case "print":
-      return code >= 32 && code <= 126;
-    case "punct":
-      return (
-        (code >= 33 && code <= 47) ||
-        (code >= 58 && code <= 64) ||
-        (code >= 91 && code <= 96) ||
-        (code >= 123 && code <= 126)
-      );
-    case "space":
-      return code === 32 || (code >= 9 && code <= 13);
-    case "upper":
-      return code >= 65 && code <= 90;
-    case "xdigit":
-      return digit || (code >= 65 && code <= 70) || (code >= 97 && code <= 102);
-    default:
-      return false;
-  }
-}
-
-function matchesClassCharacters(
-  pattern: string,
-  start: number,
-  end: number,
-  value: string,
-): boolean {
-  let matched = false;
-  let index = start;
-  while (index < end) {
-    if (pattern[index] === "\\") {
-      if (pattern[index + 1] === value) matched = true;
-      index += 2;
-      continue;
-    }
-    const first = pattern[index] ?? "";
-    if (pattern[index + 1] === "-" && index + 2 < end) {
-      const last = pattern[index + 2] ?? "";
-      if (first <= value && value <= last) matched = true;
-      index += 3;
-    } else {
-      if (first === value) matched = true;
-      index++;
-    }
-  }
-  return matched;
-}
-
-function classMatch(
-  pattern: string,
-  start: number,
-  value: string,
-): { end: number; matches: boolean } | undefined {
-  let index = start + 1;
-  const negated = pattern[index] === "!" || pattern[index] === "^";
-  if (negated) index++;
-  let matched = false;
-  if (pattern[index] === "]") {
-    if (value === "]") matched = true;
-    index++;
-  }
-  let charactersStart = index;
-
-  while (index < pattern.length) {
-    if (pattern[index] === "\\") {
-      index += 2;
-      continue;
-    }
-    if (pattern[index] === "[" && pattern[index + 1] === ":") {
-      matched ||= matchesClassCharacters(pattern, charactersStart, index, value);
-      const posixStart = index;
-      index += 2;
-      while (index < pattern.length) {
-        if (pattern[index] === "\\") {
-          index += 2;
-          continue;
-        }
-        if (pattern[index] === "]") {
-          if (pattern[index - 1] === ":") {
-            matched ||= matchesPosixClass(pattern.slice(posixStart + 2, index - 1), value);
-            index++;
-            charactersStart = index;
-            break;
-          }
-          matched ||= matchesClassCharacters(pattern, posixStart, index, value);
-          return { end: index, matches: negated ? !matched : matched };
-        }
-        index++;
-      }
-      if (index >= pattern.length) return undefined;
-      continue;
-    }
-    if (pattern[index] === "]") {
-      matched ||= matchesClassCharacters(pattern, charactersStart, index, value);
-      return { end: index, matches: negated ? !matched : matched };
-    }
-    index++;
-  }
-  return undefined;
-}
-
-function matchesSegment(pattern: string, value: string): boolean {
-  let patternIndex = 0;
-  let valueIndex = 0;
-  let starPattern = -1;
-  let starValue = -1;
-
-  while (valueIndex < value.length) {
-    const character = pattern[patternIndex];
-    if (character === "*") {
-      starPattern = patternIndex + 1;
-      while (pattern[starPattern] === "*") starPattern++;
-      starValue = valueIndex;
-      patternIndex = starPattern;
-      continue;
-    }
-    if (character === "?") {
-      patternIndex++;
-      valueIndex++;
-      continue;
-    }
-    if (character === "[") {
-      const result = classMatch(pattern, patternIndex, value[valueIndex] ?? "");
-      if (result !== undefined) {
-        if (result.matches) {
-          patternIndex = result.end + 1;
-          valueIndex++;
-          continue;
-        }
-        if (starPattern >= 0 && starValue < value.length) {
-          starValue++;
-          valueIndex = starValue;
-          patternIndex = starPattern;
-          continue;
-        }
-        return false;
-      }
-    }
-
-    const escaped = character === "\\" ? pattern[patternIndex + 1] : undefined;
-    const literal = escaped ?? character;
-    if (literal !== undefined && literal === value[valueIndex]) {
-      patternIndex += escaped === undefined ? 1 : 2;
-      valueIndex++;
-      continue;
-    }
-    if (starPattern >= 0 && starValue < value.length) {
-      starValue++;
-      valueIndex = starValue;
-      patternIndex = starPattern;
-      continue;
-    }
-    return false;
-  }
-
-  while (pattern[patternIndex] === "*") patternIndex++;
-  return patternIndex === pattern.length;
-}
-
-function matchesPathPattern(pattern: string, candidate: string): boolean {
-  const patternSegments = pattern.split("/");
-  const pathSegments = candidate.split("/");
-  let previous = new Uint8Array(pathSegments.length + 1);
-  previous[0] = 1;
-
-  for (const segment of patternSegments) {
-    const next = new Uint8Array(pathSegments.length + 1);
-    if (segment === "**") {
-      next[0] = previous[0] ?? 0;
-      for (let index = 1; index <= pathSegments.length; index++) {
-        next[index] = previous[index] === 1 || next[index - 1] === 1 ? 1 : 0;
-      }
-    } else {
-      for (let index = 1; index <= pathSegments.length; index++) {
-        if (previous[index - 1] === 1 && matchesSegment(segment, pathSegments[index - 1] ?? "")) {
-          next[index] = 1;
-        }
-      }
-    }
-    previous = next;
-  }
-  return previous[pathSegments.length] === 1;
-}
-
-function matchesRule(path: string, isDirectory: boolean, rule: IgnoreRule): boolean {
-  if (rule.directoryOnly && !isDirectory) return false;
-  const prefix = rule.base === "" ? "" : `${rule.base}/`;
-  if (!path.startsWith(prefix) || path === rule.base) return false;
-  const candidate = path.slice(prefix.length);
-  if (rule.pattern.includes("/")) {
-    const basePattern = rule.pattern.replace(/(?:\/\*\*)+$/, "");
-    if (basePattern !== rule.pattern && matchesPathPattern(basePattern, candidate)) return false;
-    return matchesPathPattern(rule.pattern, candidate);
-  }
-  const basename = candidate.slice(candidate.lastIndexOf("/") + 1);
-  return matchesSegment(rule.pattern, rule.anchored ? candidate : basename);
-}
-
-function isIgnored(path: string, isDirectory: boolean, rules: readonly IgnoreRule[]): boolean {
-  let ignored = false;
-  for (const rule of rules) {
-    if (matchesRule(path, isDirectory, rule)) ignored = !rule.negated;
-  }
-  return ignored;
-}
-
-function* readFileOnce(
-  root: string,
-  absolutePath: string,
-  path: string,
-): Generator<DiscoveryEvent, DiscoveredFile | undefined> {
-  let descriptor: number | undefined;
-  let file: DiscoveredFile | undefined;
-  let skipped = false;
-  let failed = false;
-
-  try {
-    if (!hasNoFollow) {
-      const metadata = lstatSync(absolutePath);
-      if (metadata.isSymbolicLink() || !metadata.isFile()) {
-        skipped = true;
-      } else if (!isWithin(root, realpathSync(absolutePath))) {
-        skipped = true;
-      }
-    }
-
-    if (!skipped) {
-      descriptor = openSync(absolutePath, openFlags);
-      const metadata = fstatSync(descriptor);
-      if (!metadata.isFile() || metadata.size > MAX_FILE_BYTES) {
-        skipped = true;
-      } else {
-        const pathMetadata = statSync(absolutePath);
-        const resolvedPath = realpathSync(absolutePath);
-        if (
-          metadata.dev !== pathMetadata.dev ||
-          metadata.ino !== pathMetadata.ino ||
-          !isWithin(root, resolvedPath)
-        ) {
-          skipped = true;
-        } else {
-          const size = Math.min(metadata.size, MAX_FILE_BYTES);
-          const buffer = Buffer.alloc(size);
-          let bytesRead = 0;
-          while (bytesRead < size) {
-            const count = readSync(descriptor, buffer, bytesRead, size - bytesRead, bytesRead);
-            if (count === 0) break;
-            bytesRead += count;
-          }
-          file = { path, content: buffer.subarray(0, bytesRead).toString("utf8") };
-        }
-      }
-    }
-  } catch {
-    failed = true;
-  }
-
-  if (descriptor !== undefined) {
-    try {
-      closeSync(descriptor);
-    } catch {
-      failed = true;
-    }
-  }
-
-  if (failed) {
-    yield { type: "skipped" };
-    yield {
-      type: "diagnostic",
-      diagnostic: { level: "warning", message: "Could not read file.", file: path },
-    };
-    return undefined;
-  }
-  if (skipped) {
-    yield { type: "skipped" };
-    return undefined;
-  }
-  return file;
-}
-
-function* walk(
-  root: string,
-  absoluteDirectory: string,
-  relativeDirectory: string,
-  inheritedRules: readonly IgnoreRule[],
-): Generator<DiscoveryEvent> {
-  let safeDirectory: boolean;
-  try {
-    const metadata = lstatSync(absoluteDirectory);
-    const resolvedDirectory = realpathSync(absoluteDirectory);
-    safeDirectory =
-      metadata.isDirectory() &&
-      !metadata.isSymbolicLink() &&
-      (relativeDirectory === "" ? resolvedDirectory === root : isWithin(root, resolvedDirectory));
-  } catch {
-    yield {
-      type: "diagnostic",
-      diagnostic:
-        relativeDirectory === ""
-          ? { level: "error", message: "Could not read scan root." }
-          : { level: "warning", message: "Could not read directory.", file: relativeDirectory },
-    };
-    return;
-  }
-  if (!safeDirectory) {
-    yield { type: "skipped" };
-    yield {
-      type: "diagnostic",
-      diagnostic:
-        relativeDirectory === ""
-          ? { level: "error", message: "Could not read scan root." }
-          : {
-              level: "warning",
-              message: "Skipped a directory that is not safely inside the scan root.",
-              file: relativeDirectory,
-            },
-    };
-    return;
-  }
-  let entries: Dirent[];
-  try {
-    entries = readdirSync(absoluteDirectory, { withFileTypes: true }).sort((a, b) =>
-      a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
-    );
-  } catch {
-    yield {
-      type: "diagnostic",
-      diagnostic:
-        relativeDirectory === ""
-          ? { level: "error", message: "Could not read scan root." }
-          : { level: "warning", message: "Could not read directory.", file: relativeDirectory },
-    };
-    return;
-  }
-
-  const ignoreEntry = entries.find((entry) => entry.name === ".gitignore" && entry.isFile());
-  let ignoreFilePath: string | undefined;
-  let ignoreFile: DiscoveredFile | undefined;
-  const ignoreFileProcessed = ignoreEntry !== undefined;
-  if (ignoreEntry !== undefined) {
-    ignoreFilePath = relativeDirectory === "" ? ".gitignore" : `${relativeDirectory}/.gitignore`;
-    if (!repoPath.test(ignoreFilePath)) {
-      yield { type: "skipped" };
-      yield {
-        type: "diagnostic",
-        diagnostic: { level: "warning", message: "Skipped a path invalid for report output." },
-      };
-    } else {
-      ignoreFile = yield* readFileOnce(
-        root,
-        join(absoluteDirectory, ignoreEntry.name),
-        ignoreFilePath,
-      );
-    }
-  }
-
-  const rules =
-    ignoreFile === undefined
-      ? inheritedRules
-      : [...inheritedRules, ...parseIgnoreRules(ignoreFile.content, relativeDirectory)];
-  if (
-    ignoreFile !== undefined &&
-    ignoreFilePath !== undefined &&
-    !isIgnored(ignoreFilePath, false, rules)
-  ) {
-    yield { type: "file", file: ignoreFile };
-  }
-
-  for (const entry of entries) {
-    if (ignoreFileProcessed && entry.name === ".gitignore") continue;
-    const absolutePath = join(absoluteDirectory, entry.name);
-    const path = relativeDirectory === "" ? entry.name : `${relativeDirectory}/${entry.name}`;
-    if (!repoPath.test(path)) {
-      yield { type: "skipped" };
-      yield {
-        type: "diagnostic",
-        diagnostic: { level: "warning", message: "Skipped a path invalid for report output." },
-      };
-      continue;
-    }
-    if (entry.name === ".git" || (entry.isDirectory() && SKIP_DIRECTORIES.has(entry.name))) {
-      continue;
-    }
-    if (entry.isSymbolicLink()) {
-      yield { type: "skipped" };
-      continue;
-    }
-    if (entry.isDirectory()) {
-      if (!isIgnored(path, true, rules)) yield* walk(root, absolutePath, path, rules);
-      continue;
-    }
-    if (entry.isFile()) {
-      if (isIgnored(path, false, rules)) continue;
-      const file = yield* readFileOnce(root, absolutePath, path);
-      if (file !== undefined) yield { type: "file", file };
-      continue;
-    }
-    yield { type: "skipped" };
-  }
-}
-
-/** Walks a repo and yields bounded file contents one at a time for the detector pipeline. */
-export function discoverFiles(root: string): Generator<DiscoveryEvent> {
-  const canonicalRoot = realpathSync(root);
-  return walk(canonicalRoot, canonicalRoot, "", []);
+function warning(message: string, file?: string): DiscoveryEvent {
+  return {
+    type: "diagnostic",
+    diagnostic: { level: "warning", message, ...(file === undefined ? {} : { file }) },
+  };
 }

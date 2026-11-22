@@ -3,4 +3,4 @@ ignored-root.txt
 *.log
 *.tmp
 /root-only/
-[[:digit:]].cache
+[0-9].cache

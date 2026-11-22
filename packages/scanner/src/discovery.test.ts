@@ -2,10 +2,9 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } fr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { repoPathPattern } from "@neukee/core";
+import { type Diagnostic, isRepoPath } from "@neukee/core";
 import { afterEach, describe, expect, it } from "vitest";
-import { discoverFiles } from "./discover.js";
-import { scan } from "./scan.js";
+import { type DiscoveryEvent, discoverFiles } from "./discover.js";
 
 const fixture = fileURLToPath(new URL("../../../fixtures/repos/discovery/", import.meta.url));
 const roots: string[] = [];
@@ -68,6 +67,7 @@ describe("file discovery", () => {
     );
     expect(files.map((file) => file.path)).toEqual([
       ".gitignore",
+      "7.cache",
       "at-limit.bin",
       "empty.txt",
       "ignored-tree/keep.txt",
@@ -86,14 +86,28 @@ describe("file discovery", () => {
     expect(files.find((file) => file.path === "at-limit.bin")?.content).toHaveLength(1024 * 1024);
     expect(files.find((file) => file.path === "empty.txt")?.content).toBe("");
     expect(skipped).toBe(2);
-    expect(diagnostics).toEqual([]);
+    // The POSIX class rule is dropped (ADR-015), so 7.cache stays in the scan; the external
+    // symlink is skipped and reported, never followed.
+    expect(diagnostics).toEqual([
+      {
+        level: "warning",
+        message:
+          "Line 7 of this .gitignore was not applied: it uses a POSIX character class ([:name:]), which isn't supported.",
+        file: ".gitignore",
+      },
+      {
+        level: "warning",
+        message: "Skipped a symbolic link: the scanner never follows links.",
+        file: "external-link",
+      },
+    ]);
   });
 
   it("skips a path rejected by the core RepoPath pattern without reporting that path", () => {
     const root = copyFixture();
     const invalidName = "bad\u202ename.txt";
     writeFileSync(join(root, invalidName), "hostile path");
-    expect(new RegExp(repoPathPattern(), "u").test(invalidName)).toBe(false);
+    expect(isRepoPath(invalidName)).toBe(false);
 
     const events = Array.from(discoverFiles(root));
     const files = events.flatMap((event) => (event.type === "file" ? [event.file] : []));
@@ -110,13 +124,6 @@ describe("file discovery", () => {
     expect(Object.hasOwn(diagnostic, "file")).toBe(false);
   });
 
-  it("adds discovered diagnostics and counts to the report", () => {
-    const root = copyFixture();
-    const report = scan(root, [], { name: "neukee", version: "1.2.3" });
-    expect(report.stats).toEqual({ filesScanned: 8, filesSkipped: 0 });
-    expect(report.diagnostics).toEqual([]);
-  });
-
   it("handles malformed POSIX classes without rescanning their suffixes", () => {
     const root = copyFixture();
     writeFileSync(join(root, ".gitignore"), `[${"[:".repeat(200_000)}x]`);
@@ -127,4 +134,75 @@ describe("file discovery", () => {
     );
     expect(files).toContain("included.txt");
   });
+
+  it("drops an over-long rule line with a diagnostic and applies the rest", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), `${"a".repeat(2000)}\n*.tmp\n`);
+    writeFileSync(join(root, "drop.tmp"), "ignored");
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events)).not.toContain("drop.tmp");
+    expect(diagnosticsOf(events)).toEqual([
+      {
+        level: "warning",
+        message: "Line 1 of this .gitignore was not applied: it is longer than 1024 bytes.",
+        file: ".gitignore",
+      },
+    ]);
+  });
+
+  it("skips a .gitignore over 64 KiB with a diagnostic and scans as if it weren't there", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), `*.txt\n${"#".repeat(64 * 1024)}\n`);
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events)).toContain("root.txt"); // *.txt was not applied (fail open)
+    expect(paths(events)).not.toContain(".gitignore");
+    expect(diagnosticsOf(events)).toEqual([
+      {
+        level: "warning",
+        message: "This .gitignore is larger than 64 KiB, so its rules were not applied.",
+        file: ".gitignore",
+      },
+    ]);
+  });
+
+  it("skips a .gitignore that would put more than 2,000 rules in force", () => {
+    const root = copyFixture();
+    const many = Array.from({ length: 1995 }, (_, i) => `unused-${i}`).join("\n");
+    writeFileSync(join(root, ".gitignore"), `${many}\n`);
+    writeFileSync(
+      join(root, "nested/.gitignore"),
+      Array.from({ length: 6 }, () => "*.txt").join("\n"),
+    );
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events)).toContain("nested/keep.txt"); // nested rules were not applied
+    expect(diagnosticsOf(events)).toEqual([
+      {
+        level: "warning",
+        message: "This .gitignore was not applied: it would put more than 2000 rules in force.",
+        file: "nested/.gitignore",
+      },
+    ]);
+  });
+
+  it("skips and reports a symlink even when it points inside the repo", () => {
+    const root = copyFixture();
+    symlinkSync(join(root, "nested"), join(root, "inside-link"), "junction");
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events).some((path) => path.startsWith("inside-link"))).toBe(false);
+    expect(diagnosticsOf(events)).toEqual([
+      {
+        level: "warning",
+        message: "Skipped a symbolic link: the scanner never follows links.",
+        file: "inside-link",
+      },
+    ]);
+  });
 });
+
+function paths(events: DiscoveryEvent[]): string[] {
+  return events.flatMap((event) => (event.type === "file" ? [event.file.path] : []));
+}
+
+function diagnosticsOf(events: DiscoveryEvent[]): Diagnostic[] {
+  return events.flatMap((event) => (event.type === "diagnostic" ? [event.diagnostic] : []));
+}

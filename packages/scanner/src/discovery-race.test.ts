@@ -18,6 +18,12 @@ vi.mock("node:fs", async (importOriginal) => {
   return {
     ...actual,
     openSync: (...args: Parameters<typeof actual.openSync>) => {
+      if (race.mode === "open-persist" && !race.didSwap && args[0] === race.target) {
+        race.didSwap = true;
+        actual.renameSync(race.nested, race.moved);
+        actual.symlinkSync(race.outside, race.nested, "junction");
+        return actual.openSync(...args);
+      }
       if (race.mode === "open" && !race.didSwap && args[0] === race.target) {
         race.didSwap = true;
         actual.renameSync(race.nested, race.moved);
@@ -48,7 +54,7 @@ import { discoverFiles } from "./discover.js";
 const roots: string[] = [];
 
 afterEach(async () => {
-  if (race.mode === "readdir" && race.didSwap) {
+  if ((race.mode === "readdir" || race.mode === "open-persist") && race.didSwap) {
     await rm(race.nested);
     await rename(race.moved, race.nested);
   }
@@ -111,5 +117,16 @@ describe("discovery path races", () => {
         (diagnostic) => diagnostic.message === "Skipped a path invalid for report output.",
       ),
     ).toBe(false);
+  });
+
+  it("does not return a file whose parent stays swapped for an external link after the open", async () => {
+    await setupRace();
+    race.mode = "open-persist";
+
+    const events = Array.from(discoverFiles(race.root));
+    const files = events.flatMap((event) => (event.type === "file" ? [event.file] : []));
+    expect(race.didSwap).toBe(true);
+    expect(files.some((file) => file.content === "outside")).toBe(false);
+    expect(events.some((event) => event.type === "skipped")).toBe(true);
   });
 });
