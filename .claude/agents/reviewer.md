@@ -21,9 +21,9 @@ Check, in this order:
 8. **Scope:** changes outside the task, dead code, leftover debug output.
 9. **Quality bar** (`CLAUDE.md`, "Quality bar"). Check each item and flag any breach as `must-fix`, except where marked `should-fix`:
    - **Simplicity:** an abstraction, option, parameter or extension point with only one real use. Code that could be shorter and still pass the tests is `should-fix`.
-   - **Size:** more than one task in the PR, or more than about 300 changed source lines, excluding tests, snapshots and fixtures. You often run before the work is committed, so count all three of committed, staged and unstaged changes, plus new files Git doesn't track yet:
-     - `git diff --numstat main -- packages ':!**/*.test.ts' ':!**/__snapshots__/**' ':!**/fixtures/**'` gives tracked files: the working tree against `main`, covering committed, staged and unstaged changes.
-     - `git ls-files --others --exclude-standard -- packages | grep -v -e '\.test\.ts$' -e '__snapshots__' -e '/fixtures/' | xargs wc -l` gives new untracked source files.
+   - **Size:** more than one task in the PR, or more than about 300 changed source lines anywhere in the repo, not only under `packages/`. Root scripts, config and workflows count. Tests, snapshots, fixtures, documentation (`*.md`) and lockfiles (`pnpm-lock.yaml`) don't. You often run before the work is committed, so count all three of committed, staged and unstaged changes, plus new files Git doesn't track yet:
+     - `git diff --numstat main -- . ':!*.test.ts' ':!*__snapshots__/*' ':!*fixtures/*' ':!*.md' ':!pnpm-lock.yaml'` gives tracked files: the working tree against `main`, covering committed, staged and unstaged changes. In Git's default pathspec matching, `*` also matches `/`, so these single-star patterns cover root and nested paths alike. `**/*.md` would miss a root `CLAUDE.md`.
+     - `git ls-files --others --exclude-standard | grep -v -e '\.test\.ts$' -e '__snapshots__' -e '/fixtures/' -e '^fixtures/' -e '\.md$' -e '^pnpm-lock\.yaml$' | xargs wc -l` gives new untracked source files.
      - Fixtures never count, wherever they are. A fixture outside the top-level `fixtures/` folder is a separate `must-fix` (see "Fixtures" below), not a reason to split the task.
      - Add the added and deleted lines from both. Over the limit, say how to split the task.
    - **Standard library:** a dependency or hand-rolled helper where Node's standard library already does the job.
