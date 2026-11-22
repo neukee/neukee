@@ -4,13 +4,13 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, 12:45 IST (Step 2 mostly done: GitHub org, npm org, 2FA; ADR-005 confirmed)
+- **Last updated:** 2026-11-22, evening IST (T-001 done via PR #1; Claude now runs the GitHub side of each task)
 - **Branch:** `main`
-- **Last finished:** T-000 scaffold, plus workbench additions (brief, `/wrap`, quality gates, pinned Actions)
+- **Last finished:** T-001 (repo, ruleset on `main`, CODEOWNERS, `.gitattributes` forcing LF so Windows CI passes)
 - **In progress:** nothing
-- **Exact next step:** Sreeram finishes workbench Step 2 (GitHub org `neukee`, npm org, domain, trademark search) and T-001 (repo on GitHub, protections, CodeRabbit). Then open Claude Code and run `/status`, then `/next` (T-002).
-- **Blocked / waiting on Sreeram:** confirm the target customer (brief §5); NEWKEY trademark details (pronunciation decision)
-- **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (14 days). Launch Dec 6 (15 days).
+- **Exact next step:** `/next` → T-002 (core types and JSON Schema).
+- **Blocked / waiting on Sreeram:** NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Open item: decide the pronunciation and check the registration details before the T-053 trademark search.
+- **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (13 days). Launch Dec 6 (14 days).
 
 ## Dated checkpoints
 
@@ -29,7 +29,7 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 ## Current state
 
 - **Phase:** 0 — Foundation
-- **Current task:** T-001 (you) and T-002 (Claude)
+- **Current task:** T-002 (Claude)
 - **Scanner launch target:** December 6, 2026
 - **On track?** Not yet measured. Run `/checkpoint` after T-005.
 
@@ -52,9 +52,10 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
 One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+). Sreeram's hours only when he gives them.
 
-| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                   |
-| ---------- | ----- | ---- | --------------- | ------------- | ------ | ---------------------- |
-| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green |
+| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                                                                    |
+| ---------- | ----- | ---- | --------------- | ------------- | ------ | ----------------------------------------------------------------------- |
+| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                                  |
+| 2026-11-22 | T-001 | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI |
 
 ## Daily log
 
@@ -75,6 +76,13 @@ Sreeram's notes and each session's summary. Newest first.
 - New tasks: T-006 change-signature schema, T-027 MergeWarden comparison, T-037 corpus job, T-038 mutation score target, T-056 UpgradeBench; E-001 reframed as the competitive spike.
 
 ## Log (task entries)
+
+### 2026-11-22 · T-001 · GitHub repository and protections — done
+
+- Sreeram created `neukee/neukee` (public, ADR-005), set the ruleset on `main`, set CODEOWNERS, installed CodeRabbit.
+- PR #1: Windows `verify` failed because Git checked files out with CRLF and Biome rejected them. Added `.gitattributes` (`* text=auto eol=lf`, binary patterns, `fixtures/**/crlf/** -text`). All nine checks then passed, CodeRabbit included; squash-merged as `55c70b9`.
+- Follow-up: T-015 now requires lockfile parsers to accept CRLF input, with a CRLF fixture under `fixtures/**/crlf/`.
+- Workflow change (chore PR): Claude now pushes task branches, opens the PR, requests CodeRabbit, watches checks and fixes failures; Sreeram approves every merge.
 
 ### 2026-11-18 · T-000 · Repository scaffold — done
 

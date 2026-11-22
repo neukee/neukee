@@ -22,11 +22,11 @@
 
 ### T-001 · GitHub repository and protections
 
-- Status: todo
+- Status: done
 - Depends on: T-000
 - Human review: yes (you do this; Claude gives instructions)
 - Build (follow the workbench setup checklist): confirm ADR-005 first. Create the repo (public per ADR-005), push `main`. Turn on: branch protection for `main` (require a PR, require the `verify` and `quality` checks, no force pushes), secret scanning with push protection, Dependabot alerts, CodeQL default setup, 2FA on your account. Install the CodeRabbit GitHub app on the repo. Replace `@YOUR_GITHUB_USERNAME` in `.github/CODEOWNERS`.
-- Done when: a test PR shows `verify` and `quality` running and blocking merge until green, and CodeRabbit reviews it (comment `@coderabbitai review` while the repo has fewer than 10 stars).
+- Done when: a test PR shows `verify` and `quality` running and blocking merge until green, and CodeRabbit reviews it (comment `@coderabbitai review` while the repo has fewer than 10 stars). ✔ PR #1 (2026-11-22): the Windows `verify` jobs failed on CRLF checkouts and blocked merge until `.gitattributes` forced LF; all nine checks then passed, CodeRabbit included, and it was squash-merged.
 
 ### T-002 · Core types and JSON Schema
 
@@ -127,7 +127,7 @@
 - Depends on: T-005
 - Human review: no
 - Build: v2/v3 `packages` map → resolved versions, direct vs transitive, `hasInstallScript`. Add `fast-check` (ADR-007) and property-based tests: the parser never throws on arbitrary input.
-- Done when: fixtures from real `npm install` output (small) parse exactly; a corrupt lockfile gives a diagnostic, not a crash.
+- Done when: fixtures from real `npm install` output (small) parse exactly; a corrupt lockfile gives a diagnostic, not a crash; lockfile parsers accept CRLF input; a CRLF fixture lives under `fixtures/**/crlf/` (`.gitattributes` keeps those files byte-exact).
 
 ### T-016 · Lockfile: pnpm-lock.yaml
 
