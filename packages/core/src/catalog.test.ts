@@ -2,6 +2,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -428,26 +429,102 @@ describe("loadCatalog: invalid entries give clear errors naming the file", () =>
       "catalog/node24/z-broken.yaml",
     ]);
   });
+
+  // ADR-014: the path is the id, so two files can never share an id. A copy of an entry under
+  // another name is rejected because its id doesn't match its path.
+  it("rejects a duplicate id: only the file at the id's path is accepted", () => {
+    const { entries, errors } = loadCatalog(
+      repo({ [at]: VALID, "catalog/next16/sync-request-apis-copy.yaml": VALID }),
+    );
+    expect(entries).toEqual([EXPECTED]);
+    expect(errors).toEqual([
+      {
+        file: "catalog/next16/sync-request-apis-copy.yaml",
+        message:
+          'catalog/next16/sync-request-apis-copy.yaml: id "next16/sync-request-apis" belongs at catalog/next16/sync-request-apis.yaml.',
+      },
+    ]);
+  });
+});
+
+/**
+ * Every entry needs a positive and a negative fixture folder that exists and holds at least one
+ * file (ADR-003, ADR-014). The loader can't check this, because the npm package ships the
+ * catalog without fixtures, so this test does, in CI (`pnpm verify`).
+ */
+function fixtureProblems(entries: CatalogEntry[], root: string): string[] {
+  const problems: string[] = [];
+  for (const entry of entries) {
+    for (const kind of ["positive", "negative"] as const) {
+      const folder = entry.fixtures[kind];
+      const stat = statSync(join(root, folder), { throwIfNoEntry: false });
+      if (stat?.isDirectory() !== true) {
+        problems.push(`${entry.id}: fixtures.${kind} ${folder} does not exist`);
+      } else if (!containsFile(join(root, folder))) {
+        problems.push(`${entry.id}: fixtures.${kind} ${folder} is empty`);
+      }
+    }
+  }
+  return problems;
+}
+
+function containsFile(folder: string): boolean {
+  return readdirSync(folder, { recursive: true, withFileTypes: true }).some((dirent) =>
+    dirent.isFile(),
+  );
+}
+
+describe("the fixture check", () => {
+  /** A catalog with the VALID entry and the given fixture files. */
+  const withFixtures = (files: Record<string, string>, folders: string[] = []) => {
+    const dir = repo({ [at]: VALID, ...files });
+    for (const folder of folders) mkdirSync(join(dir, "..", folder), { recursive: true });
+    return { entries: loadCatalog(dir).entries, root: join(dir, "..") };
+  };
+  const positive = "fixtures/rules/next16-sync-request-apis/positive";
+  const negative = "fixtures/rules/next16-sync-request-apis/negative";
+
+  it("passes when both folders hold a file", () => {
+    const { entries, root } = withFixtures({
+      [`${positive}/app/page.tsx`]: "x",
+      [`${negative}/app/page.tsx`]: "x",
+    });
+    expect(fixtureProblems(entries, root)).toEqual([]);
+  });
+
+  it("flags a missing folder", () => {
+    const { entries, root } = withFixtures({ [`${positive}/page.tsx`]: "x" });
+    expect(fixtureProblems(entries, root)).toEqual([
+      `next16/sync-request-apis: fixtures.negative ${negative} does not exist`,
+    ]);
+  });
+
+  it("flags an empty folder, and one holding only empty subfolders", () => {
+    const { entries, root } = withFixtures({}, [positive, `${negative}/app/nested`]);
+    expect(fixtureProblems(entries, root)).toEqual([
+      `next16/sync-request-apis: fixtures.positive ${positive} is empty`,
+      `next16/sync-request-apis: fixtures.negative ${negative} is empty`,
+    ]);
+  });
+
+  it("flags a fixture path that is a file, not a folder", () => {
+    const { entries, root } = withFixtures({ [positive]: "x", [`${negative}/page.tsx`]: "x" });
+    expect(fixtureProblems(entries, root)).toEqual([
+      `next16/sync-request-apis: fixtures.positive ${positive} does not exist`,
+    ]);
+  });
 });
 
 describe("the real catalog", () => {
   const { entries, errors } = loadCatalog(join(repoRoot, "catalog"));
 
-  // ADR-003: every entry has an official source and both fixture folders, which must exist.
-  // The loader checks the paths; this test checks the folders, because the npm package ships
-  // the catalog without fixtures (ADR-014).
   it("loads with no errors", () => {
     expect(errors).toEqual([]);
     expect(entries.length).toBeGreaterThan(0);
   });
 
-  it("has existing positive and negative fixture folders for every entry", () => {
-    for (const entry of entries) {
-      for (const folder of [entry.fixtures.positive, entry.fixtures.negative]) {
-        const stat = statSync(join(repoRoot, folder), { throwIfNoEntry: false });
-        expect(stat?.isDirectory(), `${entry.id}: ${folder} must be an existing folder`).toBe(true);
-      }
-    }
+  it("has a non-empty positive and negative fixture folder for every entry", () => {
+    expect(fixtureProblems(entries, repoRoot)).toEqual([]);
   });
 
   it("contains next16/sync-request-apis, sourced from the Next.js 16 upgrade guide", () => {

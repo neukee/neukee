@@ -22,6 +22,10 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - catalog/README.md and ARCHITECTURE §3 and §6 describe the new layout.
   - ARCHITECTURE §6's example is now the real entry, whose text was checked against the Next.js 16 guide.
   - T-014 picks a location outside `catalog/` for release data.
+- **Confirmed by Sreeram (2026-11-22):**
+  - The `catalog/<id>.yaml` layout. The loader rejects an entry whose id doesn't match its path; that same rule makes duplicate ids impossible, and a test pins it.
+  - The fixture check in a test. Every entry needs a non-empty positive and negative fixture folder; the check runs in CI through `pnpm verify`.
+  - 322 source lines for T-003.
 
 ## ADR-013 · Launch scope and date: Option A, launch Tuesday Dec 8 (2026-11-22)
 

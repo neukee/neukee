@@ -134,7 +134,10 @@ Sreeram's notes and each session's summary. Newest first.
   - file-system errors show only their code, never an absolute path;
   - an unreadable folder is an error, not a crash;
   - symlinked folders and special files are reported, not skipped.
-- Tests: 53 catalog tests; 353 in the whole repo. `pnpm check:all` passes. Source size is 322 lines, about 7% over the ~300 guideline, mostly the robustness fixes.
+- Sreeram confirmed ADR-014, adding two requirements:
+  - duplicate ids are rejected: pinned by a test, since the path rule makes them impossible;
+  - the fixture check requires non-empty folders: a new test-side check, itself tested on temp repos, and shown to fail when a real fixture folder is emptied.
+- Tests: 58 catalog tests; 358 in the whole repo. `pnpm check:all` passes. Source size is 322 lines, about 7% over the ~300 guideline, mostly the robustness fixes.
 
 ### 2026-11-22 · chore · Quality bar (ADR-012)
 
