@@ -57,6 +57,7 @@
 - Done when:
   - [x] An empty fixture repo produces a stable snapshot. `fixtures/expected/empty.json`; scanning twice gives identical JSON; an edited or missing golden file fails, and CI never writes one.
   - [x] Introducing a forbidden import (tried in a test) is caught: by package name, by a relative path into another package, through `import()` and through `require()`.
+  - [x] Fixture and golden names resolving outside their respective folders are rejected, including traversal and symlinks.
 
 ### T-005 · File discovery
 
