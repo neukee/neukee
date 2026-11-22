@@ -31,7 +31,15 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 5. Ask the `reviewer` subagent to review the diff against the task and the specs. Fix what it finds, re-run `pnpm verify`.
 6. Update `docs/TASKS.md` (status), `docs/PROGRESS.md` (log entry with what changed and the verify result), `docs/REVIEW-QUEUE.md` (if human review is required or you are unsure), `docs/DECISIONS.md` (if you changed architecture, schema, dependencies or targets).
 7. Commit on a branch named `t-XXX-short-name` with message `T-XXX: <what changed>`. Never commit to `main` directly.
-8. Run `pnpm check:all`, push the task branch, `gh pr create --fill`, comment `@coderabbitai review`, `gh pr checks --watch`. Fix CI failures and real CodeRabbit findings. Then ask the person to approve the merge (ADR-010).
+8. Run `pnpm check:all`, push the task branch, `gh pr create --fill`, comment `@coderabbitai review`, `gh pr checks --watch`. Fix CI failures and real CodeRabbit findings. Then merge as described in "Merging" (ADR-010).
+
+## Merging
+
+- **Every merge needs Sreeram's approval.** He may give it in advance for a specific PR, with conditions.
+- **Merge only when** every CI check is green, CodeRabbit has reviewed the latest commit, and every review thread is resolved. Squash-merge and delete the branch (`gh pr merge <n> --squash --delete-branch`), then `git switch main` and `git pull`.
+- **Minor CodeRabbit findings** in docs, comments, tests or tooling: fix them, reply on the thread, and continue under the existing approval. List each one in the merge summary.
+- **If a PR gets a third round of minor findings, stop fixing.** Log the rest as follow-ups in `docs/REVIEW-QUEUE.md`, resolve each thread with a short reply, and merge under the existing approval.
+- **Stop and ask Sreeram** if a finding touches product code behavior, core types or the report schema, security, CI workflows or permissions, or dependencies, or if you disagree with CodeRabbit.
 
 ## Rules (non-negotiable)
 
@@ -47,6 +55,29 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 - **Deterministic output:** sort findings; no timestamps except `scannedAt`; no `Math.random`.
 - **Detectors never throw.** Errors become `Diagnostic` entries; one bad file never stops a scan.
 - **Stop and ask the person** before: changing core types or the report schema, changing CI or release workflows, changing Action permissions, deleting files outside the current task, merging a PR, pushing to `main`, force-pushing, publishing, or deleting branches. Pushing a task branch and opening, commenting on and watching its PR are routine and need no approval (ADR-010).
+
+## Quality bar (non-negotiable)
+
+The reviewer subagent checks every item below (ADR-012).
+
+- **Simplest code that passes the tests.** No abstractions, options or extension points until a second real use exists.
+- **Small PRs.** One task per PR. Source changes stay under about 300 lines; tests and fixtures don't count.
+- **Prefer Node's standard library** to a dependency or hand-rolled helper (and see ADR-004 for runtime dependencies).
+- **Types that don't lie:**
+  - no `any` (Biome `noExplicitAny`: error);
+  - no non-null `!` (Biome `noNonNullAssertion`: error);
+  - no unchecked `as`: validate data at the boundary, then let the types follow. A cast is allowed only for a file bundled in our own package and covered by a test that pins its exact shape. Never for scanned input, user config, environment variables or anything read at runtime from outside the package;
+  - every `switch` over a union is exhaustive.
+- **Treat every scanned file as hostile:**
+  - cap file size;
+  - follow no symlinks outside the root;
+  - no `eval`, `new Function` or dynamic `import()` of anything from the repo;
+  - parse YAML without custom tags;
+  - write only linear-time regexes (no nested ambiguous quantifiers);
+  - test malformed, empty, huge and CRLF input.
+- **Every bug fix starts with a failing test** that reproduces it.
+- **Tests check behavior, not internals.** Assert on outputs and observable effects, never on private helpers or call counts.
+- **Fixtures live only in the top-level `fixtures/` folder;** the reviewer flags fixtures anywhere else.
 
 ## When you are unsure
 

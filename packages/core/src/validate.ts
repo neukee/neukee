@@ -53,7 +53,7 @@ export const SUPPORTED_FORMATS = ["date-time"] as const;
 
 type JsonType = (typeof SUPPORTED_TYPES)[number];
 
-interface SchemaNode {
+export interface SchemaNode {
   $ref?: string;
   $defs?: Record<string, SchemaNode>;
   description?: string;
@@ -84,6 +84,8 @@ let cachedSchema: SchemaNode | undefined;
 function reportSchema(): SchemaNode {
   // Resolved relative to this module: works from src/ (tests) and dist/ (published), both one
   // level below the package root where schema/ lives.
+  // The one `as` without a runtime check (ADR-012): this is our own published file, not scanned
+  // input, and validate.test.ts checks its exact shape (keywords, types, formats, value shapes).
   cachedSchema ??= JSON.parse(
     readFileSync(new URL("../schema/scan-report.v1.json", import.meta.url), "utf8"),
   ) as SchemaNode;
@@ -101,10 +103,9 @@ export function validateReport(value: unknown): ReportValidation {
 }
 
 /** The interpreter on its own, for testing the JSON Schema semantics the report schema relies on. */
-export function validateWithSchema(value: unknown, schema: object): ValidationError[] {
-  const root = schema as SchemaNode;
+export function validateWithSchema(value: unknown, schema: SchemaNode): ValidationError[] {
   const errors: ValidationError[] = [];
-  check(value, root, root, "value", errors);
+  check(value, schema, schema, "value", errors);
   return errors;
 }
 

@@ -19,6 +19,19 @@ Check, in this order:
 6. **Catalog:** every new entry has an official `sourceUrl`; spot-check that the entry's claim matches its source if you can read it.
 7. **Determinism:** stable sorting, no timestamps or randomness in output.
 8. **Scope:** changes outside the task, dead code, leftover debug output.
+9. **Quality bar** (`CLAUDE.md`, "Quality bar"). Check each item and flag any breach as `must-fix`, except where marked `should-fix`:
+   - **Simplicity:** an abstraction, option, parameter or extension point with only one real use. Code that could be shorter and still pass the tests is `should-fix`.
+   - **Size:** more than one task in the PR, or more than about 300 changed source lines anywhere in the repo, not only under `packages/`. Root scripts, config and workflows count. Tests, snapshots, fixtures, documentation (`*.md`) and lockfiles (`pnpm-lock.yaml`) don't. You often run before the work is committed, so count all three of committed, staged and unstaged changes, plus new files Git doesn't track yet:
+     - `git diff --numstat main -- . ':!*.test.ts' ':!*__snapshots__/*' ':!*fixtures/*' ':!*.md' ':!pnpm-lock.yaml'` gives tracked files: the working tree against `main`, covering committed, staged and unstaged changes. In Git's default pathspec matching, `*` also matches `/`, so these single-star patterns cover root and nested paths alike. `**/*.md` would miss a root `CLAUDE.md`.
+     - `git ls-files --others --exclude-standard | grep -v -e '\.test\.ts$' -e '__snapshots__' -e '/fixtures/' -e '^fixtures/' -e '\.md$' -e '^pnpm-lock\.yaml$' | xargs wc -l` gives new untracked source files.
+     - Fixtures never count, wherever they are. A fixture outside the top-level `fixtures/` folder is a separate `must-fix` (see "Fixtures" below), not a reason to split the task.
+     - Add the added and deleted lines from both. Over the limit, say how to split the task.
+   - **Standard library:** a dependency or hand-rolled helper where Node's standard library already does the job.
+   - **Types:** any `any`, non-null `!`, or `as` that isn't backed by a runtime check at a boundary. The only allowed exception is a cast of a file bundled in our own package and covered by a test that pins its exact shape. Flag any cast that doesn't meet both conditions. That includes every cast of scanned input, user config, environment variables or anything read at runtime from outside the package, even when a test exists. Search the diff for type assertions (`value as Type`), non-null assertions (`!.`, `!)`, `!;`) and `any`. Also flag every `switch` over a union without exhaustive handling (a `never` check, or a return type that forces every case).
+   - **Hostile input:** code reading scanned files without a size cap. Also following symlinks out of the root; `eval`, `new Function` or a dynamic `import()` of repo content; YAML parsed with custom tags enabled; and any regex with nested ambiguous quantifiers (`(a+)+`, `(a|a)*`, `(.*)*`). Tests must cover malformed, empty, huge and CRLF input for every new reader or parser.
+   - **Bug fixes:** a fix with no test that fails without it.
+   - **Tests:** tests that assert on internals (private helpers, call counts, implementation details) instead of behavior are `should-fix`.
+   - **Fixtures:** any fixture outside the top-level `fixtures/` folder. That means sample repos, rule fixtures, or sample input files under `packages/`, `catalog/` or elsewhere. Find them with `git ls-files --others --exclude-standard` and `git diff --name-only main`, then look for paths containing `fixtures/`, `__fixtures__/`, `testdata/` or `samples/` outside the top-level `fixtures/`.
 
 Reply with exactly one of:
 

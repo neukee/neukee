@@ -4,6 +4,29 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-012 · Quality bar for every change (2026-11-22)
+
+- **Context:** AI writes both the code and the tests here (ADR-007). T-002 showed how easily scope, size and cleverness grow: a validator, tests that derive from the schema, and edits to eight other tasks. The scanner also reads untrusted repos, so every reader is an attack surface.
+- **Decision (Sreeram, 2026-11-22):** CLAUDE.md gets a "Quality bar (non-negotiable)" section:
+  - the simplest code that passes the tests, with no abstraction or option before a second real use;
+  - one task per PR, under about 300 source lines (tests and fixtures excluded);
+  - Node's standard library first;
+  - no `any`, no non-null `!`, no unchecked `as` (validate at the boundary), and exhaustive switches. The one narrow exception: a cast is allowed only for a file bundled in our own package and covered by a test that pins its exact shape. Never for scanned input, user config, environment variables or anything read at runtime from outside the package;
+  - every scanned file treated as hostile: size cap, no symlinks out of the root, no `eval` or dynamic import, YAML without custom tags, linear-time regexes, and tests for malformed, empty, huge and CRLF input;
+  - every bug fix starts with a failing test;
+  - tests check behavior, not internals;
+  - fixtures live only in the top-level `fixtures/` folder, and the reviewer flags fixtures anywhere else.
+- **Enforcement:**
+  - Biome makes `suspicious/noExplicitAny` and `style/noNonNullAssertion` errors, so `pnpm verify` and CI fail on them. A probe file containing both was rejected.
+  - The rest is checked by the reviewer subagent (`.claude/agents/reviewer.md`, check 9) on every task, before the PR.
+- **Existing code:** no Biome violations.
+  - The unchecked `as` in `validateWithSchema` was removed; it now takes a typed `SchemaNode`.
+  - One cast uses the exception, documented in place: `JSON.parse(...) as SchemaNode` for the bundled `scan-report.v1.json`. It meets both conditions: the file ships in `@neukee/core`, and `validate.test.ts` pins its exact shape (keywords, types, formats, value shapes, and the constraint snapshot). Sreeram chose to keep it (2026-11-22).
+  - `value as ScanReport` in `validateReport` follows full validation, which is the allowed boundary pattern.
+- **Consequences:**
+  - Some tasks will need splitting to stay under about 300 source lines; the reviewer says how.
+  - Snapshot and schema rules (ADR-011) are unchanged.
+
 ## ADR-011 · Report schema v1: strict validator, deterministic report, compatibility policy (2026-11-22)
 
 - **Context:** T-002 adds the hand-written JSON Schema for `ScanReport` and `validateReport`. ARCHITECTURE §5 gives field types only. The task doesn't say how strict the schema is, what the validator returns, how the schema ships or evolves, or how findings are fully ordered. A schema that accepts anything the types allow would let absolute paths, control characters from untrusted file names, or typos reach reports, terminals and PR comments unnoticed.
