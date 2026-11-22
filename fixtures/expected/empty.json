@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "neukee",
+    "version": "0.0.0-test"
+  },
+  "scannedAt": "1970-01-01T00:00:00Z",
+  "root": ".",
+  "targets": [],
+  "detected": {
+    "node": [],
+    "frameworks": {}
+  },
+  "findings": [],
+  "diagnostics": [],
+  "stats": {
+    "filesScanned": 0,
+    "filesSkipped": 0
+  }
+}

@@ -4,18 +4,18 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, late evening IST (T-003 PR open)
-- **Branch:** `t-003-catalog-loader` (PR waiting for merge approval)
-- **Last finished:** T-003 (catalog loader, first entry). Merged today: PR #5 (session rules, wrap, ADR-013 launch scope).
+- **Last updated:** 2026-11-22, night IST (T-004 PR open)
+- **Branch:** `t-004-fixture-harness` (PR waiting for merge approval)
+- **Last finished:** T-004 (fixture harness, golden reports, dependency rule). Merged today: PR #6 (T-003).
 - **In progress:** nothing.
-- **Exact next step:** merge the T-003 PR once approved, then `/next` → T-004 (fixture harness, snapshots, dependency rule).
+- **Exact next step:** merge the T-004 PR once approved, then `/next` → T-005 (file discovery). T-005 is foundational: it's the first reader of hostile input. After T-005 merges, run `/checkpoint`.
 - **Standing instructions (Sreeram, 2026-11-22) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - After T-005 merges, run `/checkpoint` before the next task and report the pace against the Dec 7 checkpoint.
 - **Blocked / waiting on Sreeram:**
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (15 days). Launch Tuesday, Dec 8 (16 days). 26 tasks to launch after T-003 (ADR-013).
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (15 days). Launch Tuesday, Dec 8 (16 days). 25 tasks to launch after T-004 (ADR-013).
 
 ## Dated checkpoints
 
@@ -63,6 +63,7 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 | 2026-11-22 | T-001 | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI                                           |
 | 2026-11-22 | T-002 | M    | 1               | —             | done   | Schema + validator; reviewer 1 must-fix + 4 should-fix; ~8 CodeRabbit rounds; 3 changes from Sreeram before merge |
 | 2026-11-22 | T-003 | S    | 1               | —             | done   | Catalog loader + first entry; reviewer 3 must-fix + 5 should-fix, all fixed                                       |
+| 2026-11-22 | T-004 | S    | 1               | —             | done   | Harness, golden reports, dependency rule                                                                          |
 
 ## Daily log
 
@@ -111,6 +112,28 @@ Sreeram's notes and each session's summary. Newest first.
 - New tasks: T-006 change-signature schema, T-027 MergeWarden comparison, T-037 corpus job, T-038 mutation score target, T-056 UpgradeBench; E-001 reframed as the competitive spike.
 
 ## Log (task entries)
+
+### 2026-11-22 · T-004 · Fixture harness, snapshots and dependency rule — done
+
+- `scan(root, targets, tool)` in `@neukee/scanner`. For now it returns the valid, empty report frame and refuses a root that isn't a folder. T-005 adds discovery and T-030 assembles the rest. The caller passes `tool` (the CLI knows its version).
+- Test helpers in `packages/scanner/src/testing/`, excluded from the build and the npm package:
+  - `scanFixture(name, targets)` scans `fixtures/repos/<name>` and returns the report normalized (`scannedAt` set to `1970-01-01T00:00:00Z`, tool version `0.0.0-test`) and checked with `validateReport`;
+  - `matchGolden(name, report)` compares it with `fixtures/expected/<name>.json`.
+- New snapshot `fixtures/expected/empty.json`: the first golden report, for the new `fixtures/repos/empty`. Checked by hand: an edited golden file fails the test, and in CI mode a missing one fails rather than being written.
+- `test/dependency-direction.test.ts` enforces `action → cli → scanner → core` across every `.ts` file in `packages/*/src`, tests included. It catches package names, relative paths into another package, `import()` and `require()`, and its own tests feed it each forbidden form.
+- Noticed, not fixed (outside the task): `packages/cli/src/run.ts` reads its `package.json` with an unchecked `as` (from T-000). That breaks the Quality bar's cast rule (it's a runtime file read). Logged as a follow-up for T-033.
+- Reviewer, first pass: one must-fix and five should-fixes, all fixed:
+  - must-fix: a package not in the order (a future engine package) could import anything. Now every folder under `packages/` must be in the order, and a package outside it may import nothing internal;
+  - the import scan now also catches template-literal specifiers, `import"x"` with no space, and `vi.importActual`;
+  - multi-line imports, `export * from` and `import type` are pinned by tests;
+  - Stryker and coverage skip the test-only `testing/` helpers;
+  - the export is placed after the imports, and `scan` uses `ScanReport["tool"]`.
+- Expected, for T-005: `fixtures/repos/empty` holds a README (Git can't track an empty folder), so once discovery lands `fixtures/expected/empty.json` will count it. That commit must say so.
+- Tests: 386 in the whole repo. `pnpm check:all` passes.
+- CI follow-up on PR #7: clean-checkout matrix tests failed because Vitest resolved scanner imports only after `dist` already existed. Added source aliases for workspace packages in `vitest.config.ts`; reproducing with all dist folders removed passes, and `pnpm verify` plus `pnpm check:all` pass.
+- CodeRabbit follow-up on PR #7: changed workspace aliases to exact bare-package matchers so package subpaths continue to use the published exports. The comment-separated dependency-import bypass is covered by a regression test.
+- CodeRabbit's third review round found that the dependency-direction guard does not handle U+2028/U+2029 line-comment terminators or every ECMAScript whitespace character. Deferred after the third minor-review round per CLAUDE.md and logged in `docs/REVIEW-QUEUE.md`.
+- Independent T-004 review found that fixture and golden names could escape their folders; `scanFixture` and `matchGolden` now check lexical and real-path containment. Added traversal, absolute-path and external-symlink regression tests; `pnpm check:all` passes.
 
 ### 2026-11-22 · T-003 · Catalog format, loader and validator — done
 
