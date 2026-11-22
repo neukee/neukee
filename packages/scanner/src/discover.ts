@@ -26,6 +26,8 @@ const MAX_IGNORE_FILE_BYTES = 64 * 1024;
 const MAX_RULES_IN_FORCE = 2000;
 const SKIP_DIRECTORIES = new Set(["node_modules", ".next", "dist", "build", "coverage"]);
 const INVALID_PATH = "Skipped a path invalid for report output.";
+const TOO_COSTLY =
+  "Checking this path against .gitignore rules ran out of its work budget, so it was scanned.";
 
 // O_NOFOLLOW makes open() refuse a symlink as the last path component. O_NONBLOCK keeps open()
 // from hanging on a FIFO swapped in under a file's name; fstat then rejects it as not regular.
@@ -112,8 +114,9 @@ function* walk(
           ...parsed.rules.map((rule) => ({ base: relativeDirectory, rule })),
         ];
       }
-      if (!isIgnored(path, false, rules))
+      if (!(yield* ignored(path, false, rules))) {
         yield { type: "file", file: { path, content: result.content } };
+      }
     } else {
       yield { type: "skipped" };
       yield warning(
@@ -143,13 +146,14 @@ function* walk(
     }
     const absolutePath = join(absoluteDirectory, entry.name);
     if (entry.isDirectory()) {
-      if (!isIgnored(path, true, rules)) yield* walk(root, absolutePath, path, rules);
+      if (!(yield* ignored(path, true, rules))) yield* walk(root, absolutePath, path, rules);
       continue;
     }
-    if (!entry.isFile() || isIgnored(path, false, rules)) {
-      if (!entry.isFile()) yield { type: "skipped" }; // FIFOs, sockets, devices
+    if (!entry.isFile()) {
+      yield { type: "skipped" }; // FIFOs, sockets, devices
       continue;
     }
+    if (yield* ignored(path, false, rules)) continue;
     const result = readFileOnce(root, absolutePath, MAX_FILE_BYTES);
     if (result.kind === "file") {
       yield { type: "file", file: { path, content: result.content } };
@@ -158,6 +162,17 @@ function* walk(
       if (result.kind === "failed") yield warning("Could not read file.", path);
     }
   }
+}
+
+/** Whether .gitignore rules leave `path` out. Too costly to decide: kept, and reported (ADR-015). */
+function* ignored(
+  path: string,
+  isDirectory: boolean,
+  rules: readonly ScopedRule[],
+): Generator<DiscoveryEvent, boolean> {
+  const decision = isIgnored(path, isDirectory, rules);
+  if (decision === "too-costly") yield warning(TOO_COSTLY, path);
+  return decision === "ignored";
 }
 
 /**

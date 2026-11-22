@@ -103,7 +103,7 @@ describe("file discovery", () => {
       {
         level: "warning",
         message:
-          "Line 7 of this .gitignore was not applied: it uses a POSIX character class ([:name:]), which isn't supported.",
+          "Line 7 of this .gitignore was not applied: it uses [: inside a class, which isn't supported (POSIX classes such as [:digit:]).",
         file: ".gitignore",
       },
       {
@@ -206,6 +206,27 @@ describe("file discovery", () => {
     expect(paths(events)).not.toContain("drop.tmp");
     expect(paths(events)).toContain("nested/keep.tmp");
     expect(diagnosticsOf(events)).toEqual([]);
+  });
+
+  // ADR-015: past the matching budget the answer is "too-costly", and the path stays in the scan.
+  it("scans and reports a path whose .gitignore check runs out of its work budget", () => {
+    const root = copyFixture();
+    // Each check against a 255-byte name costs over 16,000 steps; 480 rules stay under 64 KiB.
+    const costly = `*${"a".repeat(127)}b`;
+    writeFileSync(join(root, ".gitignore"), `${costly}\n`.repeat(480));
+    const longName = `${"a".repeat(254)}c`;
+    writeFileSync(join(root, longName), "scanned anyway");
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events)).toContain(longName);
+    expect(paths(events)).toContain("root.txt");
+    expect(diagnosticsOf(events)).toEqual([
+      {
+        level: "warning",
+        message:
+          "Checking this path against .gitignore rules ran out of its work budget, so it was scanned.",
+        file: longName,
+      },
+    ]);
   });
 
   it("matches a .gitignore against itself as a file, and folder-only rules never match files", () => {
