@@ -120,8 +120,21 @@ describe("validateReport: valid reports", () => {
     "2026-11-22T12:00:00.123Z",
     "2026-11-22T17:30:00+05:30",
     "2026-11-22T07:00:00.5-05:00",
+    "2028-02-29T23:59:59Z",
+    "2026-12-31T00:00:00+14:00",
+    "2026-01-01T00:00:00-12:00",
+    new Date(0).toISOString(),
   ])("accepts the timestamp %j", (scannedAt) => {
     expect(validateReport(changed(["scannedAt"], scannedAt)).valid).toBe(true);
+  });
+
+  it.each([
+    "https://nodejs.org/en/blog/release/v24.0.0",
+    "https://nextjs.org/docs/app/guides/upgrading/version-16#async-request-apis",
+    "https://github.com/nodejs/node/blob/main/doc/changelogs/CHANGELOG_V24.md?plain=1#L10",
+    "https://docs.npmjs.com:443/cli/v11",
+  ])("accepts the source %j", (sourceUrl) => {
+    expect(validateReport(changed(["findings", 0, "sourceUrl"], sourceUrl)).valid).toBe(true);
   });
 });
 
@@ -352,6 +365,28 @@ describe("validateReport: broken reports fail with clear messages", () => {
     }
   });
 
+  it("lists unknown properties in sorted order, whatever order the input has", () => {
+    const forwards = { ...report, zeta: 1, alpha: 2 };
+    const backwards = { ...report, alpha: 2, zeta: 1 };
+    const expected = [
+      { path: "report", message: 'report has unknown property "alpha".' },
+      { path: "report", message: 'report has unknown property "zeta".' },
+    ];
+    expect(validateReport(forwards)).toEqual({ valid: false, errors: expected });
+    expect(validateReport(backwards)).toEqual({ valid: false, errors: expected });
+    const frameworks = (order: string[]) =>
+      changed(["detected", "frameworks"], Object.fromEntries(order.map((k) => [k, 1])));
+    const paths = (input: unknown) => {
+      const result = validateReport(input);
+      return result.valid ? [] : result.errors.map((e) => e.path);
+    };
+    expect(paths(frameworks(["react", "next"]))).toEqual([
+      "report.detected.frameworks.next",
+      "report.detected.frameworks.react",
+    ]);
+    expect(paths(frameworks(["next", "react"]))).toEqual(paths(frameworks(["react", "next"])));
+  });
+
   it("shortens very long values in messages", () => {
     const result = validateReport(changed(["root"], "x".repeat(500)));
     expect(result.valid).toBe(false);
@@ -466,9 +501,35 @@ const BAD_PATTERN_VALUES: Record<string, string[]> = {
     "2026-11-22",
     "2026-11-22 12:00:00Z",
     "22 Nov 2026",
+    "2026-13-01T00:00:00Z",
+    "2026-00-10T00:00:00Z",
+    "2026-11-32T00:00:00Z",
+    "2026-11-00T00:00:00Z",
+    "2026-11-22T24:00:00Z",
+    "2026-11-22T12:60:00Z",
+    "2026-11-22T12:00:60Z",
+    "2026-11-22T12:00:00+15:00",
+    "2026-11-22T12:00:00+14:30",
+    "2026-11-22T12:00:00+05:60",
+    "2026-11-22T12:00:00+0530",
+    "2026-11-22T12:00:00.Z",
   ],
   "a single line of text": ["one\ntwo", "one\rtwo", "trailing newline\n"],
-  "an https URL": ["http://nodejs.org/", "nodejs.org/docs", "https://", "https://a b", "ftp://x"],
+  "an https URL": [
+    "http://nodejs.org/",
+    "nodejs.org/docs",
+    "https://",
+    "https:///docs",
+    "https://nodejs",
+    "https://-nodejs.org/",
+    "https://nodejs-.org/",
+    "https://nodejs..org/",
+    "https://nodejs.org:port/",
+    "https://user@nodejs.org/",
+    "https://nodejs.org/a b",
+    "https://a b",
+    "ftp://x",
+  ],
   'a catalog entry id such as "next16/sync-request-apis"': [
     "next16",
     "next16/",

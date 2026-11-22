@@ -182,8 +182,11 @@ function checkObject(
   for (const [key, child] of Object.entries(properties)) {
     if (Object.hasOwn(value, key)) check(value[key], child, root, childPath(path, key), errors);
   }
-  for (const key of Object.keys(value)) {
-    if (Object.hasOwn(properties, key)) continue;
+  // Extra keys sorted, so their errors don't depend on how the input happened to be written.
+  const extraKeys = Object.keys(value)
+    .filter((key) => !Object.hasOwn(properties, key))
+    .sort();
+  for (const key of extraKeys) {
     if (node.additionalProperties === false) {
       errors.push({ path, message: `${path} has unknown property ${describe(key)}.` });
     } else if (typeof node.additionalProperties === "object") {

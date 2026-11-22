@@ -93,6 +93,12 @@ Sreeram's notes and each session's summary. Newest first.
   - Paths also reject C1 controls and bidi overrides (U+202A–202E, U+2066–2069). The snapshot was regenerated before its first commit, because the pattern changed.
   - The unverified "SARIF default columnKind" claim was dropped; T-032 sets `columnKind` explicitly.
   - T-005 tests paths against the exported pattern.
+- CodeRabbit on PR #3 (3 findings, all fixed):
+  - `scannedAt` now rejects out-of-range months, days, clock values and offsets (Feb 30 isn't checked; see §5).
+  - `sourceUrl` must have a dotted host name.
+  - Unknown keys are reported in sorted order.
+  - The constraint snapshot was updated on purpose: exactly those two patterns changed.
+  - Every pattern was timed on 100k-character hostile input: all under 5 ms, linear.
 - Follow-ups written into later tasks: T-003 shares the id grammar; T-004 normalizes with fixed values; T-005 skips unrepresentable paths; T-021 column unit; T-031 neutralises control/bidi characters and escapes markdown in repo-derived text; T-032 SARIF fallback location and explicit `columnKind`; T-034 fleet wrapper; T-040 ships `schema/`.
 - `pnpm verify` and `pnpm check:all` pass.
 
