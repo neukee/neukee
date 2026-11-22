@@ -50,13 +50,13 @@
 
 ### T-004 · Fixture harness, snapshots and dependency rule
 
-- Status: todo
+- Status: done
 - Depends on: T-002
 - Human review: no
 - Build: Test helper `scanFixture(name, targets)` that runs the scan pipeline on `fixtures/repos/<name>` and returns a normalized report (replaces `scannedAt` with the fixed value `1970-01-01T00:00:00Z`, so the normalized report still passes `validateReport`; it is the only field that varies between runs; ADR-011). Golden snapshot helper. A test that fails if any package imports from a package to its left in the dependency direction (`docs/ARCHITECTURE.md` §3).
 - Done when:
-  - [ ] An empty fixture repo produces a stable snapshot.
-  - [ ] Introducing a forbidden import (tried in a test) is caught.
+  - [x] An empty fixture repo produces a stable snapshot. `fixtures/expected/empty.json`; scanning twice gives identical JSON; an edited or missing golden file fails, and CI never writes one.
+  - [x] Introducing a forbidden import (tried in a test) is caught: by package name, by a relative path into another package, through `import()` and through `require()`.
 
 ### T-005 · File discovery
 

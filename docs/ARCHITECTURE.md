@@ -53,7 +53,7 @@ neukee/
 └── .claude/                  # Claude Code skills, reviewer agent, settings, hooks
 ```
 
-### Dependency direction (enforced by review, then by a test in T-004)
+### Dependency direction (enforced by `test/dependency-direction.test.ts`)
 
 ```mermaid
 flowchart LR
@@ -218,7 +218,7 @@ Around it (ADR-007), because AI writes both the code and the tests:
 
 **How we avoid breaking old work (regression strategy):**
 
-- **Golden snapshots:** each fixture repo has a committed expected report. Any change in output fails the test until a human-readable reason is written in the commit message and the snapshot is deliberately updated.
+- **Golden snapshots:** each fixture repo `fixtures/repos/<name>` has a committed expected report, `fixtures/expected/<name>.json`, kept outside the repo so file discovery never scans it. `scanFixture` fixes `scannedAt` and the tool version, so a golden report changes only when scanner output changes. Any change in output fails the test until a human-readable reason is written in the commit message and the snapshot is deliberately updated.
 - **Rule fixtures:** every catalog entry keeps its positive/negative fixtures forever.
 - **Contract tests:** core types and the JSON schema are tested; breaking them requires a schema version bump.
 - **Small steps:** one task per change; the gate must pass before the next task starts.
