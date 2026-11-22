@@ -24,5 +24,5 @@ Build exactly one task from `docs/TASKS.md`, completely.
     3. `gh pr comment <number> --body "@coderabbitai review"`.
     4. `gh pr checks <number> --watch`.
     5. If a check fails, read the log (`gh run view <run-id> --log-failed`), fix the cause, commit, push and watch again. Read CodeRabbit's comments; fix each real finding, and for one you disagree with, reply with the reason. Never weaken a test to turn a check green.
-12. **Ask for the merge.** When every check is green and the review comments are resolved, tell the person the PR link and the result, and ask them to approve the merge. Only after a yes: `gh pr merge <number> --squash --delete-branch`, `git switch main`, `git pull`. `gh pr merge` always needs the person's approval.
+12. **Ask for the merge.** When every check is green and the review comments are resolved, tell the person the PR link and the result, and ask them to approve merging the PR and deleting its task branch (one question, both actions named). Only after a yes: `gh pr merge <number> --squash --delete-branch`, `git switch main`, `git pull`. `gh pr merge` always needs the person's approval.
 13. **Report** in five lines or fewer: what was built, the verify result, what the reviewer and CodeRabbit flagged, the PR link and its check status, anything waiting for a person, and the next task.
