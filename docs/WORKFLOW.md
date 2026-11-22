@@ -28,7 +28,7 @@ This is different from a web app: there is no backend, database or hosting for t
 
 ## The weekly loop (you + reviewers)
 
-- **Once a week, `/checkpoint`:** Claude measures progress against the launch targets, says whether the December 6 target still fits, and lists risks and anything that needs a person.
+- **Once a week, `/checkpoint`:** Claude measures progress against the launch targets, says whether the December 8 launch (validation checkpoint Dec 7) still fits, and lists risks and anything that needs a person.
 - **Before the weekend, `/review-prep`:** Claude writes a review pack: what changed, which files, the exact questions for reviewers, and what is risky.
 - **Weekend:** reviewers review the pull requests and the pack on GitHub. Their comments become tasks or fixes.
 

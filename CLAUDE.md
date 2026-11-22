@@ -1,6 +1,6 @@
 # Neukee — project memory for Claude
 
-Working name **Neukee** (trademark check pending; rename in T-053). A local-first verification tool for Node.js and Next.js upgrades. First product: the **scanner** (static analysis, launch target **December 6, 2026**). Later: the **engine** (behavioral comparison on the customer's tests).
+Working name **Neukee** (trademark check pending; rename in T-053). A local-first verification tool for Node.js and Next.js upgrades. First product: the **scanner** (static analysis, launch target **Tuesday, December 8, 2026**). Later: the **engine** (behavioral comparison on the customer's tests).
 
 ## Read before working
 

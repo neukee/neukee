@@ -1,6 +1,6 @@
 # Scanner (v0a) specification
 
-**Launch target:** December 6, 2026. **Status:** see `docs/PROGRESS.md`.
+**Launch target:** Tuesday, December 8, 2026 (ADR-013). **Status:** see `docs/PROGRESS.md`.
 
 The scanner answers one question for a repository: _what stands between this code and the target versions, and how do I fix it?_ It is free and open source. It is also the engine of the paid upgrade audits and the lead generator for the company, so its findings must be accurate first and complete second.
 
@@ -90,7 +90,9 @@ A finding is produced only if the rule's `applies` range is crossed by the upgra
 - **json:** exactly `ScanReport` from `packages/core`; validated against the exported JSON Schema in tests.
 - **sarif:** SARIF 2.1.0; one rule per catalog entry, `helpUri` = `sourceUrl`; uploadable with `github/codeql-action/upload-sarif`.
 
-## 4. GitHub Action (T-040)
+## 4. GitHub Action (T-040, post-launch)
+
+**At launch (ADR-013)** the README ships a copy-paste workflow instead: it installs and runs the CLI, writes SARIF, and uploads it to GitHub code scanning with the official upload action. The packaged Action below follows in the first two weeks after launch.
 
 ```yaml
 - uses: <org>/neukee@v0

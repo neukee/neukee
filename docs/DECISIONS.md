@@ -4,6 +4,34 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-013 · Launch scope and date: Option A, launch Tuesday Dec 8 (2026-11-22)
+
+- **Context:** at the 2026-11-22 wrap, 33 tasks remained up to the Dec 5 validation checkpoint, with 13 days left. The measured pace was about 1 task per session. The full plan didn't fit.
+- **Decision (Sreeram, 2026-11-22): Option A, with three changes.**
+  1. **Keep a minimal native-addon detector (T-020).** Flag dependencies that build native code at install time, from the lockfile's install-script flags only, with no version table and no network lookups. It's the headline finding in the outreach pitch.
+  2. **Defer the packaged GitHub Action (T-040).** At launch the README ships a copy-paste workflow that runs the CLI and uploads SARIF to GitHub code scanning (T-054).
+  3. **Launch moves to Tuesday, Dec 8.** The validation checkpoint moves to Dec 7.
+- **Moved to "Phase 5 — Post-launch (first 2 weeks)"**, in this order:
+  1. Yarn v1 lockfiles (T-017).
+  2. Node 26 rules (T-024, T-025). T-025 also carries the `node24/*` and `node-any/md4-hash` rules, so they move too.
+  3. Packaged GitHub Action (T-040).
+  4. Yarn Berry (T-018).
+  5. Nightly corpus job (T-037).
+  6. Fleet mode (T-034).
+  7. Change-signature schema (T-006).
+  8. Also deferred under Option A, so last: Next 15 fetch caching (T-026) and the mutation-score target (T-038).
+     T-056 (UpgradeBench, due Apr 30) moves to its own phase after these, so `/next` doesn't pick it first.
+- **Kept before launch, though Option A didn't list them:**
+  - T-027 (MergeWarden comparison): the brief says to do it before launch.
+  - T-035 (performance benchmark): launch target 4.
+  - T-036 (network-free CI check): launch target 5.
+- **Security review (T-052):** no longer blocks launch. It reviews the packaged Action too, so it follows T-040, and it's due by Mar 31 (brief §7). It moves; it isn't cut.
+- **Consequences:**
+  - 27 tasks remain to launch, 23 of them by the Dec 7 checkpoint: about 1.5 tasks a day.
+  - A repo with `yarn.lock` gets a diagnostic and falls back to `package.json` ranges until T-017 (noted on T-019).
+  - The brief (v1.4), PROGRESS, TASKS, SPEC-SCANNER §4, ARCHITECTURE, README, WORKFLOW and the `/checkpoint` skill carry the new dates.
+  - The first `/checkpoint` after T-005 re-measures the pace.
+
 ## ADR-012 · Quality bar for every change (2026-11-22)
 
 - **Context:** AI writes both the code and the tests here (ADR-007). T-002 showed how easily scope, size and cleverness grow: a validator, tests that derive from the schema, and edits to eight other tasks. The scanner also reads untrusted repos, so every reader is an attack surface.

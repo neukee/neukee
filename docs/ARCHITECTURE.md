@@ -10,7 +10,7 @@ A verification tool for dependency, runtime and framework upgrades in Node.js an
 
 | Product     | Release                          | What it does                                                                                                                                         | Runs where                                                       |
 | ----------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **Scanner** | v0a (launch target: Dec 6, 2026) | Static analysis: reads lockfiles, runtime config, deployment config and source code; reports what blocks a target upgrade (e.g. Node 24, Next.js 16) | A developer's machine (CLI) or the customer's CI (GitHub Action) |
+| **Scanner** | v0a (launch target: Dec 8, 2026) | Static analysis: reads lockfiles, runtime config, deployment config and source code; reports what blocks a target upgrade (e.g. Node 24, Next.js 16) | A developer's machine (CLI) or the customer's CI (GitHub Action) |
 | **Engine**  | v0b (after the scanner launch)   | Runs the old and new versions side by side on the customer's tests and reports behavioral differences                                                | The customer's CI only                                           |
 
 Both are **local-first**: no server, no database, no account, no network calls. This is a deliberate product decision (privacy, security review, EU buyers) and an engineering one (nothing to host, nothing to break at 3am).

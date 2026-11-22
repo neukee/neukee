@@ -5,7 +5,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 ## Resume here
 
 - **Last updated:** 2026-11-22, 21:45 IST (session wrapped)
-- **Branch:** `chore/session-rules`, local and not pushed. It holds Sreeram's CLAUDE.md rules 1–3 and this wrap.
+- **Branch:** `chore/session-rules`. It holds Sreeram's CLAUDE.md rules 1–3, the wrap and the ADR-013 scope change, and goes out as one docs-only PR.
 - **Last finished:** T-002 (PR #3, merged). Also merged: PR #2 (Claude runs the PR loop, ADR-010) and PR #4 (Quality bar, ADR-012).
 - **In progress:** nothing.
 - **Exact next step:**
@@ -15,31 +15,30 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 - **Standing instructions (Sreeram, 2026-11-22) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
-  - After T-005 merges, run `/checkpoint` before the next task and report the pace against Dec 5.
+  - After T-005 merges, run `/checkpoint` before the next task and report the pace against the Dec 7 checkpoint.
 - **Blocked / waiting on Sreeram:**
-  - Decide how to handle the Dec 5 pace risk (daily log 2026-11-22, two options).
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (13 days). Launch Dec 6 (14 days).
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (15 days). Launch Tuesday, Dec 8 (16 days). 27 tasks to launch (ADR-013).
 
 ## Dated checkpoints
 
 From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
-| Date       | Must be true                                                                | Status                   |
-| ---------- | --------------------------------------------------------------------------- | ------------------------ |
-| 2026-12-05 | Scanner runs on 10 public repos and finds real blockers                     | at risk (see 2026-11-22) |
-| 2026-12-06 | Scanner v0.1.0 launched                                                     | not started              |
-| 2026-12-31 | 15–20 discovery calls; engine core end to end; E-001 competitive spike done | not started              |
-| 2027-01-31 | At least 2 paid audits                                                      | not started              |
-| 2027-02-28 | Precision good enough that design partners keep the check on                | not started              |
-| 2027-03-31 | At least 2 paid pilots; security review done                                | not started              |
-| 2027-04-30 | Three revenue streams live; UpgradeBench published                          | not started              |
+| Date       | Must be true                                                                | Status                                  |
+| ---------- | --------------------------------------------------------------------------- | --------------------------------------- |
+| 2026-12-07 | Scanner runs on 10 public repos and finds real blockers                     | not started (moved from Dec 5, ADR-013) |
+| 2026-12-08 | Scanner v0.1.0 launched (npm, README with copy-paste workflow)              | not started (moved from Dec 6, ADR-013) |
+| 2026-12-31 | 15–20 discovery calls; engine core end to end; E-001 competitive spike done | not started                             |
+| 2027-01-31 | At least 2 paid audits                                                      | not started                             |
+| 2027-02-28 | Precision good enough that design partners keep the check on                | not started                             |
+| 2027-03-31 | At least 2 paid pilots; security review done                                | not started                             |
+| 2027-04-30 | Three revenue streams live; UpgradeBench published                          | not started                             |
 
 ## Current state
 
 - **Phase:** 0 — Foundation
 - **Current task:** T-003 (Claude), next session
-- **Scanner launch target:** December 6, 2026
+- **Scanner launch target:** Tuesday, December 8, 2026 (ADR-013)
 - **On track?** Not yet measured. Run `/checkpoint` after T-005.
 
 ## Launch targets
@@ -93,6 +92,11 @@ Sreeram's notes and each session's summary. Newest first.
   - **Option A (recommended): use the brief's fallback now.** Cut to a minimum launch path: T-003–T-005, T-010–T-016, T-019, T-021–T-023, T-030–T-033, T-050, T-051, T-053, T-054, T-055, about 23 tasks. Defer Yarn lockfiles (T-017/T-018), native addons (T-020), the Node 26 rules (T-024/T-025), T-026, fleet (T-034), the corpus job (T-037), the mutation target (T-038), the change-signature schema (T-006) and the Action (T-040) to after launch. The security review (T-052) is already due by Mar 31. That still needs about 1.8 tasks a day.
   - **Option B: keep the full scope and move launch about 2 weeks,** to about Dec 18–20. Discovery calls continue in parallel; the Dec 31 engine checkpoint gets tighter.
   - The first `/checkpoint` after T-005 re-measures the pace either way.
+- **Decision (Sreeram, same evening): Option A, with three changes (ADR-013).**
+  - Keep a minimal native-addon detector, from lockfile install-script flags with no network: it's the headline finding in the outreach pitch.
+  - Defer the packaged Action; ship a copy-paste README workflow (CLI plus SARIF upload) instead.
+  - Launch moves to Tuesday, Dec 8, and the validation checkpoint to Dec 7.
+  - Deferred work is now in TASKS "Phase 5 — Post-launch (first 2 weeks)". That leaves 27 tasks to launch, 23 by Dec 7.
 
 ### 2026-11-21 · Name decided, Step 1 done
 

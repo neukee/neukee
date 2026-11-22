@@ -1,6 +1,6 @@
 # Tasks
 
-**How this file works.** Tasks run strictly in order unless a task's `Depends on` says otherwise. Each task is small enough to finish in one sitting, ends with the full quality gate passing, and leaves everything built before it still working. Claude picks the first `todo` task whose dependencies are `done` (`/next`). There are no daily deadlines; the only date is the scanner launch target, **December 6, 2026**. `/checkpoint` tells you whether the remaining work fits.
+**How this file works.** Tasks run strictly in order unless a task's `Depends on` says otherwise. Each task is small enough to finish in one sitting, ends with the full quality gate passing, and leaves everything built before it still working. Claude picks the first `todo` task whose dependencies are `done` (`/next`). There are no daily deadlines; the only date is the scanner launch target, **Tuesday, December 8, 2026** (validation checkpoint December 7; ADR-013). `/checkpoint` tells you whether the remaining work fits.
 
 **Status values:** `todo` · `in-progress` · `done` · `blocked` (with a reason) · `needs-human` (waiting for a person).
 
@@ -68,16 +68,6 @@
   - [ ] Fixture with nested `.gitignore`, a symlink pointing outside, a 2 MB file and a `node_modules` folder gives exactly the expected file list.
   - [ ] Test passes on Windows in CI (paths use `/`).
 
-### T-006 · Change-signature schema
-
-- Status: todo
-- Depends on: T-002
-- Human review: yes (Sreeram confirms nothing identifying can leak)
-- Build: `ChangeSignature` type and JSON Schema in `packages/core` per ADR-006: package name, from and to versions, change category, verdict, catalog entry id (if any), and a SHA-256 hash of the normalized change shape. No code, paths, test names, hostnames or values. Nothing uses it yet; it exists so the format never needs a breaking change.
-- Done when:
-  - [ ] Schema and type agree (test).
-  - [ ] A test feeds a change containing a path, a hostname and a secret-looking value and proves none of them appear in the signature.
-
 ## Phase 1 — Detectors
 
 ### T-010 · Runtime sources: version files and package.json
@@ -137,36 +127,21 @@
 - Build: lockfile versions 6, 7 (if present), 9; importers for workspaces.
 - Done when: fixtures for v6 and v9 parse to the same normalized structure as the npm fixture of the same dependencies.
 
-### T-017 · Lockfile: yarn.lock v1
-
-- Status: todo
-- Depends on: T-015
-- Human review: no
-- Build: small hand-written parser (no new dependency unless justified in DECISIONS.md).
-- Done when: fixture with multiple ranges resolving to one version parses correctly.
-
-### T-018 · Lockfile: Yarn Berry
-
-- Status: todo
-- Depends on: T-017
-- Human review: no
-- Done when: Berry fixture parses; `__metadata` handled; PnP noted as unsupported in the report.
-
 ### T-019 · Framework detection and rule matching
 
 - Status: todo
-- Depends on: T-016, T-018, T-003
+- Depends on: T-016, T-003
 - Human review: no
-- Build: Detect installed `next`, `react`, `react-dom`, `prisma`, `@prisma/client`, `express` versions (lockfile first, `package.json` fallback marked as "range only"). Implement matching from `docs/SPEC-SCANNER.md` §2.5.
+- Build: Detect installed `next`, `react`, `react-dom`, `prisma`, `@prisma/client`, `express` versions (lockfile first, `package.json` fallback marked as "range only"). Implement matching from `docs/SPEC-SCANNER.md` §2.5. Yarn lockfiles are post-launch (ADR-013). A repo with `yarn.lock` gets a diagnostic saying Yarn lockfiles aren't supported yet, and its versions come from `package.json` as "range only".
 - Done when: a rule for Next 16 fires for a Next 15 project, not for a Next 16 project, and says "current version unknown" when undetectable.
 
-### T-020 · Native addons
+### T-020 · Native addons: install-time builds (minimal)
 
 - Status: todo
-- Depends on: T-019
-- Human review: yes (verify each row of `native-addons.yaml` against the package's own release notes)
-- Build: `catalog/native-addons.yaml` (start with `sharp`, `bcrypt`, `better-sqlite3`, `canvas`, `node-sass`), each row with its source URL. Detector compares installed versions with the first version supporting the target Node major.
-- Done when: fixtures for an old `bcrypt` and a current one give the right result.
+- Depends on: T-015, T-016
+- Human review: no
+- Build: from the lockfile's install-script flags only (npm `hasInstallScript`, and pnpm's equivalent if its lockfile format records one: check the format before relying on it), flag each dependency that runs an install script, typically a native build. Such a package has to be rebuilt, and often updated, for a new Node major. No version table, no network lookups (ADR-013). One catalog entry with an official source explaining why native addons depend on the Node version, fetched and quoted, never from memory. The finding names the package and the lockfile line. It says the flag shows an install script, which is usually but not always a native build.
+- Done when: a fixture lockfile with an install-script dependency produces the finding at the right line; a lockfile without one produces none; a lockfile in a format that records no such flag produces a diagnostic, not a guess. This is the headline finding of the outreach pitch.
 
 ### T-021 · AST infrastructure
 
@@ -191,29 +166,6 @@
 - Human review: no
 - Build: `next16/middleware-to-proxy`, `next16/webpack-config`, `next16/removed-config`, `next16/next-lint-script`, `next16/parallel-route-default`, `next16/segment-config-cache-components`. Each with a catalog entry, source URL and fixtures.
 - Done when: all six have passing positive and negative fixtures.
-
-### T-024 · Research: Node.js 26 removals
-
-- Status: todo
-- Depends on: —
-- Human review: yes (a person checks the list against the release notes)
-- Build: Read the official Node.js 26 release notes and migration guidance; write `docs/research/node26.md` listing each removed or runtime-deprecated API, its source link, and whether it can be detected statically.
-- Done when: every row has a link to the official source; no row is from memory.
-
-### T-025 · Node.js rules
-
-- Status: todo
-- Depends on: T-021, T-024
-- Human review: no
-- Build: `node24/url-parse`, `node24/child-process-shell-args`, `node24/openssl-security-level` (info), `node-any/md4-hash`, plus the statically detectable rules from T-024.
-- Done when: each rule has fixtures and a sourced catalog entry.
-
-### T-026 · Next.js 15: fetch caching default (info)
-
-- Status: todo
-- Depends on: T-022
-- Human review: no
-- Done when: a server-side `fetch` without explicit cache options in a Next 14 project produces an info finding for target `next@15`.
 
 ### T-027 · Research: compare MergeWarden
 
@@ -258,14 +210,6 @@
 - Note: the report has no timing (ADR-011: only `scannedAt` varies). Timing can return later behind an opt-in flag (for example `--timing`, printed to stderr or as a separate field added under the compatibility policy). It is never part of the default output.
 - Done when: e2e tests run the built CLI as a child process on fixtures and check output and exit codes.
 
-### T-034 · Fleet mode
-
-- Status: todo
-- Depends on: T-033
-- Human review: no
-- Note: fleet JSON wraps each report as `{ repo, report }`; each report keeps `root: "."` and stays valid on its own (ADR-011).
-- Done when: three fixture repos produce one combined markdown report with a summary table.
-
 ### T-035 · Performance benchmark
 
 - Status: todo
@@ -281,32 +225,6 @@
 - Human review: no
 - Build: a CI job that runs the CLI e2e tests with networking disabled (e.g. `unshare -n` on Linux).
 - Done when: the job passes, and a deliberately added `fetch` in a branch makes it fail.
-
-### T-037 · Corpus job (nightly)
-
-- Status: todo
-- Depends on: T-033
-- Human review: no
-- Build: `corpus/repos.yaml` lists 100+ public Node.js and Next.js repos, each pinned to a commit SHA (mixed sizes and package managers). A script clones them shallowly in CI only (never in tests), runs the CLI, and compares the JSON output with stored expectations. The nightly workflow fails on any crash, timeout (over 60 s), or unexpected output change.
-- Done when: the job runs green nightly; a deliberately broken detector in a branch makes it fail.
-
-### T-038 · Mutation score target
-
-- Status: todo
-- Depends on: T-033
-- Human review: no
-- Build: raise the Stryker `break` threshold to 80% for `packages/core` and `packages/scanner` by strengthening tests (never by excluding files without an ADR).
-- Done when: the nightly mutation job passes at 80%.
-
-## Phase 3 — GitHub Action
-
-### T-040 · GitHub Action
-
-- Status: todo
-- Depends on: T-033
-- Human review: yes (permissions and supply chain)
-- Build: `packages/action` with `action.yml`, esbuild bundle committed under `dist/`, inputs `targets`, `fail-on`, `sarif`, `path`; writes the markdown report to the job summary; documentation of required permissions. `validateReport` reads `schema/scan-report.v1.json` relative to its module, so if the bundle calls it, ship `schema/` next to the bundle and test that path.
-- Done when: the Action runs on a test repo, writes the summary, uploads SARIF when enabled, and fails the job only per `fail-on`.
 
 ## Phase 4 — Validation and launch
 
@@ -330,6 +248,7 @@
 - Status: todo
 - Depends on: T-040
 - Human review: yes (a qualified person, not Claude alone)
+- Note: not a launch blocker (ADR-013). It reviews the packaged Action too, so it follows T-040, and it's due by Mar 31 (brief §7). It moves; it isn't cut.
 - Build: checklist in `docs/SECURITY-REVIEW.md` (network, file writes, path traversal, symlinks, YAML and regex denial of service, dependency list, Action permissions, release signing, OpenSSF Scorecard results); external reviewer signs off. Actions are already SHA-pinned (ADR-007); confirm Dependabot keeps them current.
 - Done when: all items checked and the reviewer's notes are resolved.
 
@@ -346,15 +265,104 @@
 - Status: todo
 - Depends on: T-033
 - Human review: no
-- Done when: README quickstart works from a clean machine in 60 seconds; every rule has a docs page generated from its catalog entry.
+- Build: README quickstart. A copy-paste GitHub workflow replaces the packaged Action at launch (ADR-013): it installs and runs the CLI, writes SARIF, and uploads it with GitHub's official SARIF upload action, pinned to a commit SHA (ADR-007), with `security-events: write` only for that job.
+- Done when: README quickstart works from a clean machine in 60 seconds; the copy-paste workflow runs once in a test repo and the findings appear in code scanning (manual check, noted in PROGRESS); every rule has a docs page generated from its catalog entry.
 
 ### T-055 · Launch
 
 - Status: todo
-- Depends on: T-050, T-051, T-052, T-053, T-054
+- Depends on: T-050, T-051, T-053, T-054
 - Human review: yes (you press publish)
 - Build: trusted publishing can't do a package's first publish. Sreeram publishes v0.1.0 of each package once from his laptop with 2FA, then sets each package's trusted publisher (repo `neukee/neukee`, the release workflow) on npmjs.com and turns on "require 2FA and disallow tokens". Every later release goes through GitHub Actions.
-- Done when: v0.1.0 on npm with provenance, trusted publishing configured for every package, Action tagged `v0`, README live, launch post drafted (Show HN, LinkedIn, blog).
+- Done when: v0.1.0 on npm with provenance, trusted publishing configured for every package, README live with the copy-paste workflow, launch post drafted (Show HN, LinkedIn, blog).
+
+## Phase 5 — Post-launch (first 2 weeks)
+
+Deferred from launch by ADR-013 (Option A, 2026-11-22). The order is Sreeram's. T-026 and T-038 were deferred too and come last. Nothing here blocks T-055.
+
+### T-017 · Lockfile: yarn.lock v1
+
+- Status: todo
+- Depends on: T-015
+- Human review: no
+- Build: small hand-written parser (no new dependency unless justified in DECISIONS.md).
+- Done when: fixture with multiple ranges resolving to one version parses correctly.
+
+### T-024 · Research: Node.js 26 removals
+
+- Status: todo
+- Depends on: —
+- Human review: yes (a person checks the list against the release notes)
+- Build: Read the official Node.js 26 release notes and migration guidance; write `docs/research/node26.md` listing each removed or runtime-deprecated API, its source link, and whether it can be detected statically.
+- Done when: every row has a link to the official source; no row is from memory.
+
+### T-025 · Node.js rules
+
+- Status: todo
+- Depends on: T-021, T-024
+- Human review: no
+- Note: besides the Node 26 rules, this task also carries `node24/url-parse`, `node24/child-process-shell-args`, `node24/openssl-security-level` and `node-any/md4-hash`. All of them are post-launch with it (ADR-013, Option A).
+- Build: `node24/url-parse`, `node24/child-process-shell-args`, `node24/openssl-security-level` (info), `node-any/md4-hash`, plus the statically detectable rules from T-024.
+- Done when: each rule has fixtures and a sourced catalog entry.
+
+### T-040 · GitHub Action
+
+- Status: todo
+- Depends on: T-033
+- Human review: yes (permissions and supply chain)
+- Note: at launch, the README's copy-paste workflow covers CI use (T-054). This packages it as `uses: neukee/neukee@v0`.
+- Build: `packages/action` with `action.yml`, esbuild bundle committed under `dist/`, inputs `targets`, `fail-on`, `sarif`, `path`; writes the markdown report to the job summary; documentation of required permissions. `validateReport` reads `schema/scan-report.v1.json` relative to its module, so if the bundle calls it, ship `schema/` next to the bundle and test that path.
+- Done when: the Action runs on a test repo, writes the summary, uploads SARIF when enabled, and fails the job only per `fail-on`.
+
+### T-018 · Lockfile: Yarn Berry
+
+- Status: todo
+- Depends on: T-017
+- Human review: no
+- Done when: Berry fixture parses; `__metadata` handled; PnP noted as unsupported in the report.
+
+### T-037 · Corpus job (nightly)
+
+- Status: todo
+- Depends on: T-033
+- Human review: no
+- Build: `corpus/repos.yaml` lists 100+ public Node.js and Next.js repos, each pinned to a commit SHA (mixed sizes and package managers). A script clones them shallowly in CI only (never in tests), runs the CLI, and compares the JSON output with stored expectations. The nightly workflow fails on any crash, timeout (over 60 s), or unexpected output change.
+- Done when: the job runs green nightly; a deliberately broken detector in a branch makes it fail.
+
+### T-034 · Fleet mode
+
+- Status: todo
+- Depends on: T-033
+- Human review: no
+- Note: fleet JSON wraps each report as `{ repo, report }`; each report keeps `root: "."` and stays valid on its own (ADR-011).
+- Done when: three fixture repos produce one combined markdown report with a summary table.
+
+### T-006 · Change-signature schema
+
+- Status: todo
+- Depends on: T-002
+- Human review: yes (Sreeram confirms nothing identifying can leak)
+- Build: `ChangeSignature` type and JSON Schema in `packages/core` per ADR-006: package name, from and to versions, change category, verdict, catalog entry id (if any), and a SHA-256 hash of the normalized change shape. No code, paths, test names, hostnames or values. Nothing uses it yet; it exists so the format never needs a breaking change.
+- Done when:
+  - [ ] Schema and type agree (test).
+  - [ ] A test feeds a change containing a path, a hostname and a secret-looking value and proves none of them appear in the signature.
+
+### T-026 · Next.js 15: fetch caching default (info)
+
+- Status: todo
+- Depends on: T-022
+- Human review: no
+- Done when: a server-side `fetch` without explicit cache options in a Next 14 project produces an info finding for target `next@15`.
+
+### T-038 · Mutation score target
+
+- Status: todo
+- Depends on: T-033
+- Human review: no
+- Build: raise the Stryker `break` threshold to 80% for `packages/core` and `packages/scanner` by strengthening tests (never by excluding files without an ADR).
+- Done when: the nightly mutation job passes at 80%.
+
+## Phase 6 — Benchmark (by April 30, 2027)
 
 ### T-056 · UpgradeBench
 
