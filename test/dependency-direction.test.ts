@@ -32,8 +32,23 @@ function packageOf(path: string): string | undefined {
  */
 function forbiddenImports(files: SourceFile[]): string[] {
   const found: string[] = [];
-  const specifier =
-    /(?:\bfrom\s*|\bimport(?:Actual|Original)?\s*\(\s*|\bimport\s*|\brequire\s*\(\s*)["'`]([^"'`\n]+)["'`]/g;
+  const trivia = String.raw`(?:[ \t\r\n]|\/\*(?:[^*]|\*(?!\/))*\*\/|\/\/[^\r\n]*(?:\r?\n|$))*`;
+  const specifier = new RegExp(
+    "(?:\\bfrom" +
+      trivia +
+      "|\\bimport(?:Actual|Original)?" +
+      trivia +
+      "\\(" +
+      trivia +
+      "|\\bimport" +
+      trivia +
+      "|\\brequire" +
+      trivia +
+      "\\(" +
+      trivia +
+      ")[\"'`]([^\"'`\\r\\n]+)[\"'`]",
+    "g",
+  );
   for (const file of files) {
     const own = packageOf(file.path);
     if (own === undefined) continue;
@@ -107,6 +122,10 @@ describe("dependency direction (ARCHITECTURE §3)", () => {
   it("catches a forbidden import in every form", () => {
     const files = [
       { path: "packages/core/src/a.ts", source: 'import { scan } from "@neukee/scanner";' },
+      {
+        path: "packages/core/src/a-comment.ts",
+        source: 'import { scan } from /* dependency */ "@neukee/scanner";',
+      },
       { path: "packages/core/src/b.ts", source: 'export { run } from "@neukee/cli/run";' },
       { path: "packages/scanner/src/c.ts", source: 'const cli = await import("@neukee/cli");' },
       { path: "packages/scanner/src/d.ts", source: 'const x = require("@neukee/action");' },
@@ -127,6 +146,7 @@ describe("dependency direction (ARCHITECTURE §3)", () => {
     ];
     expect(forbiddenImports(files)).toEqual([
       'packages/core/src/a.ts → scanner (via "@neukee/scanner")',
+      'packages/core/src/a-comment.ts → scanner (via "@neukee/scanner")',
       'packages/core/src/b.ts → cli (via "@neukee/cli/run")',
       'packages/scanner/src/c.ts → cli (via "@neukee/cli")',
       'packages/scanner/src/d.ts → action (via "@neukee/action")',
