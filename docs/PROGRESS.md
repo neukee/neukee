@@ -113,6 +113,25 @@ Sreeram's notes and each session's summary. Newest first.
 
 ## Log (task entries)
 
+### 2026-11-23 · T-005a · .gitignore matcher — done
+
+- Sreeram had GitHub Copilot build T-004 and T-005 while Claude was at its usage limit. Claude then audited the work:
+  - workflow files untouched (CLAUDE.md, `.claude/`, CI, Biome, Knip, `package.json`);
+  - a clean checkout of `main` passes the full gate (386 tests);
+  - but T-005's `.gitignore` matcher was quadratic on `**` chains (a 1 MB rule ≈ 95 s per file), mishandled anchored wildcards, scored 46% on mutation testing, and was 556 source lines with no ADR.
+- Sreeram's decisions: Claude owns T-005; caps of 1 KiB per rule, 64 KiB per `.gitignore` and 2,000 rules in force, fail open with a diagnostic; T-005 splits into T-005a and T-005b; symlinks are never followed. All in ADR-015.
+- `packages/scanner/src/gitignore.ts` (new):
+  - rules are parsed once into tokens, with no regular expressions built from rule text;
+  - matching works on UTF-8 bytes;
+  - repeated `**` segments collapse;
+  - classes are merged ranges searched by bisection.
+- Tests:
+  - It agrees with **real git** on all 83 cases of `fixtures/gitignore/cases.json` (generated once by `fixtures/gitignore/generate.mjs` with git 2.56.1; git never runs in tests).
+  - Over-long, POSIX-class, unclosed, trailing-backslash, empty, CRLF and BOM input is covered.
+  - Six hostile shapes from the review, 2,000 maximal rules each, take about 0.1–0.4 s per file.
+- Mutation score of `gitignore.ts`: 89.8% (the old matcher scored 46%). The remaining survivors are equivalent or only change speed.
+- TASKS: T-005 is now T-005a (done) and T-005b (the walker; PR #8 reworked next). T-010, T-015 and T-021 now depend on T-005b.
+
 ### 2026-11-22 · T-004 · Fixture harness, snapshots and dependency rule — done
 
 - `scan(root, targets, tool)` in `@neukee/scanner`. For now it returns the valid, empty report frame and refuses a root that isn't a folder. T-005 adds discovery and T-030 assembles the rest. The caller passes `tool` (the CLI knows its version).

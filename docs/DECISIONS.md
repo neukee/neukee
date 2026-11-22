@@ -4,6 +4,33 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-015 · Our own .gitignore matcher; caps; symlinks never followed (2026-11-23)
+
+- **Context:**
+  - T-005 discovery must apply `.gitignore` files from scanned repositories, which are hostile input (ARCHITECTURE §7). ADR-004 allowed the `ignore` package for this, but `ignore` compiles each rule into a backtracking regular expression. A rule like `*a*a*a*a*a*a*a*a*b` can take seconds against a short name.
+  - Copilot's first version hand-wrote a matcher without recording why. It was quadratic on `**` chains (a 1 MB rule ≈ 95 s per file), mishandled anchored wildcards, and scored 46% on mutation testing.
+- **Decision (Sreeram, 2026-11-23):**
+  - **Own matcher** (`packages/scanner/src/gitignore.ts`, T-005a):
+    - rules are parsed once into tokens, with no regular expression built from rule text;
+    - matching works on UTF-8 bytes, like git;
+    - a segment match backtracks only to the last `*` (O(name × rule)), and a path match is a segment DP (O(path segments × rule segments));
+    - repeated `**` segments collapse at parse time;
+    - classes are merged ranges searched by bisection.
+      The semantics are git's (wildmatch), and tests compare the matcher with a table generated once from real git. **ADR-004 is amended:** `ignore` is not used for scanned input.
+  - **Caps, fail open:**
+    - a rule line over **1 KiB** is dropped;
+    - a `.gitignore` over **64 KiB** is skipped;
+    - at most **2,000 rules** are in force at once.
+      Anything over a cap is skipped with a diagnostic naming the file, and the scan continues. It may then scan a few more files, which is the safe direction. Within the caps, the worst hostile shapes take about 0.1–0.4 s per file against a 2,200-byte path.
+  - **Symlinks are never followed**, inside or outside the root. Each one is reported as skipped with a diagnostic. This is simplest and safest for v0.1, and can be revisited after launch.
+  - **Deliberate differences from git:**
+    - POSIX classes (`[[:digit:]]`) aren't supported: the rule is dropped with a problem, and the file stays in the scan;
+    - matching is case-sensitive, while git defaults to case-insensitive on macOS and Windows;
+    - unclosed classes and trailing backslashes match nothing, as in git, but are reported as problems.
+- **Consequences:**
+  - T-005 splits into T-005a (the matcher) and T-005b (the walker, the safe reader and the scan wiring; PR #8 reworked), to stay near the size guideline and to test the matcher alone.
+  - The generator script lives in `fixtures/gitignore/`. Rerun it when git's behaviour is in question.
+
 ## ADR-014 · Catalog layout and loader rules (2026-11-22)
 
 - **Context:** T-003 builds `loadCatalog`. The task says "id matches file path", and catalog/README.md had suggested `catalog/<tool>/<name>.yaml`. With that layout one id could live in two folders, and `node24/x` and `node26/x` would collide. The reviewer subagent also found that the loader crashed on one bad file and that a runtime check for fixture folders would fail in the npm package.
@@ -169,7 +196,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 ## ADR-004 · Allowed runtime dependencies (2026-11-18)
 
 - **Context:** a security tool's dependency tree is part of what buyers review.
-- **Decision:** runtime dependencies allowed without a new decision: `oxc-parser`, `yaml`, `semver`, `ignore` (for `.gitignore` matching). Anything else needs its own entry: why, maintenance status, install scripts, transitive count.
+- **Decision:** runtime dependencies allowed without a new decision: `oxc-parser`, `yaml`, `semver`, `ignore` (for `.gitignore` matching; amended by ADR-015: not used for scanned input). Anything else needs its own entry: why, maintenance status, install scripts, transitive count.
 - **Consequences:** target 9 (< 40 transitive runtime dependencies) stays reachable.
 
 ## ADR-003 · The catalog is YAML with mandatory official sources (2026-11-18)
