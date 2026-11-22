@@ -1,4 +1,12 @@
-import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -196,6 +204,72 @@ describe("file discovery", () => {
         file: "inside-link",
       },
     ]);
+  });
+});
+
+// Permissions don't apply on Windows or to root, so these run elsewhere. Each restores the mode
+// so the temp folder can be removed.
+const canDenyRead = process.platform !== "win32" && process.getuid?.() !== 0;
+
+describe.skipIf(!canDenyRead)("file discovery: unreadable input becomes a diagnostic", () => {
+  function denied(root: string, path: string, run: () => void): void {
+    chmodSync(join(root, path), 0o000);
+    try {
+      run();
+    } finally {
+      chmodSync(join(root, path), 0o755);
+    }
+  }
+
+  it("reports an unreadable folder and scans the rest", () => {
+    const root = copyFixture();
+    denied(root, "nested", () => {
+      const events = Array.from(discoverFiles(root));
+      expect(paths(events)).toContain("root.txt");
+      expect(diagnosticsOf(events)).toEqual([
+        { level: "warning", message: "Could not read directory.", file: "nested" },
+      ]);
+    });
+  });
+
+  it("skips and reports an unreadable file", () => {
+    const root = copyFixture();
+    denied(root, "root.txt", () => {
+      const events = Array.from(discoverFiles(root));
+      expect(paths(events)).not.toContain("root.txt");
+      expect(events.filter((event) => event.type === "skipped")).toHaveLength(1);
+      expect(diagnosticsOf(events)).toEqual([
+        { level: "warning", message: "Could not read file.", file: "root.txt" },
+      ]);
+    });
+  });
+
+  it("scans as if an unreadable .gitignore weren't there, and says so", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, "keep.log"), "would be ignored by *.log");
+    denied(root, ".gitignore", () => {
+      const events = Array.from(discoverFiles(root));
+      expect(paths(events)).toContain("keep.log");
+      expect(diagnosticsOf(events)).toEqual([
+        {
+          level: "warning",
+          message: "This .gitignore could not be read safely, so its rules were not applied.",
+          file: ".gitignore",
+        },
+      ]);
+    });
+  });
+
+  it("reports an unreadable scan root as an error", () => {
+    const root = copyFixture();
+    chmodSync(root, 0o000);
+    try {
+      expect(diagnosticsOf(Array.from(discoverFiles(root)))).toEqual([
+        { level: "error", message: "Could not read scan root." },
+      ]);
+    } finally {
+      chmodSync(root, 0o755);
+    }
   });
 });
 
