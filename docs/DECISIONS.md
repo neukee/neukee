@@ -11,7 +11,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - the simplest code that passes the tests, with no abstraction or option before a second real use;
   - one task per PR, under about 300 source lines (tests and fixtures excluded);
   - Node's standard library first;
-  - no `any`, no non-null `!`, no unchecked `as` (validate at the boundary), and exhaustive switches;
+  - no `any`, no non-null `!`, no unchecked `as` (validate at the boundary), and exhaustive switches. The one narrow exception: a cast is allowed only for a file bundled in our own package and covered by a test that pins its exact shape. Never for scanned input, user config, environment variables or anything read at runtime from outside the package;
   - every scanned file treated as hostile: size cap, no symlinks out of the root, no `eval` or dynamic import, YAML without custom tags, linear-time regexes, and tests for malformed, empty, huge and CRLF input;
   - every bug fix starts with a failing test;
   - tests check behavior, not internals.
@@ -20,7 +20,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - The rest is checked by the reviewer subagent (`.claude/agents/reviewer.md`, check 9) on every task, before the PR.
 - **Existing code:** no Biome violations.
   - The unchecked `as` in `validateWithSchema` was removed; it now takes a typed `SchemaNode`.
-  - One exception remains, documented in place: `JSON.parse(...) as SchemaNode` for the bundled `scan-report.v1.json`. It's our own published file, not scanned input, and `validate.test.ts` checks its exact shape.
+  - One cast uses the exception, documented in place: `JSON.parse(...) as SchemaNode` for the bundled `scan-report.v1.json`. It meets both conditions: the file ships in `@neukee/core`, and `validate.test.ts` pins its exact shape (keywords, types, formats, value shapes, and the constraint snapshot). Sreeram chose to keep it (2026-11-22).
   - `value as ScanReport` in `validateReport` follows full validation, which is the allowed boundary pattern.
 - **Consequences:**
   - Some tasks will need splitting to stay under about 300 source lines; the reviewer says how.

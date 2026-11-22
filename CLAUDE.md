@@ -58,7 +58,7 @@ The reviewer subagent checks every item below (ADR-012).
 - **Types that don't lie:**
   - no `any` (Biome `noExplicitAny`: error);
   - no non-null `!` (Biome `noNonNullAssertion`: error);
-  - no unchecked `as`: validate data at the boundary, then let the types follow;
+  - no unchecked `as`: validate data at the boundary, then let the types follow. A cast is allowed only for a file bundled in our own package and covered by a test that pins its exact shape. Never for scanned input, user config, environment variables or anything read at runtime from outside the package;
   - every `switch` over a union is exhaustive.
 - **Treat every scanned file as hostile:**
   - cap file size;
