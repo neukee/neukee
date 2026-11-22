@@ -79,8 +79,10 @@ function* walk(
       yield warning("Skipped a directory that is not safely inside the scan root.", where);
       return;
     }
+    // Code-unit order, never locale order, so output is the same everywhere. Names in one folder
+    // are unique, so no two compare equal.
     entries = readdirSync(absoluteDirectory, { withFileTypes: true }).sort((a, b) =>
-      a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+      a.name < b.name ? -1 : 1,
     );
   } catch {
     yield where === undefined

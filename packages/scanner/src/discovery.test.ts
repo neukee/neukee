@@ -1,8 +1,11 @@
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   cpSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -125,11 +128,10 @@ describe("file discovery", () => {
     );
     expect(files.some((file) => file.path === invalidName)).toBe(false);
     expect(skipped).toBe(1);
-    expect(diagnostics).toHaveLength(1);
-    const diagnostic = diagnostics[0];
-    if (diagnostic === undefined) throw new Error("Expected an invalid-path diagnostic.");
-    expect(diagnostic.level).toBe("warning");
-    expect(Object.hasOwn(diagnostic, "file")).toBe(false);
+    // Strict: the diagnostic must not carry a `file` key at all, not even an undefined one.
+    expect(diagnostics).toStrictEqual([
+      { level: "warning", message: "Skipped a path invalid for report output." },
+    ]);
   });
 
   it("handles malformed POSIX classes without rescanning their suffixes", () => {
@@ -164,6 +166,7 @@ describe("file discovery", () => {
     const events = Array.from(discoverFiles(root));
     expect(paths(events)).toContain("root.txt"); // *.txt was not applied (fail open)
     expect(paths(events)).not.toContain(".gitignore");
+    expect(events.filter((event) => event.type === "skipped")).toHaveLength(1);
     expect(diagnosticsOf(events)).toEqual([
       {
         level: "warning",
@@ -188,6 +191,58 @@ describe("file discovery", () => {
         level: "warning",
         message: "This .gitignore was not applied: it would put more than 2000 rules in force.",
         file: "nested/.gitignore",
+      },
+    ]);
+  });
+
+  it("applies a .gitignore that brings the rules in force to exactly 2,000", () => {
+    const root = copyFixture();
+    // 1,999 rules at the root; nested/.gitignore (`!keep.tmp`) makes exactly 2,000.
+    const many = Array.from({ length: 1998 }, (_, i) => `unused-${i}`).join("\n");
+    writeFileSync(join(root, ".gitignore"), `${many}\n*.tmp\n`);
+    writeFileSync(join(root, "drop.tmp"), "ignored");
+    writeFileSync(join(root, "nested/keep.tmp"), "re-included by nested/.gitignore");
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events)).not.toContain("drop.tmp");
+    expect(paths(events)).toContain("nested/keep.tmp");
+    expect(diagnosticsOf(events)).toEqual([]);
+  });
+
+  it("matches a .gitignore against itself as a file, and folder-only rules never match files", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), "/.gitignore\n");
+    mkdirSync(join(root, "sub"));
+    writeFileSync(join(root, "sub/.gitignore"), ".gitignore/\ndata/\n");
+    writeFileSync(join(root, "sub/data"), "a file, not a folder");
+    const files = paths(Array.from(discoverFiles(root)));
+    expect(files).not.toContain(".gitignore");
+    expect(files).toContain("sub/.gitignore");
+    expect(files).toContain("sub/data");
+  });
+
+  // A root whose path is redirected after the scan started (a parent folder swapped for a link)
+  // must not be read: its real location is no longer the root the scan resolved.
+  it("refuses a scan root redirected after the scan started", () => {
+    const base = mkdtempSync(join(tmpdir(), "neukee-discovery-"));
+    roots.push(base);
+    const parent = join(base, "p");
+    const root = join(parent, "repo");
+    cpSync(fixture, root, { recursive: true });
+    mkdirSync(join(base, "elsewhere/repo"), { recursive: true });
+    writeFileSync(join(base, "elsewhere/repo/planted.txt"), "planted");
+
+    const scan = discoverFiles(root);
+    renameSync(parent, join(base, "p-moved"));
+    symlinkSync(join(base, "elsewhere"), parent, "junction");
+
+    expect(Array.from(scan)).toStrictEqual([
+      { type: "skipped" },
+      {
+        type: "diagnostic",
+        diagnostic: {
+          level: "warning",
+          message: "Skipped a directory that is not safely inside the scan root.",
+        },
       },
     ]);
   });
@@ -270,6 +325,32 @@ describe.skipIf(!canDenyRead)("file discovery: unreadable input becomes a diagno
     } finally {
       chmodSync(root, 0o755);
     }
+  });
+});
+
+// FIFOs and open file handles are POSIX notions here: Windows has neither mkfifo nor /dev/fd.
+describe.skipIf(process.platform === "win32")("file discovery: special files and handles", () => {
+  it("skips a FIFO without opening it", () => {
+    const root = copyFixture();
+    // Node has no mkfifo API; the system tool creates the test's own FIFO.
+    execFileSync("mkfifo", [join(root, "pipe")]);
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events)).not.toContain("pipe");
+    expect(events.filter((event) => event.type === "skipped")).toHaveLength(1);
+    expect(diagnosticsOf(events)).toEqual([]);
+  });
+
+  // A scan of a big repo opens thousands of files; one leaked handle per file runs out of them.
+  it("closes every file it opens, including ones it skips", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, "over-limit.bin"), Buffer.alloc(2 * 1024 * 1024, 0x61));
+    writeFileSync(join(root, ".gitignore"), `*.log\n${"#".repeat(64 * 1024)}\n`);
+    // Counted synchronously around a synchronous scan, so nothing else can open a handle between.
+    const before = readdirSync("/dev/fd").length;
+    const events = Array.from(discoverFiles(root));
+    const after = readdirSync("/dev/fd").length;
+    expect(paths(events)).toContain("root.txt");
+    expect(after).toBe(before);
   });
 });
 
