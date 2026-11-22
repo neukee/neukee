@@ -4,6 +4,26 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-011 · Report schema v1 is strict (2026-11-22)
+
+- **Context:** T-002 adds the hand-written JSON Schema for `ScanReport`. ARCHITECTURE §5 gives field types only, and a schema that accepts anything a type allows would let absolute paths, control characters from untrusted file names, or typos reach reports, terminals and PR comments unnoticed.
+- **Decision:**
+  - Every object is closed.
+  - Report paths are canonical repo-relative paths: no absolute, drive-letter, `scheme:`, backslash, `.`/`..`, empty-segment, trailing-slash, control-character (C0, DEL, C1) or bidi-override forms. Repos are untrusted, and these characters can disguise a file name in terminal output or PR comments.
+  - `line` and `column` are 1-based integers, with columns in UTF-16 code units (JavaScript string indexes, editors). SARIF output sets `columnKind: "utf16CodeUnits"` explicitly.
+  - `sourceUrl` is https only. `title` is one line. Required strings are non-empty.
+  - `ruleId` follows the catalog id grammar `^[a-z0-9][a-z0-9.-]*(?:/[a-z0-9][a-z0-9.-]*)+$`.
+  - `scannedAt` carries a time zone. `root` is the literal `"."`.
+  - `validateReport` interprets the schema itself; there is no new dependency (ADR-004).
+- **Consequences:**
+  - A file whose real path can't meet the path rule (a backslash, control character or `:` in its first segment) is skipped with a diagnostic that has no `file` (T-005).
+  - Rule ids stay lowercase: `node26/slowbuffer`, `native/node-rs-bcrypt`.
+  - Snapshot normalization replaces `scannedAt` and `durationMs` with fixed values instead of removing them, so normalized reports still validate (T-004).
+  - Fleet JSON wraps each report as `{ repo, report }` (T-034).
+  - If the Action calls `validateReport`, its bundle must ship `schema/` beside it (T-040).
+  - Loosening any of these later means `schemaVersion: 2`.
+  - Sreeram confirms the column unit, https-only and the id grammar (REVIEW-QUEUE).
+
 ## ADR-009 · npm trusted publishing, no stored tokens (2026-11-21)
 
 - **Context:** npm is retiring tokens that bypass 2FA. Since early August 2026 they can't manage accounts or packages, and npm is targeting January 2027 to remove their direct publishing. Our launch (Dec 6) falls just before that date and every later release after it. A security tool that ships with a stealable publish token undercuts its own pitch.

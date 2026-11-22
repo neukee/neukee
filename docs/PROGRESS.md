@@ -4,13 +4,13 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-22, 12:45 IST (Step 2 mostly done: GitHub org, npm org, 2FA; ADR-005 confirmed)
-- **Branch:** `main`
-- **Last finished:** T-000 scaffold, plus workbench additions (brief, `/wrap`, quality gates, pinned Actions)
+- **Last updated:** 2026-11-22, evening IST (T-002 done on its branch; PR open)
+- **Branch:** `t-002-core-schema` (PR waiting for merge approval)
+- **Last finished:** T-002 (report JSON Schema and `validateReport`)
 - **In progress:** nothing
-- **Exact next step:** Sreeram finishes workbench Step 2 (GitHub org `neukee`, npm org, domain, trademark search) and T-001 (repo on GitHub, protections, CodeRabbit). Then open Claude Code and run `/status`, then `/next` (T-002).
-- **Blocked / waiting on Sreeram:** confirm the target customer (brief §5); NEWKEY trademark details (pronunciation decision)
-- **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (14 days). Launch Dec 6 (15 days).
+- **Exact next step:** merge the T-002 PR once approved, then `/next` → T-003 (catalog loader).
+- **Blocked / waiting on Sreeram:** confirm the three schema defaults in ADR-011 (column unit, https-only, lowercase rule ids); NEWKEY trademark details (pronunciation decision)
+- **Next dated checkpoint:** Dec 5, scanner runs on 10 public repos (13 days). Launch Dec 6 (14 days).
 
 ## Dated checkpoints
 
@@ -29,7 +29,7 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 ## Current state
 
 - **Phase:** 0 — Foundation
-- **Current task:** T-001 (you) and T-002 (Claude)
+- **Current task:** T-003 (Claude)
 - **Scanner launch target:** December 6, 2026
 - **On track?** Not yet measured. Run `/checkpoint` after T-005.
 
@@ -52,9 +52,10 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
 One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+). Sreeram's hours only when he gives them.
 
-| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                   |
-| ---------- | ----- | ---- | --------------- | ------------- | ------ | ---------------------- |
-| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green |
+| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                                                        |
+| ---------- | ----- | ---- | --------------- | ------------- | ------ | ----------------------------------------------------------- |
+| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                      |
+| 2026-11-22 | T-002 | S    | 1               | —             | done   | Schema + validator; reviewer found 1 must-fix, 4 should-fix |
 
 ## Daily log
 
@@ -75,6 +76,25 @@ Sreeram's notes and each session's summary. Newest first.
 - New tasks: T-006 change-signature schema, T-027 MergeWarden comparison, T-037 corpus job, T-038 mutation score target, T-056 UpgradeBench; E-001 reframed as the competitive spike.
 
 ## Log (task entries)
+
+### 2026-11-22 · T-002 · Core types and JSON Schema — done
+
+- `packages/core/schema/scan-report.v1.json`: hand-written draft 2020-12 schema, published with the package and exported as `@neukee/core/schema/scan-report.v1.json`.
+- `validateReport(value)` returns the typed report or every problem as `{ path, message }`. Messages are full sentences (`report.findings[0].severity must be one of "action-required", "warning" or "info" (got "critical").`). It interprets the schema itself, with no new dependency (ADR-004).
+- The types are unchanged; they already matched §5. ARCHITECTURE §5 now documents what the schema adds (ADR-011): closed objects, canonical repo-relative paths, 1-based UTF-16 columns, https sources, the rule-id grammar, and timestamps with a time zone.
+- Tests (core: 2 → 198; whole repo 206):
+  - 22 broken reports with exact messages.
+  - A generated violation for every schema constraint (60+ cases).
+  - Real paths the detectors will emit (Next.js route syntax, dotfiles, Unicode) must pass.
+  - Fields, required/optional and enums are compared between types and schema both ways.
+  - The constraint inventory is a snapshot (new file `packages/core/src/__snapshots__/validate.test.ts.snap`). A schema change fails until the snapshot is updated on purpose, with a new `schemaVersion` and an ADR.
+  - Hand mutation check: deleting a `minLength` and loosening `integer` → `number` both fail it.
+- Reviewer subagent: one must-fix (document the extra constraints, plus an ADR) and four should-fixes. The validator now applies keywords next to `$ref` and object keywords on any object. The path rule now rejects `./`, `.`, empty segments, a trailing `/`, `file:` and control characters. Values and keys are truncated on code points. Every coverage gap is now a test. All fixed. Second pass: PASS. I took its three optional suggestions:
+  - Paths also reject C1 controls and bidi overrides (U+202A–202E, U+2066–2069). The snapshot was regenerated before its first commit, because the pattern changed.
+  - The unverified "SARIF default columnKind" claim was dropped; T-032 sets `columnKind` explicitly.
+  - T-005 tests paths against the exported pattern.
+- Follow-ups written into later tasks: T-003 shares the id grammar; T-004 normalizes with fixed values; T-005 skips unrepresentable paths; T-021 column unit; T-031 neutralises control/bidi characters and escapes markdown in repo-derived text; T-032 SARIF fallback location and explicit `columnKind`; T-034 fleet wrapper; T-040 ships `schema/`.
+- `pnpm verify` and `pnpm check:all` pass.
 
 ### 2026-11-18 · T-000 · Repository scaffold — done
 

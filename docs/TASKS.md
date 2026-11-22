@@ -30,20 +30,20 @@
 
 ### T-002 · Core types and JSON Schema
 
-- Status: todo
+- Status: done
 - Depends on: T-000
 - Human review: no
 - Build: Finalize `ScanReport`, `Finding`, `Target`, `Location`, `Diagnostic`, `Severity` in `packages/core` exactly as in `docs/ARCHITECTURE.md` §5. Export a JSON Schema for `ScanReport` (hand-written, in `packages/core/schema/scan-report.v1.json`). Add `validateReport(json)`.
 - Done when:
-  - [ ] A valid example report passes validation; five deliberately broken ones fail with clear messages.
-  - [ ] Types and schema agree (a test builds a report through the types and validates it against the schema).
+  - [x] A valid example report passes validation; five deliberately broken ones fail with clear messages. (22 hand-written broken cases with exact messages, plus one generated violation per schema constraint.)
+  - [x] Types and schema agree (a test builds a report through the types and validates it against the schema). (Also field sets, required vs optional fields and enums are compared both ways; the constraint inventory is a snapshot.)
 
 ### T-003 · Catalog format, loader and validator
 
 - Status: todo
 - Depends on: T-002
 - Human review: no
-- Build: `loadCatalog(dir)` in `packages/core` reads `catalog/**/*.yaml`, validates each entry (required fields, `id` matches file path, `sourceUrl` is https and on an allowed official domain list, severity valid, fixture paths exist), returns typed entries. Add one real entry: `next16/sync-request-apis` (verify its text against the Next.js 16 upgrade guide; paste the exact URL).
+- Build: `loadCatalog(dir)` in `packages/core` reads `catalog/**/*.yaml`, validates each entry (required fields, `id` matches file path, `sourceUrl` is https and on an allowed official domain list, severity valid, fixture paths exist), returns typed entries. Validate `id` with the same grammar as the report's `ruleId` (ADR-011); share one pattern from core rather than copying it. Add one real entry: `next16/sync-request-apis` (verify its text against the Next.js 16 upgrade guide; paste the exact URL).
 - Done when:
   - [ ] Invalid entries (missing source, unknown severity, missing fixture) produce clear errors naming the file.
   - [ ] A test fails if any entry in `catalog/` lacks a source or fixtures.
@@ -53,7 +53,7 @@
 - Status: todo
 - Depends on: T-002
 - Human review: no
-- Build: Test helper `scanFixture(name, targets)` that runs the scan pipeline on `fixtures/repos/<name>` and returns a normalized report (removes `scannedAt`, `durationMs`). Golden snapshot helper. A test that fails if any package imports from a package to its left in the dependency direction (`docs/ARCHITECTURE.md` §3).
+- Build: Test helper `scanFixture(name, targets)` that runs the scan pipeline on `fixtures/repos/<name>` and returns a normalized report (replaces `scannedAt` and `durationMs` with fixed values, `1970-01-01T00:00:00Z` and `0`, so the normalized report still passes `validateReport`; ADR-011). Golden snapshot helper. A test that fails if any package imports from a package to its left in the dependency direction (`docs/ARCHITECTURE.md` §3).
 - Done when:
   - [ ] An empty fixture repo produces a stable snapshot.
   - [ ] Introducing a forbidden import (tried in a test) is caught.
@@ -63,7 +63,7 @@
 - Status: todo
 - Depends on: T-004
 - Human review: no
-- Build: Walk the repo: respect `.gitignore` (nested too), always skip `node_modules`, `.git`, `.next`, `dist`, `build`, `coverage`; skip files over 1 MB (record as skipped); never follow symlinks outside the root; return repo-relative paths with forward slashes on all OSes.
+- Build: Walk the repo: respect `.gitignore` (nested too), always skip `node_modules`, `.git`, `.next`, `dist`, `build`, `coverage`; skip files over 1 MB (record as skipped); never follow symlinks outside the root; return repo-relative paths with forward slashes on all OSes. A path that fails the report schema's `RepoPath` pattern (ADR-011; test against the pattern itself, exported from core, rather than restating its rules) is skipped with a diagnostic that has no `file`.
 - Done when:
   - [ ] Fixture with nested `.gitignore`, a symlink pointing outside, a 2 MB file and a `node_modules` folder gives exactly the expected file list.
   - [ ] Test passes on Windows in CI (paths use `/`).
@@ -173,7 +173,7 @@
 - Status: todo
 - Depends on: T-005
 - Human review: no
-- Build: Parse each source file with `oxc-parser`; a small visitor helper; line/column from offsets; parse errors become diagnostics; parse files in parallel only if measurement shows it is needed.
+- Build: Parse each source file with `oxc-parser`; a small visitor helper; line/column from offsets (1-based, columns in UTF-16 code units; ADR-011); parse errors become diagnostics; parse files in parallel only if measurement shows it is needed.
 - Done when: a file with a syntax error is reported and skipped; the rest of the fixture scans.
 
 ### T-022 · Next.js 16: synchronous request APIs
@@ -238,6 +238,7 @@
 - Status: todo
 - Depends on: T-030
 - Human review: no
+- Note: any text that came from the scanned repo (paths in diagnostics, version strings, package names) is untrusted. Neutralise control and bidi-override characters and escape markdown before rendering.
 - Done when: snapshot tests for both formats on three fixture repos; markdown renders correctly on GitHub (paste into a test PR once).
 
 ### T-032 · JSON and SARIF
@@ -245,6 +246,7 @@
 - Status: todo
 - Depends on: T-030
 - Human review: no
+- Note: findings may have no `locations` (repo-wide). Check whether GitHub code scanning needs a location on every SARIF result; if it does, use a documented fallback (for example the manifest that declared the version). Set `run.columnKind: "utf16CodeUnits"` explicitly, to match the report's columns (ADR-011).
 - Done when: JSON output validates against the schema; SARIF validates against the SARIF 2.1.0 schema (vendored copy) and uploads cleanly in a test repo (manual check, note it in PROGRESS).
 
 ### T-033 · CLI
@@ -260,6 +262,7 @@
 - Status: todo
 - Depends on: T-033
 - Human review: no
+- Note: fleet JSON wraps each report as `{ repo, report }`; each report keeps `root: "."` and stays valid on its own (ADR-011).
 - Done when: three fixture repos produce one combined markdown report with a summary table.
 
 ### T-035 · Performance benchmark
@@ -301,7 +304,7 @@
 - Status: todo
 - Depends on: T-033
 - Human review: yes (permissions and supply chain)
-- Build: `packages/action` with `action.yml`, esbuild bundle committed under `dist/`, inputs `targets`, `fail-on`, `sarif`, `path`; writes the markdown report to the job summary; documentation of required permissions.
+- Build: `packages/action` with `action.yml`, esbuild bundle committed under `dist/`, inputs `targets`, `fail-on`, `sarif`, `path`; writes the markdown report to the job summary; documentation of required permissions. `validateReport` reads `schema/scan-report.v1.json` relative to its module, so if the bundle calls it, ship `schema/` next to the bundle and test that path.
 - Done when: the Action runs on a test repo, writes the summary, uploads SARIF when enabled, and fails the job only per `fail-on`.
 
 ## Phase 4 — Validation and launch

@@ -3,6 +3,8 @@
  * Changing these is a schema change — see docs/ARCHITECTURE.md §5 and add a decision record.
  */
 
+export { type ReportValidation, type ValidationError, validateReport } from "./validate.js";
+
 export const SCHEMA_VERSION = 1 as const;
 
 export type Severity = "action-required" | "warning" | "info";

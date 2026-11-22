@@ -131,7 +131,7 @@ interface ScanReport {
   schemaVersion: 1;
   tool: { name: string; version: string };
   scannedAt: string; // ISO timestamp — the ONLY non-deterministic field; excluded from snapshots
-  root: string; // "." — never an absolute path (no leaking machine paths)
+  root: "."; // always "." — never an absolute path (no leaking machine paths)
   targets: Target[];
   detected: { node: string[]; packageManager?: string; frameworks: Record<string, string> };
   findings: Finding[];
@@ -139,6 +139,18 @@ interface ScanReport {
   stats: { filesScanned: number; filesSkipped: number; durationMs: number };
 }
 ```
+
+### The report schema (`packages/core/schema/scan-report.v1.json`)
+
+The JSON Schema is hand-written (draft 2020-12) and published with `@neukee/core`. `validateReport(value)` checks a parsed report against it and returns either the typed report or every problem as `{ path, message }`. ADR-004 allows no JSON Schema library at runtime, so `validateReport` interprets only the keywords the schema uses. Tests pin the schema to that subset, generate a violation for every constraint, and keep the schema's fields in agreement with the TypeScript types. The schema says more than the types can (ADR-011):
+
+- Every object is closed (`additionalProperties: false`): a misspelled or extra field is an error.
+- `Location.file` and `Diagnostic.file` are canonical repo-relative paths. They use forward slashes and never contain a leading `/`, a drive letter or other `scheme:` prefix, a backslash, a `.` or `..` segment, an empty segment, a trailing `/`, a control character (C0, DEL, C1) or a bidirectional-override character (U+202A–202E, U+2066–2069) that could disguise a name in terminal or PR output.
+- `line` and `column` are integers starting at 1. Columns count UTF-16 code units, matching JavaScript string indexes and editors. SARIF output (T-032) states `columnKind: "utf16CodeUnits"` explicitly instead of relying on a default.
+- `sourceUrl` is `https://` only. `title` is a single line. Required strings are non-empty.
+- `ruleId` is a catalog id: lowercase segments of `a–z`, `0–9`, `.` and `-`, joined by `/`, at least two segments (`next16/sync-request-apis`). The catalog loader (T-003) uses the same grammar.
+- `scannedAt` is ISO 8601 with a time zone (`Z` or `±hh:mm`).
+- `locations` may be empty for repo-wide findings.
 
 ## 6. The catalog
 

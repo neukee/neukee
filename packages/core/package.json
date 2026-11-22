@@ -8,10 +8,12 @@
       "@neukee/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./schema/scan-report.v1.json": "./schema/scan-report.v1.json"
   },
   "files": [
     "dist",
+    "schema",
     "src",
     "!src/**/*.test.ts"
   ],
