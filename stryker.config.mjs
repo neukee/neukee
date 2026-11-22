@@ -6,7 +6,12 @@ export default {
   plugins: ["@stryker-mutator/vitest-runner"],
   vitest: { configFile: "vitest.config.ts" },
   coverageAnalysis: "perTest",
-  mutate: ["packages/*/src/**/*.ts", "!packages/*/src/**/*.test.ts", "!packages/cli/src/index.ts"],
+  mutate: [
+    "packages/*/src/**/*.ts",
+    "!packages/*/src/**/*.test.ts",
+    "!packages/*/src/testing/**",
+    "!packages/cli/src/index.ts",
+  ],
   reporters: ["clear-text", "progress", "html"],
   htmlReporter: { fileName: "reports/mutation/index.html" },
   incremental: true,

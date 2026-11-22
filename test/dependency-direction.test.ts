@@ -25,13 +25,15 @@ function packageOf(path: string): string | undefined {
 
 /**
  * Every import that points left of its package, as "file → package (via specifier)". Covers
- * `import … from`, `export … from`, side-effect `import "…"`, `import()` and `require()`, by
- * package name (`@neukee/x`) or by a relative path that leaves the package.
+ * `import … from` (multi-line too), `export … from`, `import type`, side-effect `import "…"`,
+ * `import()`, `vi.importActual()`, `require()`, with any quote style, by package name
+ * (`@neukee/x`) or by a relative path that leaves the package. Fails closed: commented-out
+ * imports and import-like strings are flagged too.
  */
 function forbiddenImports(files: SourceFile[]): string[] {
   const found: string[] = [];
   const specifier =
-    /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\brequire\s*\(\s*)["']([^"'\n]+)["']/g;
+    /(?:\bfrom\s*|\bimport(?:Actual|Original)?\s*\(\s*|\bimport\s*|\brequire\s*\(\s*)["'`]([^"'`\n]+)["'`]/g;
   for (const file of files) {
     const own = packageOf(file.path);
     if (own === undefined) continue;
@@ -43,7 +45,9 @@ function forbiddenImports(files: SourceFile[]): string[] {
           ? packageOf(join(dirname(file.path), spec).split(sep).join("/"))
           : undefined;
       if (target === undefined || target === own) continue;
-      const allowed = ORDER.indexOf(target) > ORDER.indexOf(own) && ORDER.includes(target);
+      // A package outside ORDER may import nothing internal: it must be placed in the order first.
+      const allowed =
+        ORDER.includes(own) && ORDER.includes(target) && ORDER.indexOf(target) > ORDER.indexOf(own);
       if (!allowed) found.push(`${file.path} → ${target} (via "${spec}")`);
     }
   }
@@ -75,6 +79,15 @@ describe("dependency direction (ARCHITECTURE §3)", () => {
     expect(forbiddenImports(files)).toEqual([]);
   });
 
+  // A new package must be placed in the order on purpose, even before it imports anything.
+  it("knows every folder under packages/", () => {
+    const folders = readdirSync(join(repoRoot, "packages"), { withFileTypes: true })
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => dirent.name);
+    for (const folder of folders)
+      expect(ORDER, `packages/${folder} is not in ORDER`).toContain(folder);
+  });
+
   it("allows imports to the right and within a package", () => {
     const files = [
       { path: "packages/scanner/src/a.ts", source: 'import { x } from "@neukee/core";' },
@@ -99,6 +112,18 @@ describe("dependency direction (ARCHITECTURE §3)", () => {
       { path: "packages/scanner/src/d.ts", source: 'const x = require("@neukee/action");' },
       { path: "packages/core/src/e.ts", source: 'import "../../scanner/src/index.js";' },
       { path: "packages/cli/src/f.ts", source: 'import { act } from "../../action/src/main.js";' },
+      {
+        path: "packages/core/src/g.ts",
+        source: 'import {\n  scan,\n  checkSyntax,\n} from\n  "@neukee/scanner";',
+      },
+      { path: "packages/core/src/h.ts", source: 'export * from "@neukee/scanner";' },
+      { path: "packages/core/src/i.ts", source: 'import type { RunResult } from "@neukee/cli";' },
+      { path: "packages/scanner/src/j.ts", source: "const m = await import(`@neukee/cli`);" },
+      { path: "packages/core/src/k.ts", source: 'import"@neukee/scanner";' },
+      {
+        path: "packages/core/src/l.ts",
+        source: 'const m = await vi.importActual("@neukee/scanner");',
+      },
     ];
     expect(forbiddenImports(files)).toEqual([
       'packages/core/src/a.ts → scanner (via "@neukee/scanner")',
@@ -107,6 +132,12 @@ describe("dependency direction (ARCHITECTURE §3)", () => {
       'packages/scanner/src/d.ts → action (via "@neukee/action")',
       'packages/core/src/e.ts → scanner (via "../../scanner/src/index.js")',
       'packages/cli/src/f.ts → action (via "../../action/src/main.js")',
+      'packages/core/src/g.ts → scanner (via "@neukee/scanner")',
+      'packages/core/src/h.ts → scanner (via "@neukee/scanner")',
+      'packages/core/src/i.ts → cli (via "@neukee/cli")',
+      'packages/scanner/src/j.ts → cli (via "@neukee/cli")',
+      'packages/core/src/k.ts → scanner (via "@neukee/scanner")',
+      'packages/core/src/l.ts → scanner (via "@neukee/scanner")',
     ]);
   });
 
@@ -114,6 +145,20 @@ describe("dependency direction (ARCHITECTURE §3)", () => {
     const files = [{ path: "packages/core/src/a.ts", source: 'import x from "@neukee/engine";' }];
     expect(forbiddenImports(files)).toEqual([
       'packages/core/src/a.ts → engine (via "@neukee/engine")',
+    ]);
+  });
+
+  it("flags every internal import from a package that isn't in the chain", () => {
+    const files = [
+      { path: "packages/engine/src/a.ts", source: 'import { run } from "@neukee/cli";' },
+      {
+        path: "packages/engine/src/b.ts",
+        source: 'import { act } from "../../action/src/main.js";',
+      },
+    ];
+    expect(forbiddenImports(files)).toEqual([
+      'packages/engine/src/a.ts → cli (via "@neukee/cli")',
+      'packages/engine/src/b.ts → action (via "../../action/src/main.js")',
     ]);
   });
 });

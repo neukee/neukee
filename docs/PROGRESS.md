@@ -122,7 +122,14 @@ Sreeram's notes and each session's summary. Newest first.
 - New snapshot `fixtures/expected/empty.json`: the first golden report, for the new `fixtures/repos/empty`. Checked by hand: an edited golden file fails the test, and in CI mode a missing one fails rather than being written.
 - `test/dependency-direction.test.ts` enforces `action → cli → scanner → core` across every `.ts` file in `packages/*/src`, tests included. It catches package names, relative paths into another package, `import()` and `require()`, and its own tests feed it each forbidden form.
 - Noticed, not fixed (outside the task): `packages/cli/src/run.ts` reads its `package.json` with an unchecked `as` (from T-000). That breaks the Quality bar's cast rule (it's a runtime file read). Logged as a follow-up for T-033.
-- Tests: 379 in the whole repo. `pnpm check:all` passes.
+- Reviewer, first pass: one must-fix and five should-fixes, all fixed:
+  - must-fix: a package not in the order (a future engine package) could import anything. Now every folder under `packages/` must be in the order, and a package outside it may import nothing internal;
+  - the import scan now also catches template-literal specifiers, `import"x"` with no space, and `vi.importActual`;
+  - multi-line imports, `export * from` and `import type` are pinned by tests;
+  - Stryker and coverage skip the test-only `testing/` helpers;
+  - the export is placed after the imports, and `scan` uses `ScanReport["tool"]`.
+- Expected, for T-005: `fixtures/repos/empty` holds a README (Git can't track an empty folder), so once discovery lands `fixtures/expected/empty.json` will count it. That commit must say so.
+- Tests: 381 in the whole repo. `pnpm check:all` passes.
 
 ### 2026-11-22 · T-003 · Catalog format, loader and validator — done
 
