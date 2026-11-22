@@ -6,23 +6,40 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ## ADR-011 · Report schema v1 is strict (2026-11-22)
 
-- **Context:** T-002 adds the hand-written JSON Schema for `ScanReport`. ARCHITECTURE §5 gives field types only, and a schema that accepts anything a type allows would let absolute paths, control characters from untrusted file names, or typos reach reports, terminals and PR comments unnoticed.
-- **Decision:**
-  - Every object is closed.
-  - Report paths are canonical repo-relative paths: no absolute, drive-letter, `scheme:`, backslash, `.`/`..`, empty-segment, trailing-slash, control-character (C0, DEL, C1) or bidi-override forms. Repos are untrusted, and these characters can disguise a file name in terminal output or PR comments.
-  - `line` and `column` are 1-based integers, with columns in UTF-16 code units (JavaScript string indexes, editors). SARIF output sets `columnKind: "utf16CodeUnits"` explicitly.
-  - `sourceUrl` is https only. `title` is one line. Required strings are non-empty.
-  - `ruleId` follows the catalog id grammar `^[a-z0-9][a-z0-9.-]*(?:/[a-z0-9][a-z0-9.-]*)+$`.
-  - `scannedAt` carries a time zone and is a real calendar date (`format: "date-time"`, asserted by `validateReport`). `root` is the literal `"."`.
-  - `validateReport` interprets the schema itself; there is no new dependency (ADR-004).
-- **Consequences:**
-  - A file whose real path can't meet the path rule (a backslash, control character or `:` in its first segment) is skipped with a diagnostic that has no `file` (T-005).
-  - Rule ids stay lowercase: `node26/slowbuffer`, `native/node-rs-bcrypt`.
-  - Snapshot normalization replaces `scannedAt` and `durationMs` with fixed values instead of removing them, so normalized reports still validate (T-004).
-  - Fleet JSON wraps each report as `{ repo, report }` (T-034).
-  - If the Action calls `validateReport`, its bundle must ship `schema/` beside it (T-040).
-  - Loosening any of these later means `schemaVersion: 2`.
-  - Sreeram confirms the column unit, https-only and the id grammar (REVIEW-QUEUE).
+- **Context:** T-002 adds the hand-written JSON Schema for `ScanReport` and `validateReport`. ARCHITECTURE §5 gives field types only. The task doesn't say how strict the schema is, what the validator returns, or how the schema ships. A schema that accepts anything the types allow would let absolute paths, control characters from untrusted file names, or typos reach reports, terminals and PR comments unnoticed. The types themselves are unchanged.
+- **Decision: what a valid v1 report is.** Everything below goes beyond §5.
+  - Every object is closed (`additionalProperties: false`).
+  - Report paths (`Location.file`, `Diagnostic.file`) are canonical repo-relative paths. They never take an absolute, drive-letter, `scheme:`, backslash, `.`/`..`, empty-segment, trailing-slash, control-character (C0, DEL, C1) or bidi-override form. Repos are untrusted, and these characters can disguise a file name in terminal output or PR comments. Directory locations have no trailing slash (`app/@modal`).
+  - `line` and `column` are 1-based integers, with columns in UTF-16 code units (JavaScript string indexes, editors).
+  - `sourceUrl` is an https URL with a dotted host name, an optional port of 1–65535 with no leading zero, then an optional path, query or fragment. Userinfo and whitespace are rejected.
+  - `title` is one line. Required strings are non-empty.
+  - `ruleId` follows the catalog id grammar `^[a-z0-9][a-z0-9.-]*(?:/[a-z0-9][a-z0-9.-]*)+$`: lowercase, at least two segments.
+  - `scannedAt` is RFC 3339 with a time zone (offsets up to ±14:00), and its date exists.
+  - `root` is the literal `"."`. ARCHITECTURE §5 said `string`; the code has said `"."` since T-000, so the doc now matches.
+  - `locations` may be empty, for repo-wide findings.
+- **Decision: how `validateReport` works.**
+  - No dependency (ADR-004). It interprets only the subset of draft 2020-12 the schema uses, with standard semantics: keywords next to `$ref` apply, and object keywords apply to any object.
+  - It deviates from JSON Schema in one place, on purpose: it asserts `format: "date-time"` instead of treating it as an annotation, because a report must hold real values. Other formats are ignored. Tests fail if the schema uses a keyword, type or format outside `SUPPORTED_KEYWORDS`, `SUPPORTED_TYPES` or `SUPPORTED_FORMATS`.
+  - It returns `{ valid: true, report }` or `{ valid: false, errors }`, and collects every error rather than stopping at the first.
+  - Each error is `{ path, message }`. The path looks like `report.findings[0].severity`, and the message is a full sentence naming what was expected and what was found.
+  - Errors follow schema order. Unknown keys and `additionalProperties` entries are checked in sorted order, so the output doesn't depend on input key order.
+  - Values and keys in messages and paths are cut at 60 code points. Two very long keys that share their first 60 can therefore give the same `path`.
+  - Every pattern must run in linear time on hostile input: no nested ambiguous quantifiers. Each was timed on 100k-character input.
+- **Decision: how the schema ships and changes.**
+  - The schema is published with `@neukee/core` (`files`) and exported as `@neukee/core/schema/scan-report.v1.json`.
+  - `validateReport` reads it from disk relative to its own module, lazily, on the first call.
+  - Because objects are closed, any change to the schema breaks someone. Adding a field fails existing validators; loosening a rule lets through reports that existing consumers don't expect. So every change, not only loosening, means `schemaVersion: 2` and a new ADR.
+  - A snapshot of every constraint (`packages/core/src/__snapshots__/validate.test.ts.snap`) fails until such a change is made on purpose.
+- **Consequences: later tasks were edited in this PR so the rules are where they'll be read.**
+  - T-003: the catalog `id` uses the same grammar, shared from core.
+  - T-004: normalization replaces `scannedAt` and `durationMs` with fixed values (`1970-01-01T00:00:00Z`, `0`) instead of removing them, so normalized reports still validate. This changes T-004's original wording.
+  - T-005: a path that fails the `RepoPath` pattern is skipped with a diagnostic that has no `file`.
+  - T-021: columns are 1-based UTF-16 code units.
+  - T-031: renderers neutralise control and bidi characters and escape markdown in any repo-derived text.
+  - T-032: SARIF sets `columnKind: "utf16CodeUnits"` explicitly, and needs a fallback location for findings with no `locations` if GitHub requires one.
+  - T-034: fleet JSON wraps each report as `{ repo, report }`.
+  - T-040: if the Action calls `validateReport`, its bundle ships `schema/` beside it.
+- **Waiting for Sreeram (REVIEW-QUEUE):** the column unit, https-only sources, and lowercase rule ids (`node26/slowbuffer`, `native/node-rs-bcrypt`).
 
 ## ADR-010 · Claude runs the PR loop; Sreeram approves merges (2026-11-22)
 
