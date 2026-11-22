@@ -11,6 +11,15 @@ _Nothing waiting._
 | Added | Task | What to check | Files | Risk if wrong |
 | ----- | ---- | ------------- | ----- | ------------- |
 
+## Follow-ups (logged, not fixed)
+
+Minor findings deliberately left for later (CLAUDE.md "Merging": after the third round of minor findings, log instead of fixing). Pick one up only when it starts to matter.
+
+| Added      | From              | Item                                                                                                                                                        | Files                        |
+| ---------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| 2026-11-22 | PR #4, CodeRabbit | Size check excludes only `*.test.ts`. Exclude test files by any naming (`*.test.js`, `*.spec.ts`, `tests/` folders) once the repo has them.                 | `.claude/agents/reviewer.md` |
+| 2026-11-22 | PR #4, CodeRabbit | The untracked-file count splits names with spaces at `xargs`. Use NUL-delimited paths (`git ls-files -z`, `grep -z`, `xargs -0`) if such files ever appear. | `.claude/agents/reviewer.md` |
+
 ## Reviewed
 
 | Date       | Task            | Reviewer | Outcome                                                                                         |
