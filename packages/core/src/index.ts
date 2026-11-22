@@ -6,6 +6,8 @@
 export { type Catalog, type CatalogEntry, type CatalogError, loadCatalog } from "./catalog.js";
 export { type ReportValidation, type ValidationError, validateReport } from "./validate.js";
 
+import { byText } from "./validate.js";
+
 export const SCHEMA_VERSION = 1 as const;
 
 export type Severity = "action-required" | "warning" | "info";
@@ -61,8 +63,6 @@ export interface ScanReport {
 
 const SEVERITY_RANK: Record<Severity, number> = { "action-required": 0, warning: 1, info: 2 };
 
-/** Code-unit order, so the result never depends on the machine's locale. */
-const byText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 const byNumber = (a: number, b: number): number => a - b;
 
 /** An absent value sorts before any present one. */

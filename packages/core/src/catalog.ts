@@ -1,10 +1,10 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, dirname, join, relative, sep } from "node:path";
+import { lstatSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { parseDocument } from "yaml";
 import type { Severity, Tool } from "./index.js";
-import { isRuleId } from "./validate.js";
+import { byText, describe, isPlainObject, isRuleId, listOf } from "./validate.js";
 
-/** One file in `catalog/<tool>/<name>.yaml` (docs/ARCHITECTURE.md §6). */
+/** One file in `catalog/<id>.yaml` (docs/ARCHITECTURE.md §6, ADR-014). */
 export interface CatalogEntry {
   /** Same grammar as a report's `ruleId`, e.g. "next16/sync-request-apis". */
   id: string;
@@ -16,7 +16,7 @@ export interface CatalogEntry {
   message: string;
   fix?: string;
   sourceUrl: string;
-  /** Repo-relative folders under fixtures/. */
+  /** Repo-relative folders under fixtures/. Tests check they exist; the npm package omits them. */
   fixtures: { positive: string; negative: string };
 }
 
@@ -35,12 +35,14 @@ export interface Catalog {
 const SEVERITIES: Record<Severity, true> = { "action-required": true, warning: true, info: true };
 const TOOLS: Record<Tool, true> = { node: true, next: true, react: true, prisma: true };
 
-/** ADR-003: sources must be official. Extend only when an entry needs another official site. */
+/** ADR-003, ADR-014: official sources only. Adding a host needs an ADR line. */
 const OFFICIAL_HOSTS = ["nextjs.org", "nodejs.org", "react.dev", "www.prisma.io"];
 const OFFICIAL_SOURCE = new RegExp(
   `^https://(?:${OFFICIAL_HOSTS.map((host) => host.replaceAll(".", "\\.")).join("|")})/\\S*$`,
 );
 const VERSION = /^\d+\.\d+\.\d+$/;
+/** Real entries are about 1 KB; anything this big is a mistake, not an entry. */
+const MAX_BYTES = 64 * 1024;
 
 // Field name → required?
 const FIELDS = {
@@ -58,19 +60,15 @@ const APPLIES_FIELDS = { tool: true, introducedIn: true };
 const FIXTURE_FIELDS = { positive: true, negative: true };
 
 /**
- * Reads every entry under `dir` (the catalog folder at the repo root). A bad file becomes an
- * error naming it and never stops the others. Entries are sorted by id, errors by file.
+ * Reads every entry under `dir`, the catalog folder at the repo root. A bad file becomes an error
+ * naming it and never stops the others. Entries are sorted by id, errors by file.
  */
 export function loadCatalog(dir: string): Catalog {
-  const root = dirname(dir);
   const entries: CatalogEntry[] = [];
   const errors: CatalogError[] = [];
-  const files = readdirSync(dir, { recursive: true, encoding: "utf8" })
-    .filter((path) => path.endsWith(".yaml") || path.endsWith(".yml"))
-    .sort();
-  for (const path of files) {
-    const file = relative(root, join(dir, path)).split(sep).join("/");
-    const result = readEntry(join(dir, path), file, root, basename(dir));
+  for (const path of yamlFiles(dir, "")) {
+    const file = `catalog/${path}`;
+    const result = readEntry(join(dir, path), path, file);
     if (typeof result === "string") errors.push({ file, message: result });
     else entries.push(result);
   }
@@ -79,42 +77,56 @@ export function loadCatalog(dir: string): Catalog {
   return { entries, errors };
 }
 
-/** The entry, or the first problem found, as a sentence naming the file. */
-function readEntry(
-  path: string,
-  file: string,
-  root: string,
-  catalogFolder: string,
-): CatalogEntry | string {
-  if (path.endsWith(".yml")) return `${file}: catalog entries use the .yaml extension.`;
-
-  // Core schema only, and any warning is fatal: an unknown tag (e.g. !!js/function) is only a
-  // warning in the yaml library, and its value would otherwise pass as a plain string.
-  const doc = parseDocument(readFileSync(path, "utf8"), {
-    schema: "core",
-    uniqueKeys: true,
-    merge: false,
+/** Paths (relative to `dir`, forward slashes) of files that look like YAML. Never follows links. */
+function yamlFiles(dir: string, prefix: string): string[] {
+  return readdirSync(join(dir, prefix), { withFileTypes: true }).flatMap((dirent) => {
+    const path = prefix === "" ? dirent.name : `${prefix}/${dirent.name}`;
+    if (dirent.isDirectory()) return yamlFiles(dir, path);
+    return /\.ya?ml$/i.test(dirent.name) ? [path] : [];
   });
-  const problem = doc.errors[0] ?? doc.warnings[0];
-  if (problem !== undefined) {
-    const firstLine = problem.message.split("\n")[0]?.replace(/:$/, "") ?? problem.message;
-    return `${file} is not valid catalog YAML: ${firstLine}.`;
-  }
+}
 
-  const raw: unknown = doc.toJS();
-  if (!isMapping(raw)) return `${file} must contain one YAML mapping (got ${shape(raw)}).`;
+/** The entry, or the first problem found, as a sentence naming the file. */
+function readEntry(fullPath: string, path: string, file: string): CatalogEntry | string {
+  if (!path.endsWith(".yaml")) return `${file}: catalog entries use the lowercase .yaml extension.`;
+  const stat = lstatSync(fullPath);
+  if (stat.isSymbolicLink()) return `${file} is a symbolic link; the catalog doesn't follow links.`;
+  if (stat.size > MAX_BYTES)
+    return `${file} is ${stat.size} bytes; catalog entries must be under 64 KiB.`;
+
+  let raw: unknown;
+  try {
+    // Core schema only, and any warning is fatal: an unknown tag (e.g. !!js/function) is only a
+    // warning in the yaml library, and its value would otherwise pass as a plain string.
+    const doc = parseDocument(readFileSync(fullPath, "utf8"), {
+      schema: "core",
+      uniqueKeys: true,
+      merge: false,
+    });
+    const problem = doc.errors[0] ?? doc.warnings[0];
+    if (problem !== undefined)
+      return `${file} is not valid catalog YAML: ${firstLine(problem.message)}.`;
+    raw = doc.toJS(); // throws on alias bombs ("Excessive alias count")
+  } catch (error) {
+    return `${file} could not be read: ${firstLine(error instanceof Error ? error.message : String(error))}.`;
+  }
+  if (!isPlainObject(raw)) return `${file} must contain one YAML mapping (got ${shape(raw)}).`;
 
   const unknown =
     unknownField(raw, FIELDS, "") ??
-    (isMapping(raw.applies) ? unknownField(raw.applies, APPLIES_FIELDS, "applies.") : undefined) ??
-    (isMapping(raw.fixtures) ? unknownField(raw.fixtures, FIXTURE_FIELDS, "fixtures.") : undefined);
+    (isPlainObject(raw.applies)
+      ? unknownField(raw.applies, APPLIES_FIELDS, "applies.")
+      : undefined) ??
+    (isPlainObject(raw.fixtures)
+      ? unknownField(raw.fixtures, FIXTURE_FIELDS, "fixtures.")
+      : undefined);
   if (unknown !== undefined) return `${file} has unknown field "${unknown}".`;
 
   const missing = missingField(raw, FIELDS, "");
   if (missing !== undefined) return `${file} is missing required field "${missing}".`;
   const { applies, fixtures } = raw;
-  if (!isMapping(applies)) return `${file}: applies must be a mapping (tool, introducedIn).`;
-  if (!isMapping(fixtures)) return `${file}: fixtures must be a mapping (positive, negative).`;
+  if (!isPlainObject(applies)) return `${file}: applies must be a mapping (tool, introducedIn).`;
+  if (!isPlainObject(fixtures)) return `${file}: fixtures must be a mapping (positive, negative).`;
   const nestedMissing =
     missingField(applies, APPLIES_FIELDS, "applies.") ??
     missingField(fixtures, FIXTURE_FIELDS, "fixtures.");
@@ -124,16 +136,17 @@ function readEntry(
   const { tool, introducedIn } = applies;
 
   if (typeof id !== "string" || !isRuleId(id)) {
-    return `${file}: id ${shown(id)} is not a catalog id (lowercase segments joined by "/", like "next16/sync-request-apis").`;
+    return `${file}: id ${describe(id)} is not a catalog id (lowercase segments joined by "/", like "next16/sync-request-apis").`;
   }
+  if (path !== `${id}.yaml`) return `${file}: id "${id}" belongs at catalog/${id}.yaml.`;
   if (!isTool(tool)) {
-    return `${file}: applies.tool must be one of ${oneOf(Object.keys(TOOLS))} (got ${shown(tool)}).`;
+    return `${file}: applies.tool must be one of ${quotedList(Object.keys(TOOLS))} (got ${describe(tool)}).`;
   }
   if (typeof introducedIn !== "string" || !VERSION.test(introducedIn)) {
-    return `${file}: applies.introducedIn must be a version like "16.0.0" (got ${shown(introducedIn)}).`;
+    return `${file}: applies.introducedIn must be a version like "16.0.0" (got ${describe(introducedIn)}).`;
   }
   if (!isSeverity(severity)) {
-    return `${file}: severity must be one of ${oneOf(Object.keys(SEVERITIES))} (got ${shown(severity)}).`;
+    return `${file}: severity must be one of ${quotedList(Object.keys(SEVERITIES))} (got ${describe(severity)}).`;
   }
   if (!isText(title)) return `${file}: title must be a non-empty string.`;
   if (/[\r\n]/.test(title)) return `${file}: title must be a single line of text.`;
@@ -141,18 +154,15 @@ function readEntry(
   if (!isText(message)) return `${file}: message must be a non-empty string.`;
   if (fix !== undefined && !isText(fix)) return `${file}: fix must be a non-empty string.`;
   if (typeof sourceUrl !== "string" || !OFFICIAL_SOURCE.test(sourceUrl)) {
-    return `${file}: sourceUrl must be an https URL on an official source (${OFFICIAL_HOSTS.join(", ")}) (got ${shown(sourceUrl)}).`;
+    return `${file}: sourceUrl must be an https URL on an official source (${OFFICIAL_HOSTS.join(", ")}) (got ${describe(sourceUrl)}).`;
   }
-
-  const expected = `${catalogFolder}/${tool}/${id.slice(id.indexOf("/") + 1)}.yaml`;
-  if (file !== expected) {
-    return `${file}: id "${id}" with applies.tool "${tool}" belongs at ${expected}.`;
+  const { positive, negative } = fixtures;
+  if (!isFixturePath(positive)) {
+    return `${file}: fixtures.positive must be a folder under fixtures/ (got ${describe(positive)}).`;
   }
-
-  const positive = fixtureFolder(fixtures.positive, "positive", root);
-  if ("problem" in positive) return `${file}: ${positive.problem}`;
-  const negative = fixtureFolder(fixtures.negative, "negative", root);
-  if ("problem" in negative) return `${file}: ${negative.problem}`;
+  if (!isFixturePath(negative)) {
+    return `${file}: fixtures.negative must be a folder under fixtures/ (got ${describe(negative)}).`;
+  }
 
   return {
     id,
@@ -163,31 +173,19 @@ function readEntry(
     message,
     ...(fix === undefined ? {} : { fix }),
     sourceUrl,
-    fixtures: { positive: positive.path, negative: negative.path },
+    fixtures: { positive, negative },
   };
 }
 
-/** Fixtures live only under the top-level fixtures/ folder (CLAUDE.md, Quality bar). */
-function fixtureFolder(
-  value: unknown,
-  kind: string,
-  root: string,
-): { path: string } | { problem: string } {
-  const outside = {
-    problem: `fixtures.${kind} must be a folder under fixtures/ (got ${shown(value)}).`,
-  };
-  if (typeof value !== "string" || value.includes("\\")) return outside;
+/** Under the top-level fixtures/ folder (CLAUDE.md, Quality bar), forward slashes, no `.`/`..`. */
+function isFixturePath(value: unknown): value is string {
+  if (typeof value !== "string" || value.includes("\\")) return false;
   const segments = value.split("/");
-  const badSegment = segments.some(
-    (segment) => segment === "" || segment === "." || segment === "..",
+  return (
+    segments[0] === "fixtures" &&
+    segments.length > 1 &&
+    segments.every((segment) => segment !== "" && segment !== "." && segment !== "..")
   );
-  if (segments[0] !== "fixtures" || segments.length < 2 || badSegment) return outside;
-  const stat = statSync(join(root, value), { throwIfNoEntry: false });
-  if (stat === undefined)
-    return { problem: `fixtures.${kind} points to ${value}, which does not exist.` };
-  if (!stat.isDirectory())
-    return { problem: `fixtures.${kind} points to ${value}, which is not a folder.` };
-  return { path: value };
 }
 
 function unknownField(
@@ -196,7 +194,7 @@ function unknownField(
   prefix: string,
 ): string | undefined {
   const key = Object.keys(value)
-    .sort()
+    .sort(byText)
     .find((name) => !Object.hasOwn(fields, name));
   return key === undefined ? undefined : `${prefix}${key}`;
 }
@@ -210,10 +208,6 @@ function missingField(
     ([name, required]) => required && !Object.hasOwn(value, name),
   )?.[0];
   return key === undefined ? undefined : `${prefix}${key}`;
-}
-
-function isMapping(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isTool(value: unknown): value is Tool {
@@ -234,17 +228,10 @@ function shape(value: unknown): string {
   return `a ${typeof value}`;
 }
 
-function shown(value: unknown): string {
-  return typeof value === "string" ? JSON.stringify(value) : String(value);
+function firstLine(text: string): string {
+  return (text.split("\n")[0] ?? text).replace(/:$/, "");
 }
 
-/** ["a", "b", "c"] → `"a", "b" or "c"` */
-function oneOf(values: string[]): string {
-  const quoted = values.map((value) => JSON.stringify(value));
-  return `${quoted.slice(0, -1).join(", ")} or ${quoted.at(-1)}`;
-}
-
-/** Code-unit order, never locale (same as compareFindings). */
-function byText(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
+function quotedList(values: string[]): string {
+  return listOf(values.map((value) => JSON.stringify(value)));
 }
