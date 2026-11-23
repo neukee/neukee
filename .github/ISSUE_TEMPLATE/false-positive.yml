@@ -1,0 +1,45 @@
+name: False positive or false negative
+description: A finding that's wrong, or a problem Neukee should have caught.
+title: "rule: "
+labels: ["false positive", "catalog"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Precision matters more than coverage, so these reports are high priority. Never paste proprietary code.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - False positive (flagged, but it's fine)
+        - False negative (missed, but it breaks)
+        - Wrong severity, location or fix
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule id
+      description: From the report, if there is one.
+      placeholder: "next16/sync-request-apis"
+  - type: textarea
+    id: snippet
+    attributes:
+      label: Minimal code that reproduces it
+      render: tsx
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why the result is wrong
+      description: Link the official docs or release notes if they settle it.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Neukee version or commit
+    validations:
+      required: true
