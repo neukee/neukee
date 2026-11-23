@@ -4,6 +4,36 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-018 · Lead offer, audit pricing, pitch and market stance (2026-11-23)
+
+- **Context:** the brief priced the audit as an assumption ($300–1,500) and listed competitors without a clear stance on each. NodeSource and the OpenJS Foundation give Node.js-only upgrade assessments for free and sell a paid blueprint from $2,499, so Node.js end-of-life alone is not a strong headline.
+- **Decision (Sreeram, 2026-11-23):**
+  1. **Lead offer:** a Next.js 16 upgrade audit that includes the Node.js runtime. Node.js end-of-life is supporting urgency, not the headline.
+  2. **Audit:**
+     - list price $800, and $400 for the first 5 founding audits;
+     - payment on delivery, and free if nothing is actionable;
+     - delivered from the report the customer generates locally, with no access to their repository.
+  3. **Subscription:** per-organization size tiers, never per repository.
+  4. **Pitch pillars:**
+     - sourced findings, each with a file and line;
+     - nothing leaves the customer's machine;
+     - we never sell the fix;
+     - a dated report the customer can show auditors.
+  5. **Proof before claims:**
+     - publish measured precision and recall from the answer-key repositories;
+     - benchmark NodeSource's CLI on the same repositories before making any comparison.
+  6. **Market stance:**
+     - NodeSource is the free floor plus paid services (the OpenJS LTS Upgrade program);
+     - Speedscale is the engine's competitor (behavioral diffs on PRs);
+     - HeroDevs and TuxCare are adjacent (extended support);
+     - Codemod is a complement: we link the official fix;
+     - staffing firms are a post-launch channel, with per-audit pricing and never referral fees;
+     - a later option is to become an OpenJS upgrade-program partner.
+- **Consequences:**
+  - BRIEF §5 (decisions in force) and §6 (market table) carry these.
+  - Public comparisons wait for measured precision and recall, and for the NodeSource benchmark on the same repositories.
+  - The thin path's findings feed the answer-key repositories (`docs/VALIDATION.md`).
+
 ## ADR-017 · Launch scope trim; Dec 15 fallback (2026-11-23)
 
 - **Context:** at the 2026-11-23 wrap, 26 tasks remained to T-055 with 14 days to the Dec 7 checkpoint: about 1.9 a day needed, against a recent pace of 1–1.5.
