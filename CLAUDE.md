@@ -30,20 +30,27 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 2. Write or extend tests first (fixtures for scanner rules: positive and negative). Run them and see them fail.
 3. Implement the smallest change that makes them pass. Stay inside the task's scope.
 4. Run `pnpm verify`. Read failures; fix causes, not symptoms.
-5. Ask the `reviewer` subagent to review the diff against the task and the specs. Fix what it finds, re-run `pnpm verify`.
-6. Update `docs/TASKS.md` (status), `docs/PROGRESS.md` (log entry with what changed and the verify result), `docs/REVIEW-QUEUE.md` (if human review is required or you are unsure), `docs/DECISIONS.md` (if you changed architecture, schema, dependencies or targets).
-7. Commit on a branch named `t-XXX-short-name` with message `T-XXX: <what changed>`. Never commit to `main` directly.
+5. Commit on a branch named `t-XXX-short-name` with message `T-XXX: <what changed>`. Never commit to `main` directly. Commit before the review, so the SHA you quote is exactly what was reviewed.
+6. Ask the `reviewer` subagent to review that commit: the diff, the task and the spec sections it touches. It runs on Sonnet; pass Opus explicitly for foundational reviews (hostile-input parsing: T-005b, T-005c, T-015, T-016, T-021). Fix what it finds in a new commit, re-run `pnpm verify`, have the reviewer check the new commit, and quote its verdict with the SHA it reviewed in the PR (ADR-016).
+7. Put `docs/DECISIONS.md` changes (architecture, schema, dependencies or targets) in the task PR. Updates to `docs/TASKS.md`, `docs/PROGRESS.md` and `docs/REVIEW-QUEUE.md` go on the day's `docs-sync/YYYY-MM-DD` branch, pushed after each update and merged at `/wrap` (ADR-016). Task PRs never touch those three files.
 8. Run `pnpm check:all`, push the task branch, `gh pr create --fill`, comment `@coderabbitai review`, `gh pr checks --watch`. Fix CI failures and real CodeRabbit findings. Then merge as described in "Merging" (ADR-010).
 
 ## Merging
 
-- **Every merge needs Sreeram's approval.** He may give it in advance for a specific PR, with conditions.
-- **Exception: a PR that changes only Markdown docs or code comments** merges under these rules without asking. Everything else asks.
+- **Standing approval for task PRs (ADR-016).** Merge without asking when all of these hold:
+  - the 4 verify jobs and the quality job are green;
+  - CodeRabbit reviewed the latest commit and every thread is resolved;
+  - the reviewer's **PASS** verdict is quoted in the PR with the SHA it reviewed, and that SHA is the PR's head. A CHANGES REQUIRED verdict blocks the merge until a new review of the head passes. If any commit lands after a PASS, re-run the reviewer on just those commits (Opus for a foundational task or a change to matching logic, Sonnet otherwise) and quote the new verdict with the new head SHA;
+  - the four-line check shows no core type or schema change, no new dependency, and no CI, workflow, permission or security-model change.
+    Squash-merge with the PR title in Conventional Commits form. Anything else needs Sreeram's approval, which he may give in advance for a specific PR, with conditions.
+- **A PR that changes only Markdown docs or code comments** (including the daily docs-sync PR) merges under these rules without asking.
+- **Changes to `CLAUDE.md` or anything under `.claude/`** (agents, skills, hooks, settings) always need Sreeram's explicit approval, even in a docs-only or docs-sync PR.
+- **At most two tasks in flight:** one building and one in review, in separate worktrees. Never two building at once.
 - **Every task PR's merge request opens with this four-line check:**
   - Tests added for this task: yes/no, how many
   - Files changed outside the task's area: list, or "none"
   - Decisions beyond the spec: list with ADR number, or "none"
-  - New dependencies or core type/schema changes: list, or "none"
+  - New dependencies, core type/schema, CI, workflow, permission or security-model changes: list, or "none"
 - **Merge only when** every CI check is green, CodeRabbit has reviewed the latest commit, and every review thread is resolved. Squash-merge and delete the branch (`gh pr merge <n> --squash --delete-branch`), then `git switch main` and `git pull`.
 - **Minor CodeRabbit findings** in docs, comments, tests or tooling: fix them, reply on the thread, and continue under the existing approval. List each one in the merge summary.
 - **If a PR gets a third round of minor findings, stop fixing.** Log the rest as follow-ups in `docs/REVIEW-QUEUE.md`, resolve each thread with a short reply, and merge under the existing approval.

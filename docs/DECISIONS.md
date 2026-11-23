@@ -11,6 +11,66 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 - **Safety:** fork pull requests are skipped, so nobody else's code becomes installable under the neukee/neukee name. The workflow's token is read-only; the pkg.pr.new GitHub App posts the comment. Accidental npm publishing stays blocked by 2FA and by having no npm token anywhere (ADR-009).
 - **Consequences:** previews install from URLs like `https://pkg.pr.new/neukee/neukee/@neukee/cli@<sha>`; after the packages exist on npm, `--compact` shortens them on its own. One manual step: install the pkg.pr.new GitHub App on neukee/neukee.
 
+## ADR-018 · Lead offer, audit pricing, pitch and market stance (2026-11-23)
+
+- **Context:** the brief priced the audit as an assumption ($300–1,500) and listed competitors without a clear stance on each. NodeSource and the OpenJS Foundation give Node.js-only upgrade assessments for free and sell a paid blueprint from $2,499, so Node.js end-of-life alone is not a strong headline.
+- **Decision (Sreeram, 2026-11-23):**
+  1. **Lead offer:** a Next.js 16 upgrade audit that includes the Node.js runtime. Node.js end-of-life is supporting urgency, not the headline.
+  2. **Audit:**
+     - list price $800, and $400 for the first 5 founding audits;
+     - payment on delivery, and free if nothing is actionable;
+     - delivered from the report the customer generates locally, with no access to their repository.
+  3. **Subscription:** per-organization size tiers, never per repository.
+  4. **Pitch pillars:**
+     - sourced findings, each with a file and line;
+     - nothing leaves the customer's machine;
+     - we never sell the fix;
+     - a dated report the customer can show auditors.
+  5. **Proof before claims:**
+     - publish measured precision and recall from the answer-key repositories;
+     - benchmark NodeSource's CLI on the same repositories before making any comparison.
+  6. **Market stance:**
+     - NodeSource is the free floor plus paid services (the OpenJS LTS Upgrade program);
+     - Speedscale is the engine's competitor (behavioral diffs on PRs);
+     - HeroDevs and TuxCare are adjacent (extended support);
+     - Codemod is a complement: we link the official fix;
+     - staffing firms are a post-launch channel, with per-audit pricing and never referral fees;
+     - a later option is to become an OpenJS upgrade-program partner.
+- **Consequences:**
+  - BRIEF §5 (decisions in force) and §6 (market table) carry these.
+  - Public comparisons wait for measured precision and recall, and for the NodeSource benchmark on the same repositories.
+  - The thin path's findings feed the answer-key repositories (`docs/VALIDATION.md`).
+
+## ADR-017 · Launch scope trim; Dec 15 fallback (2026-11-23)
+
+- **Context:** at the 2026-11-23 wrap, 26 tasks remained to T-055 with 14 days to the Dec 7 checkpoint: about 1.9 a day needed, against a recent pace of 1–1.5.
+- **Decision (Sreeram, 2026-11-23):**
+  - **Moved to Phase 5 (post-launch):** T-013 (deployment config runtime sources), T-035 (performance benchmark) and T-036 (network-free CI job). T-014 then depended on T-011 and T-012 only (superseded the same day by the thin path below: T-014 depends on T-010).
+  - **T-027 (MergeWarden comparison)** moves to the strategy chat; it is no longer a repo task.
+  - **Added:** T-005c, a scan-wide `.gitignore` matching budget (worst case under 10 s, fail open with one diagnostic), right after T-005b.
+  - **README (GitHub kit):** the runtime row drops "Vercel, Netlify, Serverless and AWS SAM config". Deployment config joins the post-launch roadmap line.
+  - **If the `/checkpoint` after T-005b still shows more than 3 days behind,** propose moving launch to Tuesday, Dec 15, rather than cutting validation.
+  - **Thin end-to-end path first (Sreeram, 2026-11-23, later the same day):** after T-005b and T-005c, build T-010 → T-014 → T-030 → T-031 → T-033, each scoped to what the path needs. T-014 works from T-010's sources (T-011 and T-012 plug in later, and T-011 carries the Dockerfile check), T-030 assembles runtime findings without T-019, and T-033 leaves JSON and SARIF to T-032. Goal: by Saturday, Nov 28, `neukee scan` runs on a real public repository and prints a real finding. The remaining detectors follow in their existing order. Same gates on every task. Guardrails: T-014 and T-030 follow ARCHITECTURE's full interfaces, implementing only what the path needs; the date moves if a gate fails; every real-repo finding must be one the maintainer would agree with, with false positives and negatives logged in `docs/VALIDATION.md`; nothing is published before the launch scope is done.
+- **Consequences:**
+  - Launch targets 4 (speed and memory) and 5 (zero network calls: a CI job in addition to the unit-test guard) are measured after launch. The unit tests still block the network in every test run.
+  - 23 tasks remain to launch: T-005b to T-055 less the four above, plus T-005c.
+
+## ADR-016 · Speedrun workflow: standing merge approval, two tasks in flight, docs-sync, model routing (2026-11-23)
+
+- **Context:** each merge waited for Sreeram, tracking docs in every task PR conflicted between PRs, and every review ran on Opus. ADR-010's loop was too slow for the Dec 7 checkpoint.
+- **Decision (Sreeram, 2026-11-23):**
+  - **Standing merge approval** for every task PR when all of these hold:
+    - the 4 verify jobs and the quality job are green;
+    - CodeRabbit reviewed the latest commit and every thread is resolved;
+    - the reviewer's **PASS** verdict is quoted in the PR, with the SHA it reviewed, and that SHA is the head (a CHANGES REQUIRED verdict blocks the merge until a new review of the head passes): any commit after a PASS gets its own reviewer run on just those commits (Opus for a foundational task or a change to matching logic, Sonnet otherwise; Sreeram, 2026-11-24), and the new verdict is quoted with the new head SHA (Sreeram, 2026-11-23);
+    - the four-line check shows no core type or schema change, no new dependency, and no CI, workflow, permission or security-model change.
+      Anything else: stop and ask. Squash-merge with the PR title in Conventional Commits form.
+  - **At most two tasks in flight:** one building and one in review, in separate worktrees. Never two building at once.
+  - **Daily docs-sync PR:** task PRs don't touch `docs/PROGRESS.md`, `docs/TASKS.md` or `docs/REVIEW-QUEUE.md`; ADRs stay in the task PR. Resume-here updates go on the day's `docs-sync/YYYY-MM-DD` branch, pushed after each update and merged at `/wrap` under the docs-only rule.
+  - **Model routing:** the reviewer subagent defaults to Sonnet. Foundational reviews (hostile-input parsing: T-005b, T-005c, T-015, T-016, T-021) pass Opus explicitly. The reviewer's scope is the diff, the task and the spec sections it touches.
+  - **Rule changes need explicit approval:** changes to `CLAUDE.md` or anything under `.claude/` (agents, skills, hooks, settings) always need Sreeram's explicit approval, even in a docs-only or docs-sync PR. He approved the rule changes in PR #10, all requested on 2026-11-23.
+- **Consequences:** CLAUDE.md ("How to work", "Merging") and `.claude/agents/reviewer.md` carry these rules. This amends ADR-010: merges no longer wait for Sreeram when the conditions hold.
+
 ## ADR-015 · Our own .gitignore matcher; caps; symlinks never followed (2026-11-23)
 
 - **Context:**
