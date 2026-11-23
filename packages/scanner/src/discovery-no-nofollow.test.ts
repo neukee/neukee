@@ -1,3 +1,4 @@
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -34,8 +35,24 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
-// Creating a file symlink on Windows needs extra privileges; this simulates Windows elsewhere.
-describe.skipIf(process.platform === "win32")("file discovery without O_NOFOLLOW", () => {
+/**
+ * File symlinks on Windows need administrator rights or Developer Mode. GitHub's Windows runners
+ * have them, so CI runs this test on every platform; it skips only where links can't be made.
+ */
+function canLinkFiles(): boolean {
+  const dir = mkdtempSync(join(tmpdir(), "neukee-link-probe-"));
+  try {
+    writeFileSync(join(dir, "target"), "");
+    symlinkSync(join(dir, "target"), join(dir, "link"));
+    return true;
+  } catch {
+    return false;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+describe.skipIf(!canLinkFiles())("file discovery without O_NOFOLLOW", () => {
   it("refuses a file swapped for a link to another file inside the root", async () => {
     const parent = await mkdtemp(join(tmpdir(), "neukee-no-nofollow-"));
     roots.push(parent);
