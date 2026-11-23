@@ -30,6 +30,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - **At most two tasks in flight:** one building and one in review, in separate worktrees. Never two building at once.
   - **Daily docs-sync PR:** task PRs don't touch `docs/PROGRESS.md`, `docs/TASKS.md` or `docs/REVIEW-QUEUE.md`; ADRs stay in the task PR. Resume-here updates go on the day's `docs-sync/YYYY-MM-DD` branch, pushed after each update and merged at `/wrap` under the docs-only rule.
   - **Model routing:** the reviewer subagent defaults to Sonnet. Foundational reviews (hostile-input parsing: T-005b, T-005c, T-015, T-016, T-021) pass Opus explicitly. The reviewer's scope is the diff, the task and the spec sections it touches.
+  - **Rule changes need explicit approval:** changes to `CLAUDE.md` or anything under `.claude/` (agents, skills, hooks, settings) always need Sreeram's explicit approval, even in a docs-only or docs-sync PR. He approved the rule changes in PR #10, all requested on 2026-11-23.
 - **Consequences:** CLAUDE.md ("How to work", "Merging") and `.claude/agents/reviewer.md` carry these rules. This amends ADR-010: merges no longer wait for Sreeram when the conditions hold.
 
 ## ADR-014 · Catalog layout and loader rules (2026-11-22)

@@ -13,8 +13,8 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 - **Last finished:** T-004 (PR #7, built by Copilot, merged). T-005a meets its done-when; it is in review.
 - **In progress:** T-005a (PR #9) and T-005b (PR #8), foundational (Opus).
 - **Exact next step (Sreeram's decisions of 2026-11-23 evening, ADR-016 and ADR-017):**
-  1. PR #9 (T-005a), at `74ba0ef`, with tracking docs moved here. Waiting for the reviewer re-check (Opus) and CodeRabbit. Merge when the reviewer passes, with the verdict and SHA quoted in the PR, and the threads are resolved.
-  2. PR #8 (T-005b) is approved under the same conditions, after #9. The `isRepoPath` core export is approved; no other core change. Merge `main` into it, remove the tracking docs, push, write the four-line check, run the reviewer on Opus, then the CodeRabbit loop.
+  1. Done: PR #9 (T-005a) squash-merged as `0a4fa24` (reviewer on Opus: PASS at `4a756b9`; CodeRabbit approved `4a756b9`; size of 359 lines accepted by Sreeram).
+  2. PR #8 (T-005b) pushed at `a4bd3c0`, retitled in Conventional Commits form, four-line check in the body. Reviewer (Opus) and CodeRabbit running. Approved under the same conditions; the `isRepoPath` core export is approved, no other core change.
   3. T-005c (scan-wide matching budget, Opus) is the next task to build while #8 is in review.
   4. After T-005b merges: Sreeram runs `/checkpoint`. If still more than 3 days behind, propose moving launch to Tue Dec 15 rather than cutting validation.
   5. GitHub presence kit: drop "Vercel, Netlify, Serverless and AWS SAM config" from the README runtime row and add deployment config to the post-launch roadmap line.

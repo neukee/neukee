@@ -44,6 +44,7 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
   - the four-line check shows no core type or schema change, no new dependency, and no CI, workflow, permission or security-model change.
     Squash-merge with the PR title in Conventional Commits form. Anything else needs Sreeram's approval, which he may give in advance for a specific PR, with conditions.
 - **A PR that changes only Markdown docs or code comments** (including the daily docs-sync PR) merges under these rules without asking.
+- **Changes to `CLAUDE.md` or anything under `.claude/`** (agents, skills, hooks, settings) always need Sreeram's explicit approval, even in a docs-only or docs-sync PR.
 - **At most two tasks in flight:** one building and one in review, in separate worktrees. Never two building at once.
 - **Every task PR's merge request opens with this four-line check:**
   - Tests added for this task: yes/no, how many
