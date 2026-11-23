@@ -263,23 +263,32 @@ describe("file discovery", () => {
   // Parsing is paid from the scan's budget too: 70 folders, each with a 64 KiB .gitignore of
   // one-character rules, spend it on parsing alone. One diagnostic names the .gitignore where
   // that happened, and later .gitignore files are scanned as plain files, not parsed.
-  it("pays for parsing .gitignore files from the scan's budget, and stops parsing once it is spent", () => {
-    const root = copyFixture();
-    for (let i = 0; i < 70; i++) {
-      const folder = join(root, `d${String(i).padStart(2, "0")}`);
-      mkdirSync(folder);
-      writeFileSync(join(folder, ".gitignore"), "a\n".repeat(32_768));
-      writeFileSync(join(folder, "kept.txt"), "kept");
-    }
-    const events = Array.from(discoverFiles(root));
-    const outOfBudget = diagnosticsOf(events).filter((diagnostic) =>
-      diagnostic.message.startsWith("The scan ran out of its .gitignore matching budget"),
-    );
-    expect(outOfBudget).toHaveLength(1);
-    expect(outOfBudget[0]?.file).toMatch(/^d\d\d\/\.gitignore$/);
-    expect(paths(events)).toContain("d69/.gitignore");
-    expect(paths(events)).toContain("d69/kept.txt");
-  }, 60_000);
+  // Charged per UTF-8 byte, not per UTF-16 code unit: "中\n" is 4 bytes but 2 code units, so
+  // a code-unit charge would let these files spend only half the budget.
+  it.each([
+    ["one-byte", "a\n".repeat(32_768)],
+    ["three-byte", "中\n".repeat(16_384)],
+  ])(
+    "pays for parsing %s .gitignore files from the scan's budget, and stops once it is spent",
+    (_, text) => {
+      const root = copyFixture();
+      for (let i = 0; i < 70; i++) {
+        const folder = join(root, `d${String(i).padStart(2, "0")}`);
+        mkdirSync(folder);
+        writeFileSync(join(folder, ".gitignore"), text);
+        writeFileSync(join(folder, "kept.txt"), "kept");
+      }
+      const events = Array.from(discoverFiles(root));
+      const outOfBudget = diagnosticsOf(events).filter((diagnostic) =>
+        diagnostic.message.startsWith("The scan ran out of its .gitignore matching budget"),
+      );
+      expect(outOfBudget).toHaveLength(1);
+      expect(outOfBudget[0]?.file).toMatch(/^d\d\d\/\.gitignore$/);
+      expect(paths(events)).toContain("d69/.gitignore");
+      expect(paths(events)).toContain("d69/kept.txt");
+    },
+    60_000,
+  );
 
   // A .gitignore that can't be applied might have re-included files: its subtree then applies no
   // inherited rules either, so a parent rule can't wrongly exclude them (fail open).

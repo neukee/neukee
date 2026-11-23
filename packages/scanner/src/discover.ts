@@ -120,7 +120,7 @@ function* walk(
     const result = readFileOnce(root, join(absoluteDirectory, ".gitignore"), MAX_IGNORE_FILE_BYTES);
     if (result.kind === "file") {
       const parsed = parseIgnoreFile(result.content);
-      scan.steps -= PARSE_STEPS_PER_BYTE * result.content.length;
+      scan.steps -= PARSE_STEPS_PER_BYTE * Buffer.byteLength(result.content); // UTF-8 bytes
       if (scan.steps <= 0) yield warning(OUT_OF_BUDGET, path);
       // One diagnostic per file, however many lines were dropped: a hostile .gitignore must not
       // flood the report.
