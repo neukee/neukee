@@ -4,7 +4,12 @@
  */
 
 export { type Catalog, type CatalogEntry, type CatalogError, loadCatalog } from "./catalog.js";
-export { type ReportValidation, type ValidationError, validateReport } from "./validate.js";
+export {
+  isRepoPath,
+  type ReportValidation,
+  type ValidationError,
+  validateReport,
+} from "./validate.js";
 
 import { byText } from "./validate.js";
 

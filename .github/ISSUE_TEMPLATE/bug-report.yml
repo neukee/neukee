@@ -1,0 +1,39 @@
+name: Bug report
+description: The scanner or CLI crashed, hung or behaved wrongly.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Never paste proprietary code; a minimal reproduction is always enough.
+        For a finding that's wrong rather than a crash, use the false positive form instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you ran, what you expected and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: The smallest files and command that reproduce it. A link to a public repository works too.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Neukee version or commit
+      placeholder: "0.1.0 or a commit SHA"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "macOS 15, Node.js 24.2.0, pnpm 10.28"
+    validations:
+      required: true
