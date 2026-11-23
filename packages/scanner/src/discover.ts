@@ -87,9 +87,15 @@ function* walk(
       a.name < b.name ? -1 : 1,
     );
   } catch {
-    yield where === undefined
-      ? { type: "diagnostic", diagnostic: { level: "error", message: "Could not read scan root." } }
-      : warning("Could not read directory.", where);
+    if (where === undefined) {
+      yield {
+        type: "diagnostic",
+        diagnostic: { level: "error", message: "Could not read scan root." },
+      };
+      return;
+    }
+    yield { type: "skipped" };
+    yield warning("Could not read directory.", where);
     return;
   }
 
@@ -100,8 +106,17 @@ function* walk(
     const result = readFileOnce(root, join(absoluteDirectory, ".gitignore"), MAX_IGNORE_FILE_BYTES);
     if (result.kind === "file") {
       const parsed = parseIgnoreFile(result.content);
-      for (const { line, reason } of parsed.problems) {
-        yield warning(`Line ${line} of this .gitignore was not applied: it ${reason}.`, path);
+      // One diagnostic per file, however many lines were dropped: a hostile .gitignore must not
+      // flood the report.
+      const [first] = parsed.problems;
+      if (first !== undefined) {
+        const count = parsed.problems.length;
+        yield warning(
+          count === 1
+            ? `Line ${first.line} of this .gitignore was not applied: it ${first.reason}.`
+            : `${count} lines of this .gitignore were not applied; the first is line ${first.line}: it ${first.reason}.`,
+          path,
+        );
       }
       if (inheritedRules.length + parsed.rules.length > MAX_RULES_IN_FORCE) {
         yield warning(
@@ -177,7 +192,7 @@ function* ignored(
 
 /**
  * Reads one file through a single handle: open it, fstat that handle, read at most `maxBytes`
- * from it. Without O_NOFOLLOW (Windows) the path is checked with lstat and realpath first.
+ * from it. Without O_NOFOLLOW (Windows), lstat first refuses a link as the last component.
  */
 function readFileOnce(root: string, absolutePath: string, maxBytes: number): ReadResult {
   let descriptor: number | undefined;
@@ -185,7 +200,6 @@ function readFileOnce(root: string, absolutePath: string, maxBytes: number): Rea
     if (!hasNoFollow) {
       const before = lstatSync(absolutePath);
       if (before.isSymbolicLink() || !before.isFile()) return { kind: "unsafe" };
-      if (!isWithin(root, realpathSync(absolutePath))) return { kind: "unsafe" };
     }
     descriptor = openSync(absolutePath, OPEN_FLAGS);
     const opened = fstatSync(descriptor);

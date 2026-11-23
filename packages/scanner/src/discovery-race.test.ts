@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, join as joinPath } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const race = vi.hoisted(() => ({
@@ -71,7 +71,7 @@ vi.mock("node:fs", async (importOriginal) => {
         actual.symlinkSync(race.linkTo, race.swapPath, "junction");
       }
       if (race.mode === "reverse" && args[0] === race.root && Array.isArray(entries)) {
-        return [...entries].reverse() as typeof entries;
+        return entries.reverse();
       }
       if (race.mode === "readdir" && !race.didSwap && args[0] === race.root) {
         race.didSwap = true;
@@ -278,8 +278,8 @@ describe("discovery path races", () => {
 
   it("returns files in name order whatever order the file system lists them", async () => {
     await setupRace();
-    await writeFile(joinPath(race.root, "a.txt"), "a");
-    await writeFile(joinPath(race.root, "z.txt"), "z");
+    await writeFile(join(race.root, "a.txt"), "a");
+    await writeFile(join(race.root, "z.txt"), "z");
     race.mode = "reverse";
 
     const files = Array.from(discoverFiles(race.root)).flatMap((event) =>

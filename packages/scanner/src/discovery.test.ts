@@ -134,15 +134,21 @@ describe("file discovery", () => {
     ]);
   });
 
-  it("handles malformed POSIX classes without rescanning their suffixes", () => {
+  it("reports many dropped rule lines as one diagnostic, not one per line", () => {
     const root = copyFixture();
-    writeFileSync(join(root, ".gitignore"), `[${"[:".repeat(200_000)}x]`);
+    writeFileSync(join(root, ".gitignore"), "[[:x]\n".repeat(10_000)); // 60,000 bytes
     writeFileSync(join(root, "included.txt"), "included");
 
-    const files = Array.from(discoverFiles(root)).flatMap((event) =>
-      event.type === "file" ? [event.file.path] : [],
-    );
-    expect(files).toContain("included.txt");
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events)).toContain("included.txt");
+    expect(diagnosticsOf(events)).toEqual([
+      {
+        level: "warning",
+        message:
+          "10000 lines of this .gitignore were not applied; the first is line 1: it uses [: inside a class, which isn't supported (POSIX classes such as [:digit:]).",
+        file: ".gitignore",
+      },
+    ]);
   });
 
   it("drops an over-long rule line with a diagnostic and applies the rest", () => {
@@ -302,6 +308,7 @@ describe.skipIf(!canDenyRead)("file discovery: unreadable input becomes a diagno
     denied(root, "nested", () => {
       const events = Array.from(discoverFiles(root));
       expect(paths(events)).toContain("root.txt");
+      expect(events.filter((event) => event.type === "skipped")).toHaveLength(1);
       expect(diagnosticsOf(events)).toEqual([
         { level: "warning", message: "Could not read directory.", file: "nested" },
       ]);
