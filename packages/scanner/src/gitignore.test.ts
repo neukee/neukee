@@ -176,9 +176,9 @@ describe("matching work per path is bounded on hostile rules within the caps", (
     const rules = rulesFrom({ "": `${rule}\n`.repeat(2000) });
     expect(rules).toHaveLength(2000);
     const start = performance.now();
-    isIgnored(path, false, rules);
-    isIgnored(path, true, rules);
+    const answers = [isIgnored(path, false, rules), isIgnored(path, true, rules)];
     expect(performance.now() - start).toBeLessThan(2000);
+    for (const answer of answers) expect(["ignored", "included", "too-costly"]).toContain(answer);
   });
 
   it("answers too-costly when the budget runs out, rather than guessing", () => {

@@ -12,9 +12,9 @@ export const MAX_RULE_BYTES = 1024;
 
 /**
  * Matching work allowed for one path: name bytes compared plus path positions tried (ADR-015).
- * A heavy real .gitignore (2,000 rules against a 255-byte name) needs about half of it.
+ * 2,000 `*.ext` rules against a 255-byte name, the costliest realistic case, need about half.
  */
-export const MAX_MATCH_STEPS = 1_000_000;
+const MAX_MATCH_STEPS = 1_000_000;
 
 type Token =
   | { kind: "byte"; value: number }
@@ -68,7 +68,7 @@ export function parseIgnoreFile(text: string): { rules: IgnoreRule[]; problems: 
   const rules: IgnoreRule[] = [];
   const problems: IgnoreProblem[] = [];
   // Git skips a UTF-8 byte order mark and splits on \n only, dropping one trailing \r.
-  const lines = (text.startsWith("﻿") ? text.slice(1) : text).split("\n");
+  const lines = (text.startsWith("\uFEFF") ? text.slice(1) : text).split("\n");
   lines.forEach((raw, index) => {
     const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
     if (line === "" || line.startsWith("#")) return;
