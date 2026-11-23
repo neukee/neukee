@@ -235,6 +235,29 @@ describe("file discovery", () => {
     ]);
   });
 
+  // T-005c: once the scan's matching budget is spent, one diagnostic says where, and every later
+  // path is scanned without .gitignore rules (fail open). Each long name below costs a full
+  // per-path budget, so about 200 of them spend the scan's budget.
+  it("reports once when the scan's matching budget runs out, then scans without rules", () => {
+    const root = copyFixture();
+    const costly = `*${"a".repeat(60)}b`; // 63 bytes; 1,000 rules stay under 64 KiB
+    writeFileSync(join(root, ".gitignore"), `*.ignored\n${`${costly}\n`.repeat(1000)}`);
+    for (let i = 0; i < 230; i++) {
+      writeFileSync(join(root, `${String(i).padStart(3, "0")}${"a".repeat(118)}c`), "");
+    }
+    writeFileSync(join(root, "zzz.ignored"), "ignored until the budget runs out");
+
+    const events = Array.from(discoverFiles(root));
+    const messages = diagnosticsOf(events).map((diagnostic) => diagnostic.message);
+    const outOfBudget = diagnosticsOf(events).filter((diagnostic) =>
+      diagnostic.message.startsWith("The scan ran out of its .gitignore matching budget"),
+    );
+    expect(outOfBudget).toHaveLength(1);
+    expect(messages.at(-1)).toBe(outOfBudget[0]?.message);
+    expect(paths(events)).toContain("zzz.ignored");
+    expect(paths(events)).toContain(`229${"a".repeat(118)}c`);
+  }, 60_000);
+
   it("matches a .gitignore against itself as a file, and folder-only rules never match files", () => {
     const root = copyFixture();
     writeFileSync(join(root, ".gitignore"), "/.gitignore\n");

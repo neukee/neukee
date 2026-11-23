@@ -25,7 +25,12 @@ One entry per decision that changes architecture, dependencies, schemas, targets
       Anything over a cap is skipped with a diagnostic naming the file, and the scan continues. It may then scan a few more files, which is the safe direction.
   - **Work budget per path (added 2026-11-23 after the reviewer measured 3–19 s per path for segment-heavy rules at the caps; confirmed by Sreeram, 2026-11-23):** each path gets **1,000,000 matching steps** (name bytes compared plus path positions tried). If the rules haven't decided by then, the answer is "too-costly": the path stays in the scan and T-005b reports it (fail open). The caps alone don't bound the work, because the cost multiplies rules × rule length × path length.
     - Measured on a development Mac, 2,000 rules at the caps: the worst hostile shapes take about 6–10 ms per path, then answer "too-costly". A heavy real-world `.gitignore` (2,000 varied rules) takes about 1.2 ms per path and never reaches the budget.
-    - So a hostile repository costs at most about 10 ms per file and folder: about 100 s for 10,000 paths. A scan-wide matching budget (worst case under 10 s, fail open with one diagnostic) follows in T-005c (Sreeram, 2026-11-23).
+    - So a hostile repository costs at most about 10 ms per file and folder: about 100 s for 10,000 paths. T-005c adds a scan-wide budget (below).
+  - **Work budget per scan (T-005c; Sreeram asked for a worst case under 10 s, fail open with one diagnostic, 2026-11-23):** a whole scan gets **200,000,000 matching steps**, and each path draws its share (at most the per-path 1,000,000) from it.
+    - Reading a path and trying a rule are charged at about their real cost (16 steps per path segment, 4 per rule tried), so a step takes about the same time whatever the rule shape.
+    - Measured on a development Mac, the worst hostile shapes spend the whole budget in about 2.6 s, leaving room under 10 s for slower CI machines. A test scales a slice of each shape up to the full budget.
+    - Once the budget is spent, the rest of the scan applies no `.gitignore` rules (fail open), and one diagnostic names the path where it ran out.
+    - A typical 15-rule `.gitignore` uses under half the budget on 100,000 paths. An extreme 2,000-rule one runs out after roughly 6,700 paths.
   - **Symlinks are never followed**, inside or outside the root. Each one is reported as skipped with a diagnostic. This is simplest and safest for v0.1, and can be revisited after launch.
   - **Deliberate differences from git:**
     - POSIX classes (`[[:digit:]]`) aren't supported: any `[:` inside a class drops the rule with a problem (even `[[:x]`, which git reads as a plain class), and the file stays in the scan;

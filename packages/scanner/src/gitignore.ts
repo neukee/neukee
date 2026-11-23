@@ -16,6 +16,18 @@ export const MAX_RULE_BYTES = 1024;
  */
 const MAX_MATCH_STEPS = 1_000_000;
 
+/**
+ * Matching work allowed for a whole scan (ADR-015, T-005c): about 2.6 s at worst on a development
+ * Mac, so under 10 s on slower CI machines. Once it is spent, the caller applies no more
+ * .gitignore rules (fail open).
+ */
+export const MAX_SCAN_MATCH_STEPS = 200_000_000;
+
+/** A scan's remaining matching work, shared by every `isIgnored` call in that scan. */
+export interface MatchBudget {
+  steps: number;
+}
+
 type Token =
   | { kind: "byte"; value: number }
   | { kind: "any" }
@@ -249,15 +261,32 @@ function parseClass(bytes: Uint8Array, start: number): { token: Token; end: numb
  * Whether `path` (repo-relative, forward slashes) is ignored by the rules, which come parent
  * folders first, each folder's rules in file order. The last matching rule decides, so rules are
  * tried from the end and the first match wins. The caller stops descending into an ignored
- * folder, as git does, so nothing below it can be re-included.
+ * folder, as git does, so nothing below it can be re-included. The work is paid from `scan`, at
+ * most MAX_MATCH_STEPS for this path; "too-costly" means this path's share ran out.
  */
 export function isIgnored(
   path: string,
   isDirectory: boolean,
   rules: readonly ScopedRule[],
+  scan: MatchBudget,
+): IgnoreDecision {
+  const budget = { steps: Math.min(MAX_MATCH_STEPS, scan.steps) };
+  const before = budget.steps;
+  const decision = decide(path, isDirectory, rules, budget);
+  scan.steps -= before - budget.steps;
+  return decision;
+}
+
+function decide(
+  path: string,
+  isDirectory: boolean,
+  rules: readonly ScopedRule[],
+  budget: { steps: number },
 ): IgnoreDecision {
   const names = path.split("/").map((part) => encoder.encode(part));
-  const budget = { steps: MAX_MATCH_STEPS };
+  // Reading the path and trying a rule are work too, charged at about their real cost (measured:
+  // a segment costs about as much as 16 byte comparisons, a rule about 4), so no call is free.
+  budget.steps -= path.length + 16 * names.length;
   // Rules from one .gitignore are adjacent and share a base, so each base is resolved once.
   let lastBase: string | undefined;
   let below: Uint8Array[] | undefined;
@@ -268,6 +297,7 @@ export function isIgnored(
       else below = path.startsWith(`${base}/`) ? names.slice(base.split("/").length) : undefined;
     }
     if (below === undefined) continue;
+    budget.steps -= 4;
     const matched = matches(rule, below, isDirectory, budget);
     if (budget.steps < 0) return "too-costly";
     if (matched) return rule.negated ? "included" : "ignored";

@@ -12,7 +12,13 @@ import {
 } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { type Diagnostic, isRepoPath } from "@neukee/core";
-import { isIgnored, parseIgnoreFile, type ScopedRule } from "./gitignore.js";
+import {
+  isIgnored,
+  MAX_SCAN_MATCH_STEPS,
+  type MatchBudget,
+  parseIgnoreFile,
+  type ScopedRule,
+} from "./gitignore.js";
 
 /**
  * File discovery (T-005b). Scanned repositories are hostile (ARCHITECTURE §7): every file is read
@@ -28,6 +34,8 @@ const SKIP_DIRECTORIES = new Set(["node_modules", ".next", "dist", "build", "cov
 const INVALID_PATH = "Skipped a path invalid for report output.";
 const TOO_COSTLY =
   "Checking this path against .gitignore rules ran out of its work budget, so it was scanned.";
+const OUT_OF_BUDGET =
+  "The scan ran out of its .gitignore matching budget here, so this path and every later one were scanned without .gitignore rules.";
 
 // O_NOFOLLOW makes open() refuse a symlink as the last path component. O_NONBLOCK keeps open()
 // from hanging on a FIFO swapped in under a file's name; fstat then rejects it as not regular.
@@ -57,7 +65,7 @@ type ReadResult =
 /** Walks a repo and yields bounded file contents one at a time for the detector pipeline. */
 export function discoverFiles(root: string): Generator<DiscoveryEvent> {
   const canonicalRoot = realpathSync(root);
-  return walk(canonicalRoot, canonicalRoot, "", []);
+  return walk(canonicalRoot, canonicalRoot, "", [], { steps: MAX_SCAN_MATCH_STEPS });
 }
 
 function* walk(
@@ -65,6 +73,7 @@ function* walk(
   absoluteDirectory: string,
   relativeDirectory: string,
   inheritedRules: readonly ScopedRule[],
+  scan: MatchBudget,
 ): Generator<DiscoveryEvent> {
   const where = relativeDirectory === "" ? undefined : relativeDirectory;
   let entries: Dirent[];
@@ -129,7 +138,7 @@ function* walk(
           ...parsed.rules.map((rule) => ({ base: relativeDirectory, rule })),
         ];
       }
-      if (!(yield* ignored(path, false, rules))) {
+      if (!(yield* ignored(path, false, rules, scan))) {
         yield { type: "file", file: { path, content: result.content } };
       }
     } else {
@@ -161,14 +170,16 @@ function* walk(
     }
     const absolutePath = join(absoluteDirectory, entry.name);
     if (entry.isDirectory()) {
-      if (!(yield* ignored(path, true, rules))) yield* walk(root, absolutePath, path, rules);
+      if (!(yield* ignored(path, true, rules, scan))) {
+        yield* walk(root, absolutePath, path, rules, scan);
+      }
       continue;
     }
     if (!entry.isFile()) {
       yield { type: "skipped" }; // FIFOs, sockets, devices
       continue;
     }
-    if (yield* ignored(path, false, rules)) continue;
+    if (yield* ignored(path, false, rules, scan)) continue;
     const result = readFileOnce(root, absolutePath, MAX_FILE_BYTES);
     if (result.kind === "file") {
       yield { type: "file", file: { path, content: result.content } };
@@ -179,14 +190,20 @@ function* walk(
   }
 }
 
-/** Whether .gitignore rules leave `path` out. Too costly to decide: kept, and reported (ADR-015). */
+/**
+ * Whether .gitignore rules leave `path` out. Too costly to decide: kept, and reported. Once the
+ * scan's budget is spent, no rule applies and one diagnostic says where that happened (ADR-015).
+ */
 function* ignored(
   path: string,
   isDirectory: boolean,
   rules: readonly ScopedRule[],
+  scan: MatchBudget,
 ): Generator<DiscoveryEvent, boolean> {
-  const decision = isIgnored(path, isDirectory, rules);
-  if (decision === "too-costly") yield warning(TOO_COSTLY, path);
+  if (scan.steps <= 0) return false;
+  const decision = isIgnored(path, isDirectory, rules, scan);
+  if (scan.steps <= 0) yield warning(OUT_OF_BUDGET, path);
+  else if (decision === "too-costly") yield warning(TOO_COSTLY, path);
   return decision === "ignored";
 }
 

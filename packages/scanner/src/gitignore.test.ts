@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { isIgnored, MAX_RULE_BYTES, parseIgnoreFile, type ScopedRule } from "./gitignore.js";
+import {
+  isIgnored,
+  MAX_RULE_BYTES,
+  MAX_SCAN_MATCH_STEPS,
+  type MatchBudget,
+  parseIgnoreFile,
+  type ScopedRule,
+} from "./gitignore.js";
 
 interface GitCase {
   name: string;
@@ -51,6 +58,11 @@ function isGitCase(value: unknown): value is GitCase {
   );
 }
 
+/** A scan budget that never runs out, so each call gets its full per-path share. */
+function unlimited(): MatchBudget {
+  return { steps: Number.POSITIVE_INFINITY };
+}
+
 /** Rules from every file, parent folders first, as the walker stacks them. */
 function rulesFrom(files: Record<string, string>): ScopedRule[] {
   return Object.entries(files)
@@ -62,9 +74,11 @@ function rulesFrom(files: Record<string, string>): ScopedRule[] {
 function ignoredLikeGit(path: string, isDirectory: boolean, rules: ScopedRule[]): boolean {
   const parts = path.split("/");
   for (let depth = 1; depth < parts.length; depth++) {
-    if (isIgnored(parts.slice(0, depth).join("/"), true, rules) === "ignored") return true;
+    if (isIgnored(parts.slice(0, depth).join("/"), true, rules, unlimited()) === "ignored") {
+      return true;
+    }
   }
-  return isIgnored(path, isDirectory, rules) === "ignored";
+  return isIgnored(path, isDirectory, rules, unlimited()) === "ignored";
 }
 
 describe(`gitignore matching agrees with real git (${table.gitVersion})`, () => {
@@ -176,14 +190,33 @@ describe("matching work per path is bounded on hostile rules within the caps", (
     const rules = rulesFrom({ "": `${rule}\n`.repeat(2000) });
     expect(rules).toHaveLength(2000);
     const start = performance.now();
-    const answers = [isIgnored(path, false, rules), isIgnored(path, true, rules)];
+    const answers = [
+      isIgnored(path, false, rules, unlimited()),
+      isIgnored(path, true, rules, unlimited()),
+    ];
     expect(performance.now() - start).toBeLessThan(2000);
     for (const answer of answers) expect(["ignored", "included", "too-costly"]).toContain(answer);
   });
 
+  // T-005c: a whole scan shares one budget. For every hostile shape, a full scan budget's worth of
+  // work must take under 10 s; this measures a slice and scales it up, so the test stays quick.
+  it.each(shapes)(
+    "a whole scan's budget of %s takes under 10 s",
+    (_, rule, path) => {
+      const rules = rulesFrom({ "": `${rule}\n`.repeat(2000) });
+      const slice = MAX_SCAN_MATCH_STEPS / 15;
+      const scan = { steps: slice };
+      const start = performance.now();
+      while (scan.steps > 0) isIgnored(path, false, rules, scan);
+      const scaled = ((performance.now() - start) * MAX_SCAN_MATCH_STEPS) / (slice - scan.steps);
+      expect(scaled).toBeLessThan(10_000);
+    },
+    60_000,
+  );
+
   it("answers too-costly when the budget runs out, rather than guessing", () => {
     const rules = rulesFrom({ "": `*${"a".repeat(127)}b\n`.repeat(2000) });
-    expect(isIgnored(longName, false, rules)).toBe("too-costly");
+    expect(isIgnored(longName, false, rules, unlimited())).toBe("too-costly");
   });
 
   // The budget must leave real repositories alone: a large, varied .gitignore at the rules cap,
@@ -205,9 +238,33 @@ describe("matching work per path is bounded on hostile rules within the caps", (
       "src/a/b/gen7.js",
     ];
     for (const path of paths) {
-      expect(isIgnored(path, false, rules)).not.toBe("too-costly");
+      expect(isIgnored(path, false, rules, unlimited())).not.toBe("too-costly");
     }
-    expect(isIgnored("src/a/b/gen7.js", false, rules)).toBe("ignored");
+    expect(isIgnored("src/a/b/gen7.js", false, rules, unlimited())).toBe("ignored");
+  });
+});
+
+describe("the scan-wide budget", () => {
+  it("is paid by every call, and answers too-costly once the scan has no budget left", () => {
+    const rules = rulesFrom({ "": "*.log\n" });
+    const scan = { steps: 1000 };
+    expect(isIgnored("src/a.txt", false, rules, scan)).toBe("included");
+    expect(scan.steps).toBeLessThan(1000);
+    scan.steps = 3;
+    expect(isIgnored("src/a.txt", false, rules, scan)).toBe("too-costly");
+    expect(scan.steps).toBeLessThanOrEqual(0);
+  });
+
+  it("never runs out for a typical .gitignore on a 100,000-path repository", () => {
+    const rules = rulesFrom({
+      "": "node_modules/\ndist/\n*.log\n.env\n.env.*\ncoverage/\n.next/\nout/\n*.tsbuildinfo\n.DS_Store\nbuild/\n.turbo\n*.pem\nnpm-debug.log*\n.vercel\n",
+    });
+    const scan = { steps: MAX_SCAN_MATCH_STEPS };
+    for (let i = 0; i < 100_000; i++) {
+      const path = `packages/pkg${i % 50}/src/feature${i % 37}/Component${i}.test.tsx`;
+      expect(isIgnored(path, false, rules, scan)).toBe("included");
+    }
+    expect(scan.steps).toBeGreaterThan(MAX_SCAN_MATCH_STEPS / 2);
   });
 });
 
