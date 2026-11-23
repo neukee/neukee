@@ -1,7 +1,15 @@
 {
   "name": "@neukee/cli",
   "version": "0.0.0",
-  "private": true,
+  "description": "Neukee CLI: find what breaks before you upgrade Node.js or Next.js.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neukee/neukee.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/neukee/neukee#readme",
+  "bugs": "https://github.com/neukee/neukee/issues",
   "type": "module",
   "bin": {
     "neukee": "./dist/index.js"
@@ -18,6 +26,5 @@
   "dependencies": {
     "@neukee/core": "workspace:*",
     "@neukee/scanner": "workspace:*"
-  },
-  "license": "Apache-2.0"
+  }
 }

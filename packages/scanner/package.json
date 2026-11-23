@@ -1,7 +1,15 @@
 {
   "name": "@neukee/scanner",
   "version": "0.0.0",
-  "private": true,
+  "description": "Neukee scanner: file discovery and upgrade-blocker detectors for Node.js and Next.js.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neukee/neukee.git",
+    "directory": "packages/scanner"
+  },
+  "homepage": "https://github.com/neukee/neukee#readme",
+  "bugs": "https://github.com/neukee/neukee/issues",
   "type": "module",
   "exports": {
     ".": {
@@ -23,6 +31,5 @@
   "dependencies": {
     "@neukee/core": "workspace:*",
     "oxc-parser": "^0.159.0"
-  },
-  "license": "Apache-2.0"
+  }
 }

@@ -1,7 +1,15 @@
 {
   "name": "@neukee/core",
   "version": "0.0.0",
-  "private": true,
+  "description": "Neukee report types, JSON Schema, validator and rule catalog loader.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neukee/neukee.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/neukee/neukee#readme",
+  "bugs": "https://github.com/neukee/neukee/issues",
   "type": "module",
   "exports": {
     ".": {
@@ -21,7 +29,6 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json"
   },
-  "license": "Apache-2.0",
   "dependencies": {
     "yaml": "^2.9.1"
   }
