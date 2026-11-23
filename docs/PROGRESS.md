@@ -18,7 +18,12 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   3. PR #11 (T-005c, scan-wide matching budget) is open at `73ad041`, with the reviewer (Opus) running. Merge under standing approval when every condition holds. Then the thin end-to-end path (TASKS Phase 1a), starting with T-010.
   4. Sreeram runs `/checkpoint` now that T-005b has merged (decision 10).
      If `/checkpoint` shows more than 3 days behind, propose moving launch to Tue Dec 15 rather than cutting validation.
-  5. GitHub presence kit: drop "Vercel, Netlify, Serverless and AWS SAM config" from the README runtime row and add deployment config to the post-launch roadmap line.
+  5. GitHub presence kit:
+     - PR #12 is open (kit plus the README change from ADR-017, plus `.github/copilot-instructions.md`); it merges under the advance approval.
+     - Labels `catalog` and `false positive` created. Repo description, topics, private vulnerability reporting, vulnerability alerts and automated security fixes set and confirmed.
+     - https://github.com/neukee/.github created.
+     - `Venu2328/Venu2328` already exists, with its own README, `assets/`, `tools/`, `.github/` and 19 commits, so it was not touched. Waiting for Sreeram: replace it with the kit's README, merge the two, or leave it.
+     - The `pnpm audit` advisories are logged in REVIEW-QUEUE.
   6. Done 2026-11-23: settings turned off for this project only (see the daily log).
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
