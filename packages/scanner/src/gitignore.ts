@@ -14,7 +14,7 @@ export const MAX_RULE_BYTES = 1024;
  * Matching work allowed for one path: name bytes compared plus path positions tried (ADR-015).
  * A heavy real .gitignore (2,000 rules against a 255-byte name) needs about half of it.
  */
-export const MAX_MATCH_STEPS = 1_000_000;
+const MAX_MATCH_STEPS = 1_000_000;
 
 type Token =
   | { kind: "byte"; value: number }
