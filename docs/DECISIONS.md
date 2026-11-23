@@ -38,7 +38,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 - **Context:** at the 2026-11-23 wrap, 26 tasks remained to T-055 with 14 days to the Dec 7 checkpoint: about 1.9 a day needed, against a recent pace of 1–1.5.
 - **Decision (Sreeram, 2026-11-23):**
-  - **Moved to Phase 5 (post-launch):** T-013 (deployment config runtime sources), T-035 (performance benchmark) and T-036 (network-free CI job). T-014 now depends on T-011 and T-012 only.
+  - **Moved to Phase 5 (post-launch):** T-013 (deployment config runtime sources), T-035 (performance benchmark) and T-036 (network-free CI job). T-014 then depended on T-011 and T-012 only (superseded the same day by the thin path below: T-014 depends on T-010).
   - **T-027 (MergeWarden comparison)** moves to the strategy chat; it is no longer a repo task.
   - **Added:** T-005c, a scan-wide `.gitignore` matching budget (worst case under 10 s, fail open with one diagnostic), right after T-005b.
   - **README (GitHub kit):** the runtime row drops "Vercel, Netlify, Serverless and AWS SAM config". Deployment config joins the post-launch roadmap line.
@@ -55,7 +55,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - **Standing merge approval** for every task PR when all of these hold:
     - the 4 verify jobs and the quality job are green;
     - CodeRabbit reviewed the latest commit and every thread is resolved;
-    - the reviewer's **PASS** verdict is quoted in the PR, with the SHA it reviewed, and that SHA is the head (a CHANGES REQUIRED verdict blocks the merge until a new review of the head passes): any commit after a PASS gets its own reviewer run on just those commits (Sonnet, or Opus if they touch matching logic), and the new verdict is quoted with the new head SHA (Sreeram, 2026-11-23);
+    - the reviewer's **PASS** verdict is quoted in the PR, with the SHA it reviewed, and that SHA is the head (a CHANGES REQUIRED verdict blocks the merge until a new review of the head passes): any commit after a PASS gets its own reviewer run on just those commits (Opus for a foundational task or a change to matching logic, Sonnet otherwise; Sreeram, 2026-11-24), and the new verdict is quoted with the new head SHA (Sreeram, 2026-11-23);
     - the four-line check shows no core type or schema change, no new dependency, and no CI, workflow, permission or security-model change.
       Anything else: stop and ask. Squash-merge with the PR title in Conventional Commits form.
   - **At most two tasks in flight:** one building and one in review, in separate worktrees. Never two building at once.

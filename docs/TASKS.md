@@ -170,7 +170,7 @@ Guardrails (Sreeram, 2026-11-23):
 - Depends on: T-010
 - Human review: no
 - Build: `.github/workflows/*.yml`: `actions/setup-node` steps' `node-version` (incl. matrix references) and `node-version-file`.
-- Done when: fixtures with a matrix `[20, 22]`, a literal and a version file pass.
+- Done when: its sources join T-014's findings: a fixture where `.nvmrc` says 24 but a workflow's `node-version` says 20 produces `sources-disagree` pointing at both lines. Also: fixtures with a matrix `[20, 22]`, a literal and a version file pass.
 
 ### T-015 · Lockfile: package-lock.json
 

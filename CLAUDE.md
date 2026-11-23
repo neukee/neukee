@@ -40,7 +40,7 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 - **Standing approval for task PRs (ADR-016).** Merge without asking when all of these hold:
   - the 4 verify jobs and the quality job are green;
   - CodeRabbit reviewed the latest commit and every thread is resolved;
-  - the reviewer's **PASS** verdict is quoted in the PR with the SHA it reviewed, and that SHA is the PR's head. A CHANGES REQUIRED verdict blocks the merge until a new review of the head passes. If any commit lands after a PASS, re-run the reviewer on just those commits (Sonnet, or Opus if they touch matching logic) and quote the new verdict with the new head SHA;
+  - the reviewer's **PASS** verdict is quoted in the PR with the SHA it reviewed, and that SHA is the PR's head. A CHANGES REQUIRED verdict blocks the merge until a new review of the head passes. If any commit lands after a PASS, re-run the reviewer on just those commits (Opus for a foundational task or a change to matching logic, Sonnet otherwise) and quote the new verdict with the new head SHA;
   - the four-line check shows no core type or schema change, no new dependency, and no CI, workflow, permission or security-model change.
     Squash-merge with the PR title in Conventional Commits form. Anything else needs Sreeram's approval, which he may give in advance for a specific PR, with conditions.
 - **A PR that changes only Markdown docs or code comments** (including the daily docs-sync PR) merges under these rules without asking.
