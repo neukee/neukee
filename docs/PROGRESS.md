@@ -4,34 +4,18 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-23, 19:23 IST (session stopped by Sreeram; usage limit near)
-- **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23). The session ended with nothing uncommitted.
-- **Branches (both local only, ahead of their PRs, not pushed):**
-  - `t-005a-gitignore` at `1eea3ab`, 3 commits ahead of PR #9. `pnpm verify` green (517 tests).
-  - `t-005-file-discovery` at `70b053d`, 14 commits ahead of PR #8, which still shows Copilot's version. Green at its last commit (542 tests).
-- **Last finished:** T-004 (PR #7, built by Copilot, merged). T-005a meets its done-when; it is in review.
-- **In progress:** T-005a (PR #9) and T-005b (PR #8), foundational (Opus).
-- **Exact next step:**
-  1. On `t-005a-gitignore`: `git push -u origin HEAD`. Ask the reviewer subagent to re-check `85ee6ef..1eea3ab` against its CHANGES REQUIRED findings (listed in the T-005a log entry). Wait for CodeRabbit on `1eea3ab`, then ask Sreeram to approve merging PR #9.
-  2. After PR #9 merges: `git switch t-005-file-discovery`, merge `main`, `pnpm verify`, push. Retitle PR #8 "T-005b: file discovery" and rewrite its body with the four-line check:
-     - tests: 29 blocks (17 discovery, 8 race, 2 scan, 1 golden, 1 core);
-     - outside the task: core `isRepoPath` export, `fixtures/expected/empty.json`;
-     - decisions: ADR-015;
-     - dependencies: none.
-       Then the reviewer subagent, the CodeRabbit loop, and ask for merge approval.
-  3. After both merge: `/checkpoint` (pace against Dec 7), then the GitHub presence steps, then Wave 1 (T-010, T-015, T-021, T-027).
-  4. Sreeram's settings request (cheaper models for subagents, turning off unused MCP servers): the investigation is done, see the 2026-11-23 daily log. Next, show each proposed change and get his approval before editing any settings.
-- **Standing instructions (Sreeram) not in CLAUDE.md:**
+- **Last updated:** 2026-11-22, night IST (T-004 PR open)
+- **Branch:** `t-004-fixture-harness` (PR waiting for merge approval)
+- **Last finished:** T-004 (fixture harness, golden reports, dependency rule). Merged today: PR #6 (T-003).
+- **In progress:** nothing.
+- **Exact next step:** merge the T-004 PR once approved, then `/next` → T-005 (file discovery). T-005 is foundational: it's the first reader of hostile input. After T-005 merges, run `/checkpoint`.
+- **Standing instructions (Sreeram, 2026-11-22) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - After T-005 merges, run `/checkpoint` before the next task and report the pace against the Dec 7 checkpoint.
-  - Report progress at every 10% of the work in hand, against a stated step list (2026-11-23).
 - **Blocked / waiting on Sreeram:**
-  - The matching work budget: 1,000,000 steps per path (ADR-015 default). Also: is a total budget for the whole scan needed? (REVIEW-QUEUE)
-  - Merge approval for PR #9, then PR #8.
-  - The four speedrun proposals (standing merge approval under conditions, parallel worktrees per wave, one daily docs-sync PR, model routing): yes or no on each.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (14 days). Launch Tuesday, Dec 8 (15 days). 26 tasks to launch, from T-005b to T-055: about 1.9 a day needed. **At risk by more than 3 days at the current pace** (see the 2026-11-23 daily log).
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (15 days). Launch Tuesday, Dec 8 (16 days). 25 tasks to launch after T-004 (ADR-013).
 
 ## Dated checkpoints
 
@@ -50,7 +34,7 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 ## Current state
 
 - **Phase:** 0 — Foundation
-- **Current task:** T-005a (PR #9) and T-005b (PR #8), in review
+- **Current task:** T-003 (Claude), next session
 - **Scanner launch target:** Tuesday, December 8, 2026 (ADR-013)
 - **On track?** Not yet measured. Run `/checkpoint` after T-005.
 
@@ -73,50 +57,17 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
 One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+). Sreeram's hours only when he gives them.
 
-| Date       | Task   | Size | Claude sessions | Sreeram hours | Result    | Note                                                                                                                                   |
-| ---------- | ------ | ---- | --------------- | ------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-18 | T-000  | M    | 1               | —             | done      | Scaffold; verify green                                                                                                                 |
-| 2026-11-22 | T-001  | S    | 0               | —             | done      | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI                                                                |
-| 2026-11-22 | T-002  | M    | 1               | —             | done      | Schema + validator; reviewer 1 must-fix + 4 should-fix; ~8 CodeRabbit rounds; 3 changes from Sreeram before merge                      |
-| 2026-11-22 | T-003  | S    | 1               | —             | done      | Catalog loader + first entry; reviewer 3 must-fix + 5 should-fix, all fixed                                                            |
-| 2026-11-22 | T-004  | S    | 1               | —             | done      | Harness, golden reports, dependency rule                                                                                               |
-| 2026-11-23 | T-005a | L    | 1               | —             | in review | Copilot's T-005 matcher replaced. Reviewer: CHANGES REQUIRED (speed at the caps), fixed. 4 CodeRabbit findings fixed. PR #9 not merged |
+| Date       | Task  | Size | Claude sessions | Sreeram hours | Result | Note                                                                                                              |
+| ---------- | ----- | ---- | --------------- | ------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| 2026-11-18 | T-000 | M    | 1               | —             | done   | Scaffold; verify green                                                                                            |
+| 2026-11-22 | T-001 | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI                                           |
+| 2026-11-22 | T-002 | M    | 1               | —             | done   | Schema + validator; reviewer 1 must-fix + 4 should-fix; ~8 CodeRabbit rounds; 3 changes from Sreeram before merge |
+| 2026-11-22 | T-003 | S    | 1               | —             | done   | Catalog loader + first entry; reviewer 3 must-fix + 5 should-fix, all fixed                                       |
+| 2026-11-22 | T-004 | S    | 1               | —             | done   | Harness, golden reports, dependency rule                                                                          |
 
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
-
-### 2026-11-23 · T-005 reworked as T-005a and T-005b; both nearly through review
-
-- **Copilot audit.** While Claude was at its usage limit, Sreeram had Copilot build T-004 (merged, PR #7) and T-005 (PR #8).
-  - The workflow files were untouched, and a clean `main` passed the gate.
-  - But T-005's matcher was quadratic and scored 46% on mutation, and Copilot's PROGRESS claimed a reviewer PASS that never happened.
-- **Sreeram's decisions (ADR-015):**
-  - Claude owns T-005.
-  - Caps of 1 KiB per rule, 64 KiB per `.gitignore` and 2,000 rules in force, failing open with a diagnostic.
-  - T-005 splits into T-005a and T-005b.
-  - Symlinks are never followed.
-  - Asked whether Copilot costs time, the answer was: keep using it, with guardrails (the same review gate; no parallel commits in one checkout).
-- **T-005a (PR #9):**
-  - CodeRabbit's four findings fixed: generator isolation, `***/`, escaped `\/`, and `a/**\/b`. CodeRabbit approved `eb45eb0`.
-  - The reviewer subagent returned CHANGES REQUIRED: segment-heavy rules took 3–19 s per path. Fixed with a per-path work budget (about 10 ms worst case now) and its tests. Should-fixes done; three follow-ups logged.
-  - The generator now passes `./path` (a leading `:` was read as pathspec magic). 103 git cases.
-  - Mutation score 89.0%.
-- **T-005b (local):**
-  - Tests added for FIFOs, leaked handles, a file shrinking mid-read, and folders swapped for links (inside the root, to the root, above the root). Mutation score of `discover.ts` went from 75.5% to 89.0%, with a simpler sort.
-  - Handles the matcher's "too-costly" answer: such a path is scanned and reported.
-- **Sreeram said to remember:**
-  - Report progress at every 10% of the work.
-  - Start sessions with `git status`, then `/status`, and reconcile uncommitted work before `/next`.
-- **Settings request, investigated, nothing changed yet:**
-  - The only custom subagent is `reviewer` (`.claude/agents/reviewer.md`). It sets no model, so it inherits Opus: 5 runs at about 2–5 million tokens each. Candidate: `model: sonnet`, with Opus passed explicitly for foundational reviews.
-  - The built-in `web-fetch` already runs on Haiku.
-  - MCP calls in the last 30 days: only claude.ai Supabase (54) and claude.ai Vercel (22). `playwright` was last used Sep 6; no other server was called.
-  - Most servers come from claude.ai: account connectors, and plugins synced from the claude.ai plugin directory. Local `enabledPlugins` lists only 8 plugins.
-  - The check of Claude Code's docs for per-server switches was cut off by the 5-hour usage limit. Redo it, then show each change for approval.
-- **Pace:** T-005 has taken about 1.5 days and isn't merged. 26 tasks remain to T-055 in 14 days (about 1.9 a day needed; recent pace about 1–1.5). Options for Sreeram:
-  - A: approve the speedrun proposals (standing merge approval under conditions, parallel worktrees per wave);
-  - B: move more tasks to the post-launch phase, or move the Dec 7 checkpoint.
 
 ### 2026-11-22 · T-002 merged; PR loop, Quality bar and merge rules
 
@@ -161,30 +112,6 @@ Sreeram's notes and each session's summary. Newest first.
 - New tasks: T-006 change-signature schema, T-027 MergeWarden comparison, T-037 corpus job, T-038 mutation score target, T-056 UpgradeBench; E-001 reframed as the competitive spike.
 
 ## Log (task entries)
-
-### 2026-11-23 · T-005a · .gitignore matcher — done
-
-- Sreeram had GitHub Copilot build T-004 and T-005 while Claude was at its usage limit. Claude then audited the work:
-  - workflow files untouched (CLAUDE.md, `.claude/`, CI, Biome, Knip, `package.json`);
-  - a clean checkout of `main` passes the full gate (386 tests);
-  - but T-005's `.gitignore` matcher was quadratic on `**` chains (a 1 MB rule ≈ 95 s per file), mishandled anchored wildcards, scored 46% on mutation testing, and was 556 source lines with no ADR.
-- Sreeram's decisions: Claude owns T-005; caps of 1 KiB per rule, 64 KiB per `.gitignore` and 2,000 rules in force, fail open with a diagnostic; T-005 splits into T-005a and T-005b; symlinks are never followed. All in ADR-015.
-- `packages/scanner/src/gitignore.ts` (new):
-  - rules are parsed once into tokens, with no regular expressions built from rule text;
-  - matching works on UTF-8 bytes;
-  - repeated `**` segments collapse;
-  - classes are 256-bit sets.
-- Tests:
-  - It agrees with **real git** on all 103 cases of `fixtures/gitignore/cases.json` (generated once by `fixtures/gitignore/generate.mjs` with git 2.56.1, in an environment cut off from the developer's git config; git never runs in tests). The generator passes paths as `./path`, so a leading `:` isn't read as pathspec magic; that changed only the newest case, no earlier one.
-  - Over-long, POSIX-class, unclosed, trailing-backslash, empty, CRLF and BOM input is covered.
-- CodeRabbit (PR #9), fixed: generator isolation, `***/` as a globstar, escaped `\/` as a separator, and `a/**\/b` needing at least one folder (git's zero-folder shortcut needs a plain `/`). CodeRabbit approved `eb45eb0`.
-- Reviewer subagent: **CHANGES REQUIRED**, now fixed:
-  - Segment-heavy rules at the caps took 3–19 s per path; the earlier "0.1–0.4 s per file" claim was wrong. Each path now gets a work budget of 1,000,000 steps; past it the answer is "too-costly" and the caller keeps the path (fail open). The worst hostile shapes now take about 10 ms per path; a heavy real-world `.gitignore` takes about 1.2 ms and never reaches the budget. The budget number is a default waiting for Sreeram (REVIEW-QUEUE, ADR-015).
-  - The hostile-input tests now include the reviewer's shapes (512-segment rules, 1,100-segment paths, 255-byte names).
-  - `cases.json` is shape-checked before use (no `any` from a runtime read).
-  - Also: shared tokens (memory), class bitmap (simpler), BOM written as an escape, accurate problem reasons for `[:` and for a class split by `/`. Three items logged as follow-ups.
-- Mutation score of `gitignore.ts`: 89.0%, measured before the six newest git cases, which target several of the survivors (trailing `*`, class member order, `[` and `:` inside a class, escaped space before a trailing space, a rule matching only a parent). Most of the rest are guards whose removal changes no answer: the empty-line check, and the depth reject and early exit, which only save time.
-- TASKS: T-005 is now T-005a (done) and T-005b (the walker; PR #8 reworked next). T-010, T-015 and T-021 now depend on T-005b.
 
 ### 2026-11-22 · T-004 · Fixture harness, snapshots and dependency rule — done
 
