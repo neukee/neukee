@@ -1,8 +1,9 @@
 /**
  * .gitignore parsing and matching (ADR-015). Scanned repositories are hostile, so this never
  * builds a regular expression from rule text: rules are parsed once into tokens and matched on
- * bytes, and every call is paid from the scan's budget of matching work, at most a fixed share per
- * path. Past it the answer is "too-costly" and the caller keeps the path in the scan (fail open). Semantics follow git's own
+ * bytes, and every call is paid from the scan's budget of matching work, at most a fixed
+ * share per path. Past it the answer is "too-costly" and the caller keeps the path in the scan
+ * (fail open). Semantics follow git's own
  * matcher (wildmatch), checked against a table generated from real git
  * (fixtures/gitignore/cases.json). Deliberate differences are listed in ADR-015.
  */
@@ -22,6 +23,13 @@ const MAX_MATCH_STEPS = 1_000_000;
  * applies no more .gitignore rules (fail open).
  */
 export const MAX_SCAN_MATCH_STEPS = 200_000_000;
+
+/**
+ * Parsing a .gitignore is paid from the scan's budget at this many steps per byte. That covers
+ * the costliest shape measured (about 250 ns per `/` in long segment runs), so many hostile
+ * .gitignore files can't add unbounded time.
+ */
+export const PARSE_STEPS_PER_BYTE = 48;
 
 /** Allocating a DP row costs about as much as this many byte comparisons (measured). */
 const ALLOCATION_STEPS = 8;

@@ -16,6 +16,7 @@ import {
   isIgnored,
   MAX_SCAN_MATCH_STEPS,
   type MatchBudget,
+  PARSE_STEPS_PER_BYTE,
   parseIgnoreFile,
   type ScopedRule,
 } from "./gitignore.js";
@@ -119,9 +120,7 @@ function* walk(
     const result = readFileOnce(root, join(absoluteDirectory, ".gitignore"), MAX_IGNORE_FILE_BYTES);
     if (result.kind === "file") {
       const parsed = parseIgnoreFile(result.content);
-      // Parsing is paid from the scan's budget too (measured: about 2 steps per byte and 96 per
-      // rule line), so many hostile .gitignore files can't add unbounded time.
-      scan.steps -= 2 * result.content.length + 96 * (parsed.rules.length + parsed.problems.length);
+      scan.steps -= PARSE_STEPS_PER_BYTE * result.content.length;
       if (scan.steps <= 0) yield warning(OUT_OF_BUDGET, path);
       // One diagnostic per file, however many lines were dropped: a hostile .gitignore must not
       // flood the report.
@@ -136,8 +135,11 @@ function* walk(
         );
       }
       if (inheritedRules.length + parsed.rules.length > MAX_RULES_IN_FORCE) {
+        // It might re-include files a parent rule ignores, so no inherited rule applies below
+        // either (fail open).
+        rules = [];
         yield warning(
-          `This .gitignore was not applied: it would put more than ${MAX_RULES_IN_FORCE} rules in force.`,
+          `This .gitignore was not applied: it would put more than ${MAX_RULES_IN_FORCE} rules in force, so no .gitignore rules apply in this folder or below.`,
           path,
         );
       } else {
@@ -150,11 +152,12 @@ function* walk(
         yield { type: "file", file: { path, content: result.content } };
       }
     } else {
+      rules = []; // as above: fail open for this folder and below
       yield { type: "skipped" };
       yield warning(
         result.kind === "too-large"
-          ? "This .gitignore is larger than 64 KiB, so its rules were not applied."
-          : "This .gitignore could not be read safely, so its rules were not applied.",
+          ? "This .gitignore is larger than 64 KiB, so no .gitignore rules apply in this folder or below."
+          : "This .gitignore could not be read safely, so no .gitignore rules apply in this folder or below.",
         path,
       );
     }

@@ -5,6 +5,7 @@ import {
   MAX_RULE_BYTES,
   MAX_SCAN_MATCH_STEPS,
   type MatchBudget,
+  PARSE_STEPS_PER_BYTE,
   parseIgnoreFile,
   type ScopedRule,
 } from "./gitignore.js";
@@ -265,6 +266,32 @@ describe("matching work per path is bounded on hostile rules within the caps", (
 function fail(): never {
   throw new Error("expected a rule");
 }
+
+describe("parsing is paid from the scan's budget", () => {
+  // Parsing a 64 KiB .gitignore is charged PARSE_STEPS_PER_BYTE per byte. For every hostile
+  // shape, parsing the files it takes to spend the whole budget must take under 10 s.
+  const fill = (line: string) => `${line}\n`.repeat(Math.floor(65_536 / (line.length + 1)));
+  const parseShapes: [string, string][] = [
+    ["one-character rules", fill("a")],
+    ["unsupported class lines", fill("[[:x]")],
+    ["slash runs", fill(`a${"/".repeat(1000)}a`)],
+    ["short segments", fill(`${"a/".repeat(500)}a`)],
+    ["star segments", fill(`${"*/".repeat(500)}*`)],
+    ["class segments", fill(`${"[a]/".repeat(250)}a`)],
+    ["escaped slashes", fill(`${"a\\/".repeat(300)}a`)],
+    ["globstar segments", fill(`${"**/a/".repeat(200)}a`)],
+    ["class ranges", fill(`[${"\u0001-\u00ff".repeat(300)}]`)],
+  ];
+  it.each(parseShapes)("a whole scan's budget of %s takes under 10 s to parse", (_, text) => {
+    parseIgnoreFile(text); // warm up
+    const runs = 3;
+    const start = performance.now();
+    for (let i = 0; i < runs; i++) parseIgnoreFile(text);
+    const perFile = (performance.now() - start) / runs;
+    const files = MAX_SCAN_MATCH_STEPS / (PARSE_STEPS_PER_BYTE * text.length);
+    expect(perFile * files).toBeLessThan(10_000);
+  });
+});
 
 describe("the scan-wide budget", () => {
   it("never answers with the scan's last steps: spending them means too-costly", () => {

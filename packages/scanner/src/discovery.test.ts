@@ -176,7 +176,8 @@ describe("file discovery", () => {
     expect(diagnosticsOf(events)).toEqual([
       {
         level: "warning",
-        message: "This .gitignore is larger than 64 KiB, so its rules were not applied.",
+        message:
+          "This .gitignore is larger than 64 KiB, so no .gitignore rules apply in this folder or below.",
         file: ".gitignore",
       },
     ]);
@@ -195,7 +196,8 @@ describe("file discovery", () => {
     expect(diagnosticsOf(events)).toEqual([
       {
         level: "warning",
-        message: "This .gitignore was not applied: it would put more than 2000 rules in force.",
+        message:
+          "This .gitignore was not applied: it would put more than 2000 rules in force, so no .gitignore rules apply in this folder or below.",
         file: "nested/.gitignore",
       },
     ]);
@@ -278,6 +280,23 @@ describe("file discovery", () => {
     expect(paths(events)).toContain("d69/.gitignore");
     expect(paths(events)).toContain("d69/kept.txt");
   }, 60_000);
+
+  // A .gitignore that can't be applied might have re-included files: its subtree then applies no
+  // inherited rules either, so a parent rule can't wrongly exclude them (fail open).
+  it.each([
+    ["over 64 KiB", `!important.js\n${"#".repeat(64 * 1024)}\n`],
+    ["past the rules-in-force cap", `!important.js\n${"x\n".repeat(2000)}`],
+  ])("turns off inherited rules below a .gitignore %s", (_, nested) => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), "*.js\n");
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "src/.gitignore"), nested);
+    writeFileSync(join(root, "src/important.js"), "kept");
+    writeFileSync(join(root, "dropped.js"), "ignored by the root rule");
+    const files = paths(Array.from(discoverFiles(root)));
+    expect(files).toContain("src/important.js");
+    expect(files).not.toContain("dropped.js");
+  });
 
   it("matches a .gitignore against itself as a file, and folder-only rules never match files", () => {
     const root = copyFixture();
@@ -400,7 +419,8 @@ describe.skipIf(!canDenyRead)("file discovery: unreadable input becomes a diagno
       expect(diagnosticsOf(events)).toEqual([
         {
           level: "warning",
-          message: "This .gitignore could not be read safely, so its rules were not applied.",
+          message:
+            "This .gitignore could not be read safely, so no .gitignore rules apply in this folder or below.",
           file: ".gitignore",
         },
       ]);
