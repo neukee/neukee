@@ -109,12 +109,20 @@ function* walk(
   }
 
   let rules = inheritedRules;
-  const ignoreEntry = entries.find((entry) => entry.name === ".gitignore" && entry.isFile());
+  // Once the scan's matching budget is spent, a .gitignore is an ordinary file: it is not parsed.
+  const ignoreEntry =
+    scan.steps > 0
+      ? entries.find((entry) => entry.name === ".gitignore" && entry.isFile())
+      : undefined;
   if (ignoreEntry !== undefined) {
     const path = where === undefined ? ".gitignore" : `${where}/.gitignore`;
     const result = readFileOnce(root, join(absoluteDirectory, ".gitignore"), MAX_IGNORE_FILE_BYTES);
     if (result.kind === "file") {
       const parsed = parseIgnoreFile(result.content);
+      // Parsing is paid from the scan's budget too (measured: about 2 steps per byte and 96 per
+      // rule line), so many hostile .gitignore files can't add unbounded time.
+      scan.steps -= 2 * result.content.length + 96 * (parsed.rules.length + parsed.problems.length);
+      if (scan.steps <= 0) yield warning(OUT_OF_BUDGET, path);
       // One diagnostic per file, however many lines were dropped: a hostile .gitignore must not
       // flood the report.
       const [first] = parsed.problems;

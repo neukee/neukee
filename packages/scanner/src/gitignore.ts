@@ -1,8 +1,8 @@
 /**
  * .gitignore parsing and matching (ADR-015). Scanned repositories are hostile, so this never
  * builds a regular expression from rule text: rules are parsed once into tokens and matched on
- * bytes, and every path gets a fixed budget of matching work. Past the budget the answer is
- * "too-costly" and the caller keeps the path in the scan (fail open). Semantics follow git's own
+ * bytes, and every call is paid from the scan's budget of matching work, at most a fixed share per
+ * path. Past it the answer is "too-costly" and the caller keeps the path in the scan (fail open). Semantics follow git's own
  * matcher (wildmatch), checked against a table generated from real git
  * (fixtures/gitignore/cases.json). Deliberate differences are listed in ADR-015.
  */
@@ -17,11 +17,14 @@ export const MAX_RULE_BYTES = 1024;
 const MAX_MATCH_STEPS = 1_000_000;
 
 /**
- * Matching work allowed for a whole scan (ADR-015, T-005c): about 2.6 s at worst on a development
- * Mac, so under 10 s on slower CI machines. Once it is spent, the caller applies no more
- * .gitignore rules (fail open).
+ * Matching work allowed for a whole scan (ADR-015, T-005c): at most about 2.3 s on a development
+ * Mac for every tested shape, so under 10 s on slower CI machines. Once it is spent, the caller
+ * applies no more .gitignore rules (fail open).
  */
 export const MAX_SCAN_MATCH_STEPS = 200_000_000;
+
+/** Allocating a DP row costs about as much as this many byte comparisons (measured). */
+const ALLOCATION_STEPS = 8;
 
 /** A scan's remaining matching work, shared by every `isIgnored` call in that scan. */
 export interface MatchBudget {
@@ -270,11 +273,13 @@ export function isIgnored(
   rules: readonly ScopedRule[],
   scan: MatchBudget,
 ): IgnoreDecision {
+  if (rules.length === 0) return "included";
   const budget = { steps: Math.min(MAX_MATCH_STEPS, scan.steps) };
   const before = budget.steps;
   const decision = decide(path, isDirectory, rules, budget);
   scan.steps -= before - budget.steps;
-  return decision;
+  // An answer that spent the scan's last steps is not trusted: the caller keeps the path.
+  return scan.steps <= 0 ? "too-costly" : decision;
 }
 
 function decide(
@@ -284,15 +289,21 @@ function decide(
   budget: { steps: number },
 ): IgnoreDecision {
   const names = path.split("/").map((part) => encoder.encode(part));
-  // Reading the path and trying a rule are work too, charged at about their real cost (measured:
-  // a segment costs about as much as 16 byte comparisons, a rule about 4), so no call is free.
-  budget.steps -= path.length + 16 * names.length;
+  // Reading the path, resolving a base and trying a rule are work too, charged at about their
+  // real cost (measured: a path segment costs about as much as 16 byte comparisons, a rule about
+  // 4), so no call is free.
+  const pathCost = path.length + 16 * names.length;
+  budget.steps -= pathCost;
   // Rules from one .gitignore are adjacent and share a base, so each base is resolved once.
   let lastBase: string | undefined;
   let below: Uint8Array[] | undefined;
-  for (const { base, rule } of rules.toReversed()) {
+  for (let k = rules.length - 1; k >= 0; k--) {
+    const scoped = rules[k];
+    if (scoped === undefined) continue;
+    const { base, rule } = scoped;
     if (base !== lastBase) {
       lastBase = base;
+      budget.steps -= pathCost;
       if (base === "") below = names;
       else below = path.startsWith(`${base}/`) ? names.slice(base.split("/").length) : undefined;
     }
@@ -323,9 +334,11 @@ function matches(
     return false;
   }
   // reach[j]: the rule's segments so far can match the first j path segments.
+  budget.steps -= ALLOCATION_STEPS;
   let reach = new Uint8Array(path.length + 1);
   reach[0] = 1;
   for (const segment of rule.segments) {
+    budget.steps -= ALLOCATION_STEPS;
     const next = new Uint8Array(path.length + 1);
     let alive = false;
     let reachedBefore = false;

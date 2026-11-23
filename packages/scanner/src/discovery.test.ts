@@ -258,6 +258,27 @@ describe("file discovery", () => {
     expect(paths(events)).toContain(`229${"a".repeat(118)}c`);
   }, 60_000);
 
+  // Parsing is paid from the scan's budget too: 70 folders, each with a 64 KiB .gitignore of
+  // one-character rules, spend it on parsing alone. One diagnostic names the .gitignore where
+  // that happened, and later .gitignore files are scanned as plain files, not parsed.
+  it("pays for parsing .gitignore files from the scan's budget, and stops parsing once it is spent", () => {
+    const root = copyFixture();
+    for (let i = 0; i < 70; i++) {
+      const folder = join(root, `d${String(i).padStart(2, "0")}`);
+      mkdirSync(folder);
+      writeFileSync(join(folder, ".gitignore"), "a\n".repeat(32_768));
+      writeFileSync(join(folder, "kept.txt"), "kept");
+    }
+    const events = Array.from(discoverFiles(root));
+    const outOfBudget = diagnosticsOf(events).filter((diagnostic) =>
+      diagnostic.message.startsWith("The scan ran out of its .gitignore matching budget"),
+    );
+    expect(outOfBudget).toHaveLength(1);
+    expect(outOfBudget[0]?.file).toMatch(/^d\d\d\/\.gitignore$/);
+    expect(paths(events)).toContain("d69/.gitignore");
+    expect(paths(events)).toContain("d69/kept.txt");
+  }, 60_000);
+
   it("matches a .gitignore against itself as a file, and folder-only rules never match files", () => {
     const root = copyFixture();
     writeFileSync(join(root, ".gitignore"), "/.gitignore\n");

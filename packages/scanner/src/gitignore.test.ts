@@ -184,6 +184,9 @@ describe("matching work per path is bounded on hostile rules within the caps", (
       longNames,
     ],
     ["a star chunk against a 255-byte name", `*${"a".repeat(127)}b`, longName],
+    ["short anchored x/**", "x/**", "a/b"],
+    ["short anchored */*", "*/*", "a/b"],
+    ["short anchored **/x", "**/x", "a/b"],
   ];
 
   it.each(shapes)("2,000 rules of %s", (_, rule, path) => {
@@ -213,6 +216,21 @@ describe("matching work per path is bounded on hostile rules within the caps", (
     },
     60_000,
   );
+
+  // One .gitignore per folder, each with one rule: every rule needs its own base resolved.
+  it("a whole scan's budget with a .gitignore in each of 400 nested folders takes under 10 s", () => {
+    const rules: ScopedRule[] = Array.from({ length: 400 }, (_, depth) => ({
+      base: Array.from({ length: depth }, () => "a").join("/"),
+      rule: parseIgnoreFile("x/\n").rules[0] ?? fail(),
+    }));
+    const path = `${"a/".repeat(400)}f`;
+    const slice = MAX_SCAN_MATCH_STEPS / 15;
+    const scan = { steps: slice };
+    const start = performance.now();
+    while (scan.steps > 0) isIgnored(path, false, rules, scan);
+    const scaled = ((performance.now() - start) * MAX_SCAN_MATCH_STEPS) / (slice - scan.steps);
+    expect(scaled).toBeLessThan(10_000);
+  }, 60_000);
 
   it("answers too-costly when the budget runs out, rather than guessing", () => {
     const rules = rulesFrom({ "": `*${"a".repeat(127)}b\n`.repeat(2000) });
@@ -244,7 +262,45 @@ describe("matching work per path is bounded on hostile rules within the caps", (
   });
 });
 
+function fail(): never {
+  throw new Error("expected a rule");
+}
+
 describe("the scan-wide budget", () => {
+  it("never answers with the scan's last steps: spending them means too-costly", () => {
+    const rules = rulesFrom({ "": "*.log\n" });
+    const probe = { steps: 1_000_000 };
+    expect(isIgnored("a.log", false, rules, probe)).toBe("ignored");
+    const cost = 1_000_000 - probe.steps;
+    expect(isIgnored("a.log", false, rules, { steps: cost })).toBe("too-costly");
+  });
+
+  it("charges nothing when no .gitignore applies", () => {
+    const scan = { steps: 10 };
+    expect(isIgnored("a/b/c.txt", false, [], scan)).toBe("included");
+    expect(scan.steps).toBe(10);
+  });
+
+  // Sreeram, 2026-11-23: a large real-world .gitignore (300 varied rules) on a 25,000-path
+  // repository never runs out. Bigger ones fail open with one diagnostic.
+  it("never runs out for 300 varied rules on a 25,000-path repository", () => {
+    const lines = Array.from({ length: 60 }, (_, i) => [
+      `*.ext${i}`,
+      `build${i}/`,
+      `/generated/out${i}`,
+      `**/cache${i}`,
+      `src/**/gen${i}.js`,
+    ]).flat();
+    const rules = rulesFrom({ "": `${lines.join("\n")}\n` });
+    expect(rules).toHaveLength(300);
+    const scan = { steps: MAX_SCAN_MATCH_STEPS };
+    for (let i = 0; i < 25_000; i++) {
+      const path = `packages/pkg${i % 50}/src/components/feature${i % 37}/Component${i}.test.tsx`;
+      expect(isIgnored(path, false, rules, scan)).not.toBe("too-costly");
+    }
+    expect(scan.steps).toBeGreaterThan(0);
+  });
+
   it("is paid by every call, and answers too-costly once the scan has no budget left", () => {
     const rules = rulesFrom({ "": "*.log\n" });
     const scan = { steps: 1000 };

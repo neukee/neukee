@@ -27,10 +27,10 @@ One entry per decision that changes architecture, dependencies, schemas, targets
     - Measured on a development Mac, 2,000 rules at the caps: the worst hostile shapes take about 6–10 ms per path, then answer "too-costly". A heavy real-world `.gitignore` (2,000 varied rules) takes about 1.2 ms per path and never reaches the budget.
     - So a hostile repository costs at most about 10 ms per file and folder: about 100 s for 10,000 paths. T-005c adds a scan-wide budget (below).
   - **Work budget per scan (T-005c; Sreeram asked for a worst case under 10 s, fail open with one diagnostic, 2026-11-23):** a whole scan gets **200,000,000 matching steps**, and each path draws its share (at most the per-path 1,000,000) from it.
-    - Reading a path and trying a rule are charged at about their real cost (16 steps per path segment, 4 per rule tried), so a step takes about the same time whatever the rule shape.
-    - Measured on a development Mac, the worst hostile shapes spend the whole budget in about 2.6 s, leaving room under 10 s for slower CI machines. A test scales a slice of each shape up to the full budget.
-    - Once the budget is spent, the rest of the scan applies no `.gitignore` rules (fail open), and one diagnostic names the path where it ran out.
-    - A typical 15-rule `.gitignore` uses under half the budget on 100,000 paths. An extreme 2,000-rule one runs out after roughly 6,700 paths.
+    - Every piece of work is charged at about its measured cost: reading the path and resolving each `.gitignore` base (path length plus 16 per segment), each rule tried (4), each DP row allocated (8), and parsing each `.gitignore` (2 per byte plus 96 per rule line).
+    - Measured on a development Mac, every tested shape spends the whole budget in 1.2–2.3 s. The shapes are T-005a's hostile ones plus short anchored rules, one `.gitignore` in each of 400 nested folders, and `!*` as the last rule. That leaves room under 10 s for slower CI machines. A test scales a slice of each shape up to the full budget.
+    - Once the budget is spent, the rest of the scan applies no `.gitignore` rules and parses no more `.gitignore` files (fail open), and one diagnostic names the path where it ran out.
+    - **The bar (Sreeram, 2026-11-23):** a large real-world `.gitignore` of 300 varied rules never runs out on a 25,000-path repository (measured: it lasts 27,808 paths). A typical 15-rule file never runs out on 100,000 paths. An extreme 2,000-rule file runs out after about 4,400 paths and then fails open.
   - **Symlinks are never followed**, inside or outside the root. Each one is reported as skipped with a diagnostic. This is simplest and safest for v0.1, and can be revisited after launch.
   - **Deliberate differences from git:**
     - POSIX classes (`[[:digit:]]`) aren't supported: any `[:` inside a class drops the rule with a problem (even `[[:x]`, which git reads as a plain class), and the file stays in the scan;
