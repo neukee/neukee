@@ -103,6 +103,13 @@
 
 After T-005b and T-005c: one runtime finding all the way to the terminal. Goal: by **Saturday, Nov 28**, `neukee scan` runs on a real public repository and prints a real finding. Each task is scoped to what the path needs; the remaining detectors (Phase 1), then JSON and SARIF (T-032), follow in their existing order. Same gates on every task.
 
+Guardrails (Sreeram, 2026-11-23):
+
+- T-014 and T-030 are built to their full interfaces in `docs/ARCHITECTURE.md`, implementing only what this path needs. Nothing a later task has to undo.
+- Saturday is a target, not a deadline. If a gate fails, the date moves.
+- Every finding on a real repository must be one its maintainer would agree with. Each false positive and false negative goes in `docs/VALIDATION.md`, with the repository and commit.
+- The thin path's output is internal. Nothing is published until the launch scope is done.
+
 ### T-010 · Runtime sources: version files and package.json
 
 - Status: todo

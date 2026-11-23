@@ -14,8 +14,8 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 - **In progress:** T-005a (PR #9) and T-005b (PR #8), foundational (Opus).
 - **Exact next step (Sreeram's decisions of 2026-11-23 evening, ADR-016 and ADR-017):**
   1. Done: PR #9 (T-005a) squash-merged as `0a4fa24` (reviewer on Opus: PASS at `4a756b9`; CodeRabbit approved `4a756b9`; size of 359 lines accepted by Sreeram).
-  2. PR #8 (T-005b) at `64eb285`: reviewer (Opus) PASS at `64eb285`, quoted in the PR. Its CHANGES REQUIRED on `a4bd3c0` was fixed. Waiting for CI and CodeRabbit on `64eb285`, then merge under Sreeram's approval.
-  3. Then T-005c (scan-wide matching budget, Opus; consider the depth cap in REVIEW-QUEUE). After it, the thin end-to-end path T-010 → T-014 → T-030 → T-031 → T-033 (TASKS Phase 1a). Goal: by Sat Nov 28, `neukee scan` prints a real finding on a real public repo.
+  2. PR #8 (T-005b): reviewer PASS at `64eb285` (Opus) and `820af31` (Sonnet, a linked `.git` now reported). `77ba1a7` (the Windows fallback test now runs where file links can be made) is under review. Then CodeRabbit, then merge under Sreeram's approval.
+  3. T-005c (scan-wide matching budget) is built on `t-005c-scan-budget` (`f83d6f2`, 567 tests green, worst case about 2.6 s): open its PR once #8 merges, then review it on Opus. The depth cap in REVIEW-QUEUE is still Sreeram's call. After it, the thin end-to-end path T-010 → T-014 → T-030 → T-031 → T-033 (TASKS Phase 1a). Goal: by Sat Nov 28, `neukee scan` prints a real finding on a real public repo.
   4. After T-005b merges: Sreeram runs `/checkpoint`. If still more than 3 days behind, propose moving launch to Tue Dec 15 rather than cutting validation.
   5. GitHub presence kit: drop "Vercel, Netlify, Serverless and AWS SAM config" from the README runtime row and add deployment config to the post-launch roadmap line.
   6. Done 2026-11-23: settings turned off for this project only (see the daily log).
