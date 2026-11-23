@@ -4,35 +4,35 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-23, evening IST (Sreeram's decisions applied: ADR-016, ADR-017)
-- **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23). The session ended with nothing uncommitted.
+- **Last updated:** 2026-11-23, 21:05 IST (`/wrap`).
+- **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23). The session ended with nothing uncommitted in any checkout.
+- **Note:** until PR #10 merges, this file is current only on `docs-sync/2026-11-23`, in the worktree `../neukee-wt/docs-sync`. The wrap commit there is local (not pushed). Sreeram approved PR #10; push it and merge it under the docs-only rule.
 - **Branches:**
-  - `t-005a-gitignore` (PR #9) pushed at `74ba0ef`. `pnpm verify` green (517 tests).
-  - `t-005-file-discovery` (PR #8) local at `70b053d`, 14 commits ahead of the PR, which still shows Copilot's version. Green at its last commit (542 tests).
-  - `docs-sync/2026-11-23`: today's tracking docs, rules (ADR-016) and scope (ADR-017). Merged at `/wrap`.
-- **Last finished:** T-004 (PR #7, built by Copilot, merged). T-005a meets its done-when; it is in review.
-- **In progress:** T-005a (PR #9) and T-005b (PR #8), foundational (Opus).
-- **Exact next step (Sreeram's decisions of 2026-11-23 evening, ADR-016 and ADR-017):**
-  1. Done: PR #9 (T-005a) squash-merged as `0a4fa24` (reviewer on Opus: PASS at `4a756b9`; CodeRabbit approved `4a756b9`; size of 359 lines accepted by Sreeram).
-  2. Done: PR #8 (T-005b) squash-merged as `43767f3`. Reviewer PASS at head `77ba1a7`; CodeRabbit approved `77ba1a7`. The no-`O_NOFOLLOW` test ran and passed on Windows CI.
-  3. PR #11 (T-005c, scan-wide matching budget) is open at `73ad041`, with the reviewer (Opus) running. Merge under standing approval when every condition holds. Then the thin end-to-end path (TASKS Phase 1a), starting with T-010.
-  4. Sreeram runs `/checkpoint` now that T-005b has merged (decision 10).
-     If `/checkpoint` shows more than 3 days behind, propose moving launch to Tue Dec 15 rather than cutting validation.
-  5. GitHub presence kit:
-     - PR #12 is open (kit plus the README change from ADR-017, plus `.github/copilot-instructions.md`); it merges under the advance approval.
-     - Labels `catalog` and `false positive` created. Repo description, topics, private vulnerability reporting, vulnerability alerts and automated security fixes set and confirmed.
-     - https://github.com/neukee/.github created.
-     - `Venu2328/Venu2328` already exists, with its own README, `assets/`, `tools/`, `.github/` and 19 commits, so it was not touched. Waiting for Sreeram: replace it with the kit's README, merge the two, or leave it.
-     - The `pnpm audit` advisories are logged in REVIEW-QUEUE.
-  6. Done 2026-11-23: settings turned off for this project only (see the daily log).
+  - `main` at `5a2e672`: T-005a (#9), T-005b (#8) and the GitHub presence kit (#12) are merged. `pnpm verify` is green (550 tests).
+  - `t-005c-scan-budget` at `353a33f` (PR #11), in the worktree `../neukee-wt/t005c`.
+  - `docs-sync/2026-11-23` (PR #10): ADR-016, ADR-017 and ADR-018, the CLAUDE.md rules, the reviewer on Sonnet, TASKS Phase 1a, BRIEF §5 and §6.
+- **Last finished:** T-005b (file discovery), merged as `43767f3`.
+- **In progress:** T-005c (scan-wide matching budget), foundational (Opus), PR #11.
+- **Exact next step:** fix the reviewer's CHANGES REQUIRED on `353a33f`, then re-run it (Opus) on the fix commit only:
+  1. **must-fix:** the parse charge (`2·bytes + 96·rules`, `discover.ts`) is far too low for lines with many segments. Parsing costs about 250 ns per `/`.
+     - Measured: lines of 500 × `a/` take 17.5 s to spend the budget on parsing alone. 1,600 folders with 64 KiB `.gitignore` files took 21.7 s end to end.
+     - Fix: charge about 40 steps per byte, or per `/` plus per class range. Add a scaled parse test (slash runs, segments, class ranges) like the matching ones.
+  2. **must-fix:** then correct ADR-015 ("every piece of work is charged at about its measured cost", "1.2–2.3 s") to the measured numbers.
+  3. **nits:** ADR-015 should say the 300-rule pin counts files only (real scans also charge folders); wrap `gitignore.ts` line 5 (about 125 characters).
+  4. Then CodeRabbit, and merge under standing approval.
+  5. After T-005c: the thin end-to-end path T-010 → T-014 → T-030 → T-031 → T-033 (TASKS Phase 1a, with its guardrails). Target: by Sat Nov 28, `neukee scan` prints a real finding on a real public repo.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
-  - After T-005 merges, run `/checkpoint` before the next task and report the pace against the Dec 7 checkpoint.
   - Report progress at every 10% of the work in hand, against a stated step list (2026-11-23).
+  - Report overall MVP progress as launch tasks done out of 28 (7 done: 25%).
 - **Blocked / waiting on Sreeram:**
+  - Run `/checkpoint` (T-005b has merged; decision 10). If it shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation.
+  - Personal profile `Venu2328/Venu2328`: he asked for both profiles to look top-tier, styled from the brand. The org profile (github.com/neukee) is done. For the personal profile, the plan is a PR on his repo that adds Neukee through its own `tools/build_assets.py`, without replacing the SciPhyLabs content. Not started.
+  - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio (kit README, Step 2).
+  - REVIEW-QUEUE: the residual file-read and listing races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories (dev-only); the T-005b nit on path ordering; `realpathSync` cost on deep trees (outside T-005c).
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (14 days). Launch Tuesday, Dec 8 (15 days). 23 tasks to launch after ADR-017 (T-005b to T-055, plus T-005c): about 1.6 a day needed. If `/checkpoint` after T-005b shows more than 3 days behind, the fallback is launch on Tue Dec 15.
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (14 days). Launch Tuesday, Dec 8 (15 days). 21 launch tasks remain (7 of 28 done): about 1.5 a day needed. Today 2 merged, with a third in review.
 
 ## Dated checkpoints
 
@@ -74,18 +74,41 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
 One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+). Sreeram's hours only when he gives them.
 
-| Date       | Task   | Size | Claude sessions | Sreeram hours | Result    | Note                                                                                                                                   |
-| ---------- | ------ | ---- | --------------- | ------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-18 | T-000  | M    | 1               | —             | done      | Scaffold; verify green                                                                                                                 |
-| 2026-11-22 | T-001  | S    | 0               | —             | done      | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI                                                                |
-| 2026-11-22 | T-002  | M    | 1               | —             | done      | Schema + validator; reviewer 1 must-fix + 4 should-fix; ~8 CodeRabbit rounds; 3 changes from Sreeram before merge                      |
-| 2026-11-22 | T-003  | S    | 1               | —             | done      | Catalog loader + first entry; reviewer 3 must-fix + 5 should-fix, all fixed                                                            |
-| 2026-11-22 | T-004  | S    | 1               | —             | done      | Harness, golden reports, dependency rule                                                                                               |
-| 2026-11-23 | T-005a | L    | 1               | —             | in review | Copilot's T-005 matcher replaced. Reviewer: CHANGES REQUIRED (speed at the caps), fixed. 4 CodeRabbit findings fixed. PR #9 not merged |
+| Date       | Task   | Size | Claude sessions | Sreeram hours | Result | Note                                                                                                                                                                                                                       |
+| ---------- | ------ | ---- | --------------- | ------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-18 | T-000  | M    | 1               | —             | done   | Scaffold; verify green                                                                                                                                                                                                     |
+| 2026-11-22 | T-001  | S    | 0               | —             | done   | Sreeram: repo, ruleset, CODEOWNERS; PR #1 also fixed CRLF on Windows CI                                                                                                                                                    |
+| 2026-11-22 | T-002  | M    | 1               | —             | done   | Schema + validator; reviewer 1 must-fix + 4 should-fix; ~8 CodeRabbit rounds; 3 changes from Sreeram before merge                                                                                                          |
+| 2026-11-22 | T-003  | S    | 1               | —             | done   | Catalog loader + first entry; reviewer 3 must-fix + 5 should-fix, all fixed                                                                                                                                                |
+| 2026-11-22 | T-004  | S    | 1               | —             | done   | Harness, golden reports, dependency rule                                                                                                                                                                                   |
+| 2026-11-23 | T-005a | L    | 1               | —             | done   | Copilot's T-005 matcher replaced; tested against real git (103 cases). Reviewer: 2 rounds of CHANGES REQUIRED (speed at the caps), then PASS. 4 CodeRabbit findings fixed. 359 lines accepted. PR #9                       |
+| 2026-11-23 | T-005b | L    | 1               | —             | done   | Copilot's discovery reworked on T-005a: single-handle reads, symlinks never followed, races tested. Reviewer: CHANGES REQUIRED (untested Windows path), then PASS on each later commit. 2 CodeRabbit findings fixed. PR #8 |
 
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
+
+### 2026-11-23 (evening) · Sreeram's decisions applied; T-005a and T-005b merged; GitHub presence live
+
+- **Decisions from Sreeram:**
+  - ADR-016: standing merge approval under conditions; two tasks in flight; a daily docs-sync PR; the reviewer on Sonnet, with Opus for foundational reviews. Also: any commit after a reviewer PASS gets its own review, and changes to `CLAUDE.md` or `.claude/` always need his explicit approval.
+  - ADR-017: scope trim (T-013, T-035, T-036 post-launch; T-027 to the strategy chat; T-005c added), the thin end-to-end path first, with its guardrails, and Dec 15 as the fallback.
+  - ADR-018: the lead offer, audit pricing, pitch pillars, proof before claims, and the market stance (BRIEF §5 and §6).
+  - Accepted 359 source lines on PR #9, confirmed the 1,000,000-step per-path budget, and set T-005c's bar at 300 rules on 25,000 paths.
+- **Merged:**
+  - T-005a (#9, `0a4fa24`) and T-005b (#8, `43767f3`), both reviewed on Opus with every later commit re-reviewed. The Windows fallback test was confirmed to run on Windows CI.
+  - The GitHub presence kit (#12, `5a2e672`), with the README's runtime row trimmed per ADR-017 and `.github/copilot-instructions.md` added.
+- **GitHub:**
+  - labels `catalog` and `false positive`;
+  - repo description, topics, private vulnerability reporting, vulnerability alerts and automated security fixes, all confirmed;
+  - https://github.com/neukee/.github created, and its profile redesigned (banner, badges, what the scanner is built to find, trust principles, honest pre-release status).
+- **T-005c (#11):** the scan-wide budget. The first Opus review found free work (base resolution, row allocation, parsing). Most of it is fixed; the parse charge for many-segment lines is still open (see Resume here).
+- **Settings (decision 8):** 20 plugins and 19 claude.ai connectors turned off for this project only. Account-wide, Supabase and Vercel stay on.
+- **Sreeram said to remember:**
+  - Report progress at every 10% of the work.
+  - Report MVP progress as launch tasks done out of 28.
+  - Every real-repo finding must be one its maintainer would agree with, logged in VALIDATION.md.
+  - The thin path's output is internal until the launch scope is done.
 
 ### 2026-11-23 · T-005 reworked as T-005a and T-005b; both nearly through review
 
