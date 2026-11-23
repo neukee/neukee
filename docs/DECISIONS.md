@@ -63,6 +63,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - **Model routing:** the reviewer subagent defaults to Sonnet. Foundational reviews (hostile-input parsing: T-005b, T-005c, T-015, T-016, T-021) pass Opus explicitly. The reviewer's scope is the diff, the task and the spec sections it touches.
   - **Rule changes need explicit approval:** changes to `CLAUDE.md` or anything under `.claude/` (agents, skills, hooks, settings) always need Sreeram's explicit approval, even in a docs-only or docs-sync PR. He approved the rule changes in PR #10, all requested on 2026-11-23.
 - **Consequences:** CLAUDE.md ("How to work", "Merging") and `.claude/agents/reviewer.md` carry these rules. This amends ADR-010: merges no longer wait for Sreeram when the conditions hold.
+
 ## ADR-015 · Our own .gitignore matcher; caps; symlinks never followed (2026-11-23)
 
 - **Context:**
