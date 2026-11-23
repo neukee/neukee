@@ -61,7 +61,7 @@
 
 ### T-005a · .gitignore matcher
 
-- Status: in review (PR #9)
+- Status: done (PR #9, `0a4fa24`)
 - Depends on: T-004
 - Human review: no
 - Build: `packages/scanner/src/gitignore.ts`. It parses a `.gitignore` into rules once and matches repo-relative paths, with git's semantics for wildcards, classes, escapes, negation, directory-only, anchored and `**` rules, and nesting. It builds no regular expressions from rule text, and its work per path is capped by a step budget (past it: "too-costly", fail open). Lines over 1 KiB, POSIX classes, unclosed classes and trailing backslashes are dropped as problems (fail open). ADR-015.
@@ -72,7 +72,7 @@
 
 ### T-005b · File discovery
 
-- Status: in review (PR #8)
+- Status: done (PR #8, `43767f3`)
 - Depends on: T-005a
 - Human review: no
 - Build: walk the repo:
@@ -90,7 +90,7 @@
 
 ### T-005c · Scan-wide matching budget
 
-- Status: todo
+- Status: in review (PR #11)
 - Depends on: T-005b
 - Human review: no
 - Build: foundational (Opus). On top of ADR-015's budget of 1,000,000 steps per path, cap the `.gitignore` matching work for the whole scan. Once it is spent, the rest of the scan applies no `.gitignore` rules (fail open), with one diagnostic. Sreeram, 2026-11-23.
