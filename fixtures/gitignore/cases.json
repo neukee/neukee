@@ -814,6 +814,60 @@
       "ignored": false
     },
     {
+      "name": "trailing star matches nothing",
+      "files": {
+        "": "foo*\n"
+      },
+      "path": "foo",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "class members in any order",
+      "files": {
+        "": "[zab].txt\n"
+      },
+      "path": "a.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "open bracket inside a class",
+      "files": {
+        "": "[[a].txt\n"
+      },
+      "path": "[.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "colon inside a class",
+      "files": {
+        "": "[a:].txt\n"
+      },
+      "path": ":.txt",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "escaped space then a trailing space",
+      "files": {
+        "": "foo\\  \n"
+      },
+      "path": "foo ",
+      "isDirectory": false,
+      "ignored": true
+    },
+    {
+      "name": "a rule matching only a parent, after a re-include",
+      "files": {
+        "": "a/**/b\n!a/b\n"
+      },
+      "path": "a/b/c",
+      "isDirectory": false,
+      "ignored": false
+    },
+    {
       "name": "three stars as a whole segment are a globstar",
       "files": {
         "": "***/a\n"

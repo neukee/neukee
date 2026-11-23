@@ -102,6 +102,12 @@ const CASES = [
   ["case-sensitive", { "": "*.LOG\n" }, "a.log", false],
   ["last match wins", { "": "!a.txt\na.txt\n" }, "a.txt", false],
   ["no rules", { "": "" }, "a.txt", false],
+  ["trailing star matches nothing", { "": "foo*\n" }, "foo", false],
+  ["class members in any order", { "": "[zab].txt\n" }, "a.txt", false],
+  ["open bracket inside a class", { "": "[[a].txt\n" }, "[.txt", false],
+  ["colon inside a class", { "": "[a:].txt\n" }, ":.txt", false],
+  ["escaped space then a trailing space", { "": "foo\\  \n" }, "foo ", false],
+  ["a rule matching only a parent, after a re-include", { "": "a/**/b\n!a/b\n" }, "a/b/c", false],
   ["three stars as a whole segment are a globstar", { "": "***/a\n" }, "x/y/a", false],
   ["three-star segment matches zero folders", { "": "***/a\n" }, "a", false],
   ["negation through a three-star segment", { "": "*.log\n!***/keep.log\n" }, "keep.log", false],
@@ -138,7 +144,8 @@ function ask(files, path, isDirectory) {
     if (isDirectory) mkdirSync(join(repo, path), { recursive: true });
     else writeFileSync(join(repo, path), "");
     try {
-      git(repo, "check-ignore", "-q", "--no-index", "--", path);
+      // "./" keeps a leading ":" from being read as pathspec magic.
+      git(repo, "check-ignore", "-q", "--no-index", "--", `./${path}`);
       return true;
     } catch (error) {
       if (error.status === 1) return false;
