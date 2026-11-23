@@ -161,13 +161,14 @@ function* walk(
       yield { type: "diagnostic", diagnostic: { level: "warning", message: INVALID_PATH } };
       continue;
     }
-    if (entry.name === ".git" || (entry.isDirectory() && SKIP_DIRECTORIES.has(entry.name)))
-      continue;
+    // Links first, so a linked .git or node_modules is reported like any other link (ADR-015).
     if (entry.isSymbolicLink()) {
       yield { type: "skipped" };
       yield warning("Skipped a symbolic link: the scanner never follows links.", path);
       continue;
     }
+    if (entry.name === ".git" || (entry.isDirectory() && SKIP_DIRECTORIES.has(entry.name)))
+      continue;
     const absolutePath = join(absoluteDirectory, entry.name);
     if (entry.isDirectory()) {
       if (!(yield* ignored(path, true, rules, scan))) {

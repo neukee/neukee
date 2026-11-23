@@ -297,6 +297,26 @@ describe("file discovery", () => {
     ]);
   });
 
+  it("reports a .git or generated folder that is a symlink, like any other link", () => {
+    const root = copyFixture();
+    symlinkSync(join(root, "nested"), join(root, ".git"), "junction");
+    symlinkSync(join(root, "nested"), join(root, "node_modules"), "junction");
+    const events = Array.from(discoverFiles(root));
+    expect(events.filter((event) => event.type === "skipped")).toHaveLength(2);
+    expect(diagnosticsOf(events)).toEqual([
+      {
+        level: "warning",
+        message: "Skipped a symbolic link: the scanner never follows links.",
+        file: ".git",
+      },
+      {
+        level: "warning",
+        message: "Skipped a symbolic link: the scanner never follows links.",
+        file: "node_modules",
+      },
+    ]);
+  });
+
   it("skips and reports a symlink even when it points inside the repo", () => {
     const root = copyFixture();
     symlinkSync(join(root, "nested"), join(root, "inside-link"), "junction");
