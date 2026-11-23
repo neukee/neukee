@@ -70,6 +70,10 @@ describe("fixture harness", () => {
 
   // Golden reports live in fixtures/expected/<name>.json. Changing one needs a reason in the
   // commit message and PROGRESS (CLAUDE.md); CI never writes them.
+  it("matches the golden report for the discovery repo", async () => {
+    await matchGolden("discovery", scanFixture("discovery"));
+  });
+
   it("matches the golden report for the empty repo", async () => {
     await matchGolden("empty", scanFixture("empty"));
   });

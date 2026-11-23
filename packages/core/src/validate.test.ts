@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { Diagnostic, Finding, Location, ScanReport, Target } from "./index.js";
-import { validateReport } from "./index.js";
+import { isRepoPath, validateReport } from "./index.js";
 import {
   type SchemaNode,
   SUPPORTED_FORMATS,
@@ -115,6 +115,13 @@ describe("validateReport: valid reports", () => {
     "my dir/a b.ts",
   ])("accepts the real repo path %j", (file) => {
     expect(validateReport(changed(["findings", 0, "locations", 0, "file"], file)).valid).toBe(true);
+  });
+
+  it("isRepoPath checks a path with the report schema's RepoPath pattern", () => {
+    for (const ok of ["a.ts", ".github/workflows/ci.yml", "app/[...slug]/page.tsx"])
+      expect(isRepoPath(ok)).toBe(true);
+    for (const bad of ["/abs", "../up", "a\\b", "bad\u202ename", "a//b", ""])
+      expect(isRepoPath(bad)).toBe(false);
   });
 
   it.each([

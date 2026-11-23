@@ -1,11 +1,15 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { validateReport } from "@neukee/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { scan } from "./index.js";
 
 const tool = { name: "neukee", version: "1.2.3" };
+const discoveryFixture = fileURLToPath(
+  new URL("../../../fixtures/repos/discovery/", import.meta.url),
+);
 const roots: string[] = [];
 afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -37,5 +41,17 @@ describe("scan", () => {
     writeFileSync(join(root, "file.txt"), "x");
     expect(() => scan(join(root, "file.txt"), [], tool)).toThrow(/file\.txt is not a folder/);
     expect(() => scan(join(root, "missing"), [], tool)).toThrow(/missing is not a folder/);
+  });
+
+  it("reports the number of files discovered and skipped", () => {
+    const report = scan(discoveryFixture, [], tool);
+    expect(report.stats).toEqual({ filesScanned: 8, filesSkipped: 0 });
+  });
+
+  it("reports files skipped for exceeding the size limit", () => {
+    const root = tempRepo();
+    writeFileSync(join(root, "over-limit.bin"), Buffer.alloc(1024 * 1024 + 1));
+    const report = scan(root, [], tool);
+    expect(report.stats).toEqual({ filesScanned: 0, filesSkipped: 1 });
   });
 });

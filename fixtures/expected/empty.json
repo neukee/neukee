@@ -14,7 +14,7 @@
   "findings": [],
   "diagnostics": [],
   "stats": {
-    "filesScanned": 0,
+    "filesScanned": 1,
     "filesSkipped": 0
   }
 }
