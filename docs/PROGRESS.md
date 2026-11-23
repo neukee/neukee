@@ -18,7 +18,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   3. T-005c (scan-wide matching budget, Opus) is the next task to build while #8 is in review.
   4. After T-005b merges: Sreeram runs `/checkpoint`. If still more than 3 days behind, propose moving launch to Tue Dec 15 rather than cutting validation.
   5. GitHub presence kit: drop "Vercel, Netlify, Serverless and AWS SAM config" from the README runtime row and add deployment config to the post-launch roadmap line.
-  6. Settings: turn off, at project level only, the MCP servers and plugins this project hasn't used. Supabase and Vercel stay on account-wide. Show the final list.
+  6. Done 2026-11-23: settings turned off for this project only (see the daily log).
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
@@ -103,12 +103,11 @@ Sreeram's notes and each session's summary. Newest first.
 - **Sreeram said to remember:**
   - Report progress at every 10% of the work.
   - Start sessions with `git status`, then `/status`, and reconcile uncommitted work before `/next`.
-- **Settings request, investigated, nothing changed yet:**
-  - The only custom subagent is `reviewer` (`.claude/agents/reviewer.md`). It sets no model, so it inherits Opus: 5 runs at about 2–5 million tokens each. Candidate: `model: sonnet`, with Opus passed explicitly for foundational reviews.
-  - The built-in `web-fetch` already runs on Haiku.
-  - MCP calls in the last 30 days: only claude.ai Supabase (54) and claude.ai Vercel (22). `playwright` was last used Sep 6; no other server was called.
-  - Most servers come from claude.ai: account connectors, and plugins synced from the claude.ai plugin directory. Local `enabledPlugins` lists only 8 plugins.
-  - The check of Claude Code's docs for per-server switches was cut off by the 5-hour usage limit. Redo it, then show each change for approval.
+- **Settings (Sreeram's decision 8), done for this project only:**
+  - 20 plugins turned off in `.claude/settings.local.json` (`claude plugin disable --scope local`), and 19 claude.ai connectors in this project's `disabledMcpServers` (what `/mcp disable` writes). Neither file is committed; the full list went to Sreeram in the session.
+  - Account-wide settings are unchanged: Supabase and Vercel stay on for other projects. `typescript-lsp` stays on here.
+  - Usage evidence: no plugin skill, plugin agent or MCP tool was used in this project's transcripts.
+  - Reviewer model: `model: sonnet` in `.claude/agents/reviewer.md`, with Opus for foundational reviews (ADR-016). The built-in `web-fetch` already runs on Haiku.
 - **Pace:** T-005 has taken about 1.5 days and isn't merged. 26 tasks remain to T-055 in 14 days (about 1.9 a day needed; recent pace about 1–1.5). Options for Sreeram:
   - A: approve the speedrun proposals (standing merge approval under conditions, parallel worktrees per wave);
   - B: move more tasks to the post-launch phase, or move the Dec 7 checkpoint.
