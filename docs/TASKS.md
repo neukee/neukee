@@ -99,7 +99,9 @@
   - [ ] Running out of the scan budget keeps the rest of the files in the scan and reports exactly one diagnostic.
   - [ ] A heavy real-world `.gitignore` on a large repository never runs out of the scan budget.
 
-## Phase 1 — Detectors
+## Phase 1a — Thin end-to-end path (Sreeram, 2026-11-23)
+
+After T-005b and T-005c: one runtime finding all the way to the terminal. Goal: by **Saturday, Nov 28**, `neukee scan` runs on a real public repository and prints a real finding. Each task is scoped to what the path needs; the remaining detectors (Phase 1), then JSON and SARIF (T-032), follow in their existing order. Same gates on every task.
 
 ### T-010 · Runtime sources: version files and package.json
 
@@ -110,13 +112,49 @@
 - Done when:
   - [ ] Fixtures cover each source and each odd format; every declared version comes back with its file and line.
 
+### T-014 · Runtime findings
+
+- Status: todo
+- Depends on: T-010
+- Human review: no
+- Build: Node release data (not under `catalog/`, where every `*.yaml` is an entry, ADR-014; for example `packages/core/data/node-releases.yaml`) with each Node major's end-of-life date (source: the official Node.js release schedule). Findings: `runtime/below-target`, `runtime/sources-disagree`, `runtime/end-of-life`.
+- Scope (thin path, 2026-11-23): works from T-010's sources. Dockerfile (T-011) and GitHub Actions (T-012) sources plug in later.
+- Done when: a fixture where `.nvmrc` says 24 but `package.json` `engines.node` says 20 produces `sources-disagree` pointing at both lines.
+
+### T-030 · Report assembly
+
+- Status: todo
+- Depends on: T-014
+- Human review: no
+- Build: run the detectors that exist, deduplicate, sort deterministically, compute stats, attach diagnostics. Scope (thin path, 2026-11-23): runtime findings first; framework-rule findings join when T-019 lands.
+- Done when: scanning the same fixture twice gives byte-identical JSON (except `scannedAt`).
+
+### T-031 · Terminal and markdown renderers
+
+- Status: todo
+- Depends on: T-030
+- Human review: no
+- Note: any text that came from the scanned repo (paths in diagnostics, version strings, package names) is untrusted. Neutralise control and bidi-override characters and escape markdown before rendering.
+- Done when: snapshot tests for both formats on three fixture repos; markdown renders correctly on GitHub (paste into a test PR once).
+
+### T-033 · CLI
+
+- Status: todo
+- Depends on: T-031
+- Human review: no
+- Build: `neukee scan` with the options in `docs/SPEC-SCANNER.md` §1 except the JSON and SARIF formats, which T-032 adds (thin path, 2026-11-23), exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
+- Note: the report has no timing (ADR-011: only `scannedAt` varies). Timing can return later behind an opt-in flag (for example `--timing`, printed to stderr or as a separate field added under the compatibility policy). It is never part of the default output.
+- Done when: e2e tests run the built CLI as a child process on fixtures and check output and exit codes.
+
+## Phase 1 — Detectors
+
 ### T-011 · Runtime sources: Dockerfiles
 
 - Status: todo
 - Depends on: T-010
 - Human review: no
 - Build: All `Dockerfile*` files; `FROM node:<tag>` incl. `--platform=…`, `AS stage`, digests (`node:22@sha256:…`), `ARG`-based tags (report as unresolved).
-- Done when: fixtures for multi-stage, platform flag, digest and ARG cases pass.
+- Done when: its sources join T-014's findings: a fixture where `.nvmrc` says 24 but the Dockerfile says 20 produces `sources-disagree` pointing at both lines. Also: fixtures for multi-stage, platform flag, digest and ARG cases pass.
 
 ### T-012 · Runtime sources: GitHub Actions
 
@@ -125,14 +163,6 @@
 - Human review: no
 - Build: `.github/workflows/*.yml`: `actions/setup-node` steps' `node-version` (incl. matrix references) and `node-version-file`.
 - Done when: fixtures with a matrix `[20, 22]`, a literal and a version file pass.
-
-### T-014 · Runtime findings
-
-- Status: todo
-- Depends on: T-011, T-012
-- Human review: no
-- Build: Node release data (not under `catalog/`, where every `*.yaml` is an entry, ADR-014; for example `packages/core/data/node-releases.yaml`) with each Node major's end-of-life date (source: the official Node.js release schedule). Findings: `runtime/below-target`, `runtime/sources-disagree`, `runtime/end-of-life`.
-- Done when: a fixture where `.nvmrc` says 24 but the Dockerfile says 20 produces `sources-disagree` pointing at both lines.
 
 ### T-015 · Lockfile: package-lock.json
 
@@ -196,38 +226,13 @@
 
 ## Phase 2 — Output and CLI
 
-### T-030 · Report assembly
-
-- Status: todo
-- Depends on: T-014, T-019
-- Human review: no
-- Build: run all detectors, deduplicate, sort deterministically, compute stats, attach diagnostics.
-- Done when: scanning the same fixture twice gives byte-identical JSON (except `scannedAt`).
-
-### T-031 · Terminal and markdown renderers
-
-- Status: todo
-- Depends on: T-030
-- Human review: no
-- Note: any text that came from the scanned repo (paths in diagnostics, version strings, package names) is untrusted. Neutralise control and bidi-override characters and escape markdown before rendering.
-- Done when: snapshot tests for both formats on three fixture repos; markdown renders correctly on GitHub (paste into a test PR once).
-
 ### T-032 · JSON and SARIF
 
 - Status: todo
-- Depends on: T-030
+- Depends on: T-030, T-033 (adds `--format json` and `--format sarif` to the CLI)
 - Human review: no
 - Note: findings may have no `locations` (repo-wide). Check whether GitHub code scanning needs a location on every SARIF result; if it does, use a documented fallback (for example the manifest that declared the version). Set `run.columnKind: "utf16CodeUnits"` explicitly, to match the report's columns (ADR-011).
 - Done when: JSON output validates against the schema; SARIF validates against the SARIF 2.1.0 schema (vendored copy) and uploads cleanly in a test repo (manual check, note it in PROGRESS).
-
-### T-033 · CLI
-
-- Status: todo
-- Depends on: T-031, T-032
-- Human review: no
-- Build: `neukee scan` with all options in `docs/SPEC-SCANNER.md` §1, exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
-- Note: the report has no timing (ADR-011: only `scannedAt` varies). Timing can return later behind an opt-in flag (for example `--timing`, printed to stderr or as a separate field added under the compatibility policy). It is never part of the default output.
-- Done when: e2e tests run the built CLI as a child process on fixtures and check output and exit codes.
 
 ## Phase 4 — Validation and launch
 
