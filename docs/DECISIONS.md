@@ -24,7 +24,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - **Standing merge approval** for every task PR when all of these hold:
     - the 4 verify jobs and the quality job are green;
     - CodeRabbit reviewed the latest commit and every thread is resolved;
-    - the reviewer's verdict is quoted in the PR, with the SHA it reviewed;
+    - the reviewer's verdict is quoted in the PR, with the SHA it reviewed, and that SHA is the head: any commit after a PASS gets its own reviewer run on just those commits (Sonnet, or Opus if they touch matching logic), and the new verdict is quoted with the new head SHA (Sreeram, 2026-11-23);
     - the four-line check shows no core type or schema change, no new dependency, and no CI, workflow, permission or security-model change.
       Anything else: stop and ask. Squash-merge with the PR title in Conventional Commits form.
   - **At most two tasks in flight:** one building and one in review, in separate worktrees. Never two building at once.
