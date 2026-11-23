@@ -139,7 +139,7 @@ function* walk(
         // either (fail open).
         rules = [];
         yield warning(
-          `This .gitignore was not applied: it would put more than ${MAX_RULES_IN_FORCE} rules in force, so no .gitignore rules apply in this folder or below.`,
+          `This .gitignore was not applied: it would put more than ${MAX_RULES_IN_FORCE} rules in force, so rules from parent folders no longer apply here or below.`,
           path,
         );
       } else {
@@ -156,8 +156,8 @@ function* walk(
       yield { type: "skipped" };
       yield warning(
         result.kind === "too-large"
-          ? "This .gitignore is larger than 64 KiB, so no .gitignore rules apply in this folder or below."
-          : "This .gitignore could not be read safely, so no .gitignore rules apply in this folder or below.",
+          ? "This .gitignore is larger than 64 KiB, so rules from parent folders no longer apply here or below."
+          : "This .gitignore could not be read safely, so rules from parent folders no longer apply here or below.",
         path,
       );
     }

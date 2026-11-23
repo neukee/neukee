@@ -177,7 +177,7 @@ describe("file discovery", () => {
       {
         level: "warning",
         message:
-          "This .gitignore is larger than 64 KiB, so no .gitignore rules apply in this folder or below.",
+          "This .gitignore is larger than 64 KiB, so rules from parent folders no longer apply here or below.",
         file: ".gitignore",
       },
     ]);
@@ -197,7 +197,7 @@ describe("file discovery", () => {
       {
         level: "warning",
         message:
-          "This .gitignore was not applied: it would put more than 2000 rules in force, so no .gitignore rules apply in this folder or below.",
+          "This .gitignore was not applied: it would put more than 2000 rules in force, so rules from parent folders no longer apply here or below.",
         file: "nested/.gitignore",
       },
     ]);
@@ -420,7 +420,7 @@ describe.skipIf(!canDenyRead)("file discovery: unreadable input becomes a diagno
         {
           level: "warning",
           message:
-            "This .gitignore could not be read safely, so no .gitignore rules apply in this folder or below.",
+            "This .gitignore could not be read safely, so rules from parent folders no longer apply here or below.",
           file: ".gitignore",
         },
       ]);

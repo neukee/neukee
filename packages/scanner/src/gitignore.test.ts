@@ -280,10 +280,12 @@ describe("parsing is paid from the scan's budget", () => {
     ["class segments", fill(`${"[a]/".repeat(250)}a`)],
     ["escaped slashes", fill(`${"a\\/".repeat(300)}a`)],
     ["globstar segments", fill(`${"**/a/".repeat(200)}a`)],
-    ["class ranges", fill(`[${"\u0001-\u00ff".repeat(300)}]`)],
+    ["class ranges", fill(`[${"\u0001-\u00ff".repeat(250)}]`)],
   ];
   it.each(parseShapes)("a whole scan's budget of %s takes under 10 s to parse", (_, text) => {
-    parseIgnoreFile(text); // warm up
+    // Each shape must really be parsed into rules or problems, not dropped for length.
+    const parsed = parseIgnoreFile(text);
+    expect(parsed.problems.every(({ reason }) => !reason.startsWith("is longer than"))).toBe(true);
     const runs = 3;
     const start = performance.now();
     for (let i = 0; i < runs; i++) parseIgnoreFile(text);
