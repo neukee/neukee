@@ -1,0 +1,42 @@
+name: Missing breaking change
+description: A Node.js or Next.js change that breaks upgrades and isn't in the catalog yet.
+title: "catalog: "
+labels: ["catalog", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every rule needs a primary source. Rules are never written from memory, blog posts or forum threads.
+  - type: input
+    id: target
+    attributes:
+      label: Tool and version
+      placeholder: "next@16 or node@24"
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Official source
+      description: The release note or migration guide that documents the change (https only).
+      placeholder: "https://nextjs.org/docs/app/guides/upgrading/version-16"
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: What breaks
+      description: Quote the sentence from the source, then describe how it shows up in code or config.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Code that should be flagged
+      render: tsx
+  - type: textarea
+    id: not-flagged
+    attributes:
+      label: Similar code that must not be flagged
+      description: Helps us write the negative fixture.
+      render: tsx
