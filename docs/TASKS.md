@@ -113,7 +113,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-010 · Runtime sources: version files and package.json
 
-- Status: todo
+- Status: in review (PR #15)
 - Depends on: T-005b
 - Human review: no
 - Review: on Opus (Sreeram, 2026-11-24). The first detector sets the pattern later runtime sources copy; routine detectors after it use Sonnet.

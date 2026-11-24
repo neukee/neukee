@@ -8,7 +8,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
 - **Branches and worktrees:** `main` at `4fa9eaf`, `pnpm verify` green (592 tests), no open PRs. `docs-sync/2026-11-24` (worktree `../neukee-wt/docs-sync`) carries this update; it is merged at `/wrap`.
 - **Last finished:** T-005c (scan-wide matching budget), merged as `d149e9f`. Also merged today: PR #14 (docs-sync) as `0a5aff8` and PR #13 (pkg.pr.new, ADR-019) as `4fa9eaf`, both approved by Sreeram.
-- **In progress:** nothing.
+- **In progress:** T-010 (runtime sources), PR #15. Reviewer (Opus) PASS at `6c91fc0` after two CHANGES REQUIRED rounds; CI and CodeRabbit running. It merges under standing approval when every condition holds.
 - **Exact next step:** `/next` picks T-010 (runtime sources: version files and `package.json`), the first task of the thin end-to-end path (TASKS Phase 1a). Its review is on Opus (Sreeram, 2026-11-24): the first detector sets the pattern later runtime sources copy. Routine detectors after it use Sonnet. Follow the CLAUDE.md order: commit, then review, then quote the PASS with the head SHA. T-005d (dropped negations fail open) waits until after T-033.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
