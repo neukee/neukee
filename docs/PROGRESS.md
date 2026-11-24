@@ -19,7 +19,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 - **Exact next step (Sreeram, 2026-11-24 evening):**
   1. This docs-sync branch is pushed and open as PR #14 (docs-only); merge it so `main` has the current Resume here.
   2. Bring PR #11 (T-005c) up to date with `main`, have the reviewer (Opus) check the merge commit, then merge it when green with CodeRabbit's review of the head (approved by Sreeram).
-  3. Bring PR #13 (pkg.pr.new, ADR-019) up to date with `main`, then merge it when green (approved by Sreeram).
+  3. Bring PR #13 (pkg.pr.new, ADR-019) up to date with `main`, then merge it once CI is green, CodeRabbit has reviewed the new head and every thread is resolved (approved by Sreeram).
   4. Start the thin end-to-end path with T-010 (TASKS Phase 1a, routine), following the CLAUDE.md order: commit, then review, then quote the PASS with the head SHA. T-005d (dropped negations fail open) comes after T-033 and must not delay it.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
