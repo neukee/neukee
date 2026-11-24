@@ -31,11 +31,12 @@ Minor findings deliberately left for later (CLAUDE.md "Merging": after the third
 
 ## Reviewed
 
-| Date       | Task            | Reviewer | Outcome                                                                                                                                   |
-| ---------- | --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-11-23 | PR #9 size      | Sreeram  | Accepted 359 source lines on PR #9 (guideline about 300); most of the growth is the per-path budget                                       |
-| 2026-11-23 | ADR-015 budget  | Sreeram  | Confirmed: 1,000,000 matching steps per path. A scan-wide budget follows in T-005c (under 10 s worst case, fail open with one diagnostic) |
-| 2026-11-22 | ADR-005         | Sreeram  | Confirmed: public repo from day one; Apache-2.0 scanner, core, CLI and Action; FSL engine                                                 |
-| 2026-11-22 | Brief §5        | Sreeram  | Target customer confirmed (20–200 engineers, Node.js or Next.js, integration tests, SOC 2)                                                |
-| 2026-11-22 | T-001           | Sreeram  | Repo, ruleset on `main`, required checks and CODEOWNERS set up; PR #1 proved checks block merge                                           |
-| 2026-11-22 | T-002 / ADR-011 | Sreeram  | Confirmed: columns in UTF-16 code units; `sourceUrl` https only; lowercase rule ids                                                       |
+| Date       | Task              | Reviewer | Outcome                                                                                                                                   |
+| ---------- | ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-11-24 | Dropped `!` lines | Sreeram  | Becomes task T-005d, after the thin path: a `.gitignore` with a dropped negation is treated like one that can't be applied                |
+| 2026-11-23 | PR #9 size        | Sreeram  | Accepted 359 source lines on PR #9 (guideline about 300); most of the growth is the per-path budget                                       |
+| 2026-11-23 | ADR-015 budget    | Sreeram  | Confirmed: 1,000,000 matching steps per path. A scan-wide budget follows in T-005c (under 10 s worst case, fail open with one diagnostic) |
+| 2026-11-22 | ADR-005           | Sreeram  | Confirmed: public repo from day one; Apache-2.0 scanner, core, CLI and Action; FSL engine                                                 |
+| 2026-11-22 | Brief §5          | Sreeram  | Target customer confirmed (20–200 engineers, Node.js or Next.js, integration tests, SOC 2)                                                |
+| 2026-11-22 | T-001             | Sreeram  | Repo, ruleset on `main`, required checks and CODEOWNERS set up; PR #1 proved checks block merge                                           |
+| 2026-11-22 | T-002 / ADR-011   | Sreeram  | Confirmed: columns in UTF-16 code units; `sourceUrl` https only; lowercase rule ids                                                       |

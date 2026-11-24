@@ -4,23 +4,23 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-23, 21:05 IST (`/wrap`).
-- **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23). The session ended with nothing uncommitted in any checkout.
-- **Note:** until PR #10 merges, this file is current only on `docs-sync/2026-11-23`, in the worktree `../neukee-wt/docs-sync`. The wrap commit there is local (not pushed). Sreeram approved PR #10; push it and merge it under the docs-only rule.
-- **Branches:**
-  - `main` at `5a2e672`: T-005a (#9), T-005b (#8) and the GitHub presence kit (#12) are merged. `pnpm verify` is green (550 tests).
-  - `t-005c-scan-budget` at `353a33f` (PR #11), in the worktree `../neukee-wt/t005c`.
-  - `docs-sync/2026-11-23` (PR #10): ADR-016, ADR-017 and ADR-018, the CLAUDE.md rules, the reviewer on Sonnet, TASKS Phase 1a, BRIEF §5 and §6.
+- **Last updated:** 2026-11-24, evening IST (Sreeram approved merging #11 and #13, and added T-005d).
+- **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23). The session ended with nothing uncommitted. The only unpushed commit is this wrap, on `docs-sync/2026-11-24`.
+- **Branches and worktrees:**
+  - `main` at `f26b722`: T-005a, T-005b, the presence kit and the 2026-11-23 docs-sync (#10) are merged. `pnpm verify` green (550 tests).
+  - `t-005c-scan-budget` at `aa4b8ff` (PR #11), in the worktree `../neukee-wt/t005c`.
+  - `ci/pkg-pr-new` at `3591317` (PR #13, from the strategy chat), in the worktree `../neukee-wt/pkgprnew`; `main` merged in, with ADR-019 above ADR-018.
+  - `docs-sync/2026-11-24`, in the worktree `../neukee-wt/docs-sync`: this wrap, not pushed.
 - **Last finished:** T-005b (file discovery), merged as `43767f3`.
-- **In progress:** T-005c (scan-wide matching budget), foundational (Opus), PR #11.
-- **Exact next step:** fix the reviewer's CHANGES REQUIRED on `353a33f`, then re-run it (Opus) on the fix commit only:
-  1. **must-fix:** the parse charge (`2·bytes + 96·rules`, `discover.ts`) is far too low for lines with many segments. Parsing costs about 250 ns per `/`.
-     - Measured: lines of 500 × `a/` take 17.5 s to spend the budget on parsing alone. 1,600 folders with 64 KiB `.gitignore` files took 21.7 s end to end.
-     - Fix: charge about 40 steps per byte, or per `/` plus per class range. Add a scaled parse test (slash runs, segments, class ranges) like the matching ones.
-  2. **must-fix:** then correct ADR-015 ("every piece of work is charged at about its measured cost", "1.2–2.3 s") to the measured numbers.
-  3. **nits:** ADR-015 should say the 300-rule pin counts files only (real scans also charge folders); wrap `gitignore.ts` line 5 (about 125 characters).
-  4. Then CodeRabbit, and merge under standing approval.
-  5. After T-005c: the thin end-to-end path T-010 → T-014 → T-030 → T-031 → T-033 (TASKS Phase 1a, with its guardrails). Target: by Sat Nov 28, `neukee scan` prints a real finding on a real public repo.
+- **In progress:** T-005c (scan-wide matching budget), foundational (Opus), PR #11. It's ready:
+  - reviewer (Opus) PASS at head `aa4b8ff`;
+  - CodeRabbit approved `aa4b8ff`; CI green; no open threads.
+    It changes ADR-015's hostile-input defenses, so it waits for Sreeram's explicit merge approval rather than standing approval.
+- **Exact next step (Sreeram, 2026-11-24 evening):**
+  1. This docs-sync branch is pushed and open as PR #14 (docs-only); merge it so `main` has the current Resume here.
+  2. Bring PR #11 (T-005c) up to date with `main`, have the reviewer (Opus) check the merge commit, then merge it when green with CodeRabbit's review of the head (approved by Sreeram).
+  3. Bring PR #13 (pkg.pr.new, ADR-019) up to date with `main`, then merge it once CI is green, CodeRabbit has reviewed the new head and every thread is resolved (approved by Sreeram).
+  4. Start the thin end-to-end path with T-010 (TASKS Phase 1a, routine), following the CLAUDE.md order: commit, then review, then quote the PASS with the head SHA. T-005d (dropped negations fail open) comes after T-033 and must not delay it.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
@@ -28,11 +28,12 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   - Report overall MVP progress as launch tasks done out of 28 (7 done: 25%).
 - **Blocked / waiting on Sreeram:**
   - Run `/checkpoint` (T-005b has merged; decision 10). If it shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation.
-  - Personal profile `Venu2328/Venu2328`: he asked for both profiles to look top-tier, styled from the brand. The org profile (github.com/neukee) is done. For the personal profile, the plan is a PR on his repo that adds Neukee through its own `tools/build_assets.py`, without replacing the SciPhyLabs content. Not started.
-  - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio (kit README, Step 2).
-  - REVIEW-QUEUE: the residual file-read and listing races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories (dev-only); the T-005b nit on path ordering; `realpathSync` cost on deep trees (outside T-005c).
+  - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
+  - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
+  - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio.
+  - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (14 days). Launch Tuesday, Dec 8 (15 days). 21 launch tasks remain (7 of 28 done): about 1.5 a day needed. Today 2 merged, with a third in review.
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (13 days). Launch Tuesday, Dec 8 (14 days). 21 launch tasks remain (7 of 28 done; T-005c ready to merge): about 1.6 a day needed. Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28.
 
 ## Dated checkpoints
 
@@ -87,6 +88,19 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
+
+### 2026-11-24 (early) · PR #10 merged; T-005c ready; pkg.pr.new branch updated
+
+- **PR #10 (docs-sync 2026-11-23)** merged as `f26b722`, after two CodeRabbit rounds:
+  - Rule changes approved by Sreeram: commit before the review; standing approval needs a PASS for the head SHA; the four-line check also lists CI, workflow, permission and security-model changes; the reviewer counts size on the committed diff and reports uncommitted work separately; follow-up reviews on foundational tasks use Opus.
+  - Sreeram kept his rule: a follow-up review covers just the new commits.
+  - Docs: ADR-017's interim T-014 dependency is marked superseded; T-012 feeds T-014, like T-011.
+- **T-005c (PR #11)** is ready: reviewer (Opus) PASS at `aa4b8ff`, CodeRabbit approved, CI green. Since the wrap it gained:
+  - parsing charged at 48 steps per UTF-8 byte (worst parse shape 1.4 s per full budget; the 1,600-folder case dropped from 21.7 s to 1.0 s);
+  - the subtree fail-open, which Sreeram folded in from CodeRabbit on #10 (a `.gitignore` that can't be applied turns off parent rules below it);
+  - a class-range test shape that really parses, and message wording that says parent rules stop.
+- **PR #13 (pkg.pr.new, from the strategy chat):** `main` merged in, with ADR-019 kept above ADR-018. `check:all` green (550 tests). Pushed as `3591317`; it waits for Sreeram's explicit approval (CI change).
+- **Sreeram said:** merge #10 first, then run `/status`; #13 needs his explicit approval, never standing approval.
 
 ### 2026-11-23 (evening) · Sreeram's decisions applied; T-005a and T-005b merged; GitHub presence live
 
