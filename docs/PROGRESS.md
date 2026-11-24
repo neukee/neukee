@@ -4,7 +4,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-24, 02:31 IST (`/wrap`).
+- **Last updated:** 2026-11-24, evening IST (Sreeram approved merging #11 and #13, and added T-005d).
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23). The session ended with nothing uncommitted. The only unpushed commit is this wrap, on `docs-sync/2026-11-24`.
 - **Branches and worktrees:**
   - `main` at `f26b722`: T-005a, T-005b, the presence kit and the 2026-11-23 docs-sync (#10) are merged. `pnpm verify` green (550 tests).
@@ -16,23 +16,22 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   - reviewer (Opus) PASS at head `aa4b8ff`;
   - CodeRabbit approved `aa4b8ff`; CI green; no open threads.
     It changes ADR-015's hostile-input defenses, so it waits for Sreeram's explicit merge approval rather than standing approval.
-- **Exact next step:**
-  1. With Sreeram's approval, squash-merge #11 (title already in Conventional Commits form), then sync `main`.
-  2. Push this docs-sync branch and open its PR (docs-only; merged at `/wrap`).
-  3. Start the thin end-to-end path with T-010 (TASKS Phase 1a, routine), following the updated CLAUDE.md order: commit, then review, then quote the PASS with the head SHA.
-  4. PR #13 (CI change) waits for Sreeram's explicit approval; its checks run on `3591317`.
+- **Exact next step (Sreeram, 2026-11-24 evening):**
+  1. This docs-sync branch is pushed and open as PR #14 (docs-only); merge it so `main` has the current Resume here.
+  2. Bring PR #11 (T-005c) up to date with `main`, have the reviewer (Opus) check the merge commit, then merge it when green with CodeRabbit's review of the head (approved by Sreeram).
+  3. Bring PR #13 (pkg.pr.new, ADR-019) up to date with `main`, then merge it when green (approved by Sreeram).
+  4. Start the thin end-to-end path with T-010 (TASKS Phase 1a, routine), following the CLAUDE.md order: commit, then review, then quote the PASS with the head SHA. T-005d (dropped negations fail open) comes after T-033 and must not delay it.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - Report progress at every 10% of the work in hand, against a stated step list (2026-11-23).
   - Report overall MVP progress as launch tasks done out of 28 (7 done: 25%).
 - **Blocked / waiting on Sreeram:**
-  - Merge approval for PR #11 (T-005c) and PR #13 (pkg.pr.new, a CI change).
   - Run `/checkpoint` (T-005b has merged; decision 10). If it shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation.
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
   - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
   - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio.
-  - REVIEW-QUEUE: dropped `!` lines (new); the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
+  - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
 - **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (13 days). Launch Tuesday, Dec 8 (14 days). 21 launch tasks remain (7 of 28 done; T-005c ready to merge): about 1.6 a day needed. Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28.
 
