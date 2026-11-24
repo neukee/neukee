@@ -176,7 +176,8 @@ describe("file discovery", () => {
     expect(diagnosticsOf(events)).toEqual([
       {
         level: "warning",
-        message: "This .gitignore is larger than 64 KiB, so its rules were not applied.",
+        message:
+          "This .gitignore is larger than 64 KiB, so rules from parent folders no longer apply here or below.",
         file: ".gitignore",
       },
     ]);
@@ -195,7 +196,8 @@ describe("file discovery", () => {
     expect(diagnosticsOf(events)).toEqual([
       {
         level: "warning",
-        message: "This .gitignore was not applied: it would put more than 2000 rules in force.",
+        message:
+          "This .gitignore was not applied: it would put more than 2000 rules in force, so rules from parent folders no longer apply here or below.",
         file: "nested/.gitignore",
       },
     ]);
@@ -233,6 +235,76 @@ describe("file discovery", () => {
         file: longName,
       },
     ]);
+  });
+
+  // T-005c: once the scan's matching budget is spent, one diagnostic says where, and every later
+  // path is scanned without .gitignore rules (fail open). Each long name below costs a full
+  // per-path budget, so about 200 of them spend the scan's budget.
+  it("reports once when the scan's matching budget runs out, then scans without rules", () => {
+    const root = copyFixture();
+    const costly = `*${"a".repeat(60)}b`; // 63 bytes; 1,000 rules stay under 64 KiB
+    writeFileSync(join(root, ".gitignore"), `*.ignored\n${`${costly}\n`.repeat(1000)}`);
+    for (let i = 0; i < 230; i++) {
+      writeFileSync(join(root, `${String(i).padStart(3, "0")}${"a".repeat(118)}c`), "");
+    }
+    writeFileSync(join(root, "zzz.ignored"), "ignored until the budget runs out");
+
+    const events = Array.from(discoverFiles(root));
+    const messages = diagnosticsOf(events).map((diagnostic) => diagnostic.message);
+    const outOfBudget = diagnosticsOf(events).filter((diagnostic) =>
+      diagnostic.message.startsWith("The scan ran out of its .gitignore matching budget"),
+    );
+    expect(outOfBudget).toHaveLength(1);
+    expect(messages.at(-1)).toBe(outOfBudget[0]?.message);
+    expect(paths(events)).toContain("zzz.ignored");
+    expect(paths(events)).toContain(`229${"a".repeat(118)}c`);
+  }, 60_000);
+
+  // Parsing is paid from the scan's budget too: 70 folders, each with a 64 KiB .gitignore of
+  // one-character rules, spend it on parsing alone. One diagnostic names the .gitignore where
+  // that happened, and later .gitignore files are scanned as plain files, not parsed.
+  // Charged per UTF-8 byte, not per UTF-16 code unit: "中\n" is 4 bytes but 2 code units, so
+  // a code-unit charge would let these files spend only half the budget.
+  it.each([
+    ["one-byte", "a\n".repeat(32_768)],
+    ["three-byte", "中\n".repeat(16_384)],
+  ])(
+    "pays for parsing %s .gitignore files from the scan's budget, and stops once it is spent",
+    (_, text) => {
+      const root = copyFixture();
+      for (let i = 0; i < 70; i++) {
+        const folder = join(root, `d${String(i).padStart(2, "0")}`);
+        mkdirSync(folder);
+        writeFileSync(join(folder, ".gitignore"), text);
+        writeFileSync(join(folder, "kept.txt"), "kept");
+      }
+      const events = Array.from(discoverFiles(root));
+      const outOfBudget = diagnosticsOf(events).filter((diagnostic) =>
+        diagnostic.message.startsWith("The scan ran out of its .gitignore matching budget"),
+      );
+      expect(outOfBudget).toHaveLength(1);
+      expect(outOfBudget[0]?.file).toMatch(/^d\d\d\/\.gitignore$/);
+      expect(paths(events)).toContain("d69/.gitignore");
+      expect(paths(events)).toContain("d69/kept.txt");
+    },
+    60_000,
+  );
+
+  // A .gitignore that can't be applied might have re-included files: its subtree then applies no
+  // inherited rules either, so a parent rule can't wrongly exclude them (fail open).
+  it.each([
+    ["over 64 KiB", `!important.js\n${"#".repeat(64 * 1024)}\n`],
+    ["past the rules-in-force cap", `!important.js\n${"x\n".repeat(2000)}`],
+  ])("turns off inherited rules below a .gitignore %s", (_, nested) => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), "*.js\n");
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "src/.gitignore"), nested);
+    writeFileSync(join(root, "src/important.js"), "kept");
+    writeFileSync(join(root, "dropped.js"), "ignored by the root rule");
+    const files = paths(Array.from(discoverFiles(root)));
+    expect(files).toContain("src/important.js");
+    expect(files).not.toContain("dropped.js");
   });
 
   it("matches a .gitignore against itself as a file, and folder-only rules never match files", () => {
@@ -356,7 +428,8 @@ describe.skipIf(!canDenyRead)("file discovery: unreadable input becomes a diagno
       expect(diagnosticsOf(events)).toEqual([
         {
           level: "warning",
-          message: "This .gitignore could not be read safely, so its rules were not applied.",
+          message:
+            "This .gitignore could not be read safely, so rules from parent folders no longer apply here or below.",
           file: ".gitignore",
         },
       ]);
