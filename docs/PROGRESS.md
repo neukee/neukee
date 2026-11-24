@@ -9,19 +9,19 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 - **Branches and worktrees:** `main` at `4fa9eaf`, `pnpm verify` green (592 tests), no open PRs. `docs-sync/2026-11-24` (worktree `../neukee-wt/docs-sync`) carries this update; it is merged at `/wrap`.
 - **Last finished:** T-005c (scan-wide matching budget), merged as `d149e9f`. Also merged today: PR #14 (docs-sync) as `0a5aff8` and PR #13 (pkg.pr.new, ADR-019) as `4fa9eaf`, both approved by Sreeram.
 - **In progress:** nothing.
-- **Exact next step:** `/next` picks T-010 (runtime sources: version files and `package.json`), the first task of the thin end-to-end path (TASKS Phase 1a). It's routine (Sonnet), and its review is on Sonnet. Follow the CLAUDE.md order: commit, then review, then quote the PASS with the head SHA. T-005d (dropped negations fail open) waits until after T-033.
+- **Exact next step:** `/next` picks T-010 (runtime sources: version files and `package.json`), the first task of the thin end-to-end path (TASKS Phase 1a). Its review is on Opus (Sreeram, 2026-11-24): the first detector sets the pattern later runtime sources copy. Routine detectors after it use Sonnet. Follow the CLAUDE.md order: commit, then review, then quote the PASS with the head SHA. T-005d (dropped negations fail open) waits until after T-033.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - Report progress at every 10% of the work in hand, against a stated step list (2026-11-23).
   - Report overall MVP progress as launch tasks done out of 28 (7 done: 25%).
 - **Blocked / waiting on Sreeram:**
-  - Run `/checkpoint` (T-005b has merged; decision 10). If it shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation.
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
   - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
   - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio.
   - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
+- **`/checkpoint`:** Sreeram runs it on Saturday, Nov 28, after the thin path (2026-11-24).
 - **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (13 days). Launch Tuesday, Dec 8 (14 days). 21 launch tasks remain (7 of 28 done; T-005c ready to merge): about 1.6 a day needed. Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28.
 
 ## Dated checkpoints
