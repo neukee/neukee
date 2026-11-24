@@ -233,6 +233,18 @@ describe("matching work per path is bounded on hostile rules within the caps", (
     expect(scaled).toBeLessThan(10_000);
   }, 60_000);
 
+  // `!*` as the last of 2,000 rules: every call answers on the first rule it tries.
+  it("a whole scan's budget with `!*` as the last of 2,000 rules takes under 10 s", () => {
+    const rules = rulesFrom({ "": `${"a\n".repeat(1999)}!*\n` });
+    expect(rules).toHaveLength(2000);
+    const slice = MAX_SCAN_MATCH_STEPS / 15;
+    const scan = { steps: slice };
+    const start = performance.now();
+    while (scan.steps > 0) isIgnored("z", false, rules, scan);
+    const scaled = ((performance.now() - start) * MAX_SCAN_MATCH_STEPS) / (slice - scan.steps);
+    expect(scaled).toBeLessThan(10_000);
+  }, 60_000);
+
   it("answers too-costly when the budget runs out, rather than guessing", () => {
     const rules = rulesFrom({ "": `*${"a".repeat(127)}b\n`.repeat(2000) });
     expect(isIgnored(longName, false, rules, unlimited())).toBe("too-costly");
