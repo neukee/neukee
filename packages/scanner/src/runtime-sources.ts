@@ -124,9 +124,14 @@ function readVersionFile(
       return fail("contains a control character; nvm rejects the file");
     }
     const body = source === "nvmrc" ? (line.split("#")[0] ?? "") : line;
-    const token = body.replace(/^[ \t]+|[ \t]+$/g, "");
+    // Only spaces and tabs are white space here (nvm's); index loops keep long runs linear.
+    let start = 0;
+    let end = body.length;
+    while (start < end && (body[start] === " " || body[start] === "\t")) start++;
+    while (end > start && (body[end - 1] === " " || body[end - 1] === "\t")) end--;
+    const token = body.slice(start, end);
     if (token === "" || (source === "nvmrc" && token.includes("="))) continue;
-    found.push({ line: index + 1, column: body.indexOf(token) + 1, token });
+    found.push({ line: index + 1, column: start + 1, token });
   }
   const [only, ...rest] = found;
   if (only === undefined) return fail("has no version line");

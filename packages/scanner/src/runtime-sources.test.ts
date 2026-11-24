@@ -398,6 +398,23 @@ describe("package.json", () => {
   });
 });
 
+// A long run of white space inside a line must not make trimming slow (a hostile 1 MB file).
+describe("version files with long runs of white space", () => {
+  it.each([
+    [".nvmrc", " "],
+    [".nvmrc", "\t"],
+    [".node-version", " "],
+    [".node-version", "\t"],
+  ])("reads %s with a 1 MB run of %j inside a line quickly", (path, space) => {
+    const text = `22${space.repeat(1_000_000)}x\n`;
+    const start = performance.now();
+    const result = read(path, text);
+    expect(performance.now() - start).toBeLessThan(1000);
+    expect(result.declarations).toEqual([]);
+    expect(result.diagnostics).toHaveLength(1);
+  });
+});
+
 describe("other files", () => {
   it.each(["README.md", "nvmrc", ".nvmrc.bak", "package.json.orig", "src/node-version.ts"])(
     "reads nothing from %s",
