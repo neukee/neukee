@@ -4,6 +4,13 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-019 · Continuous preview packages with pkg.pr.new (2026-11-24)
+
+- **Context:** reviewers and design partners need to try a pull request's build without cloning the repo, and nothing goes to npm before v0.1.0 (ADR-009, T-055). pkg.pr.new publishes npm-compatible preview packages to its own URLs, not to npm.
+- **Decision:** `.github/workflows/pkg-pr-new.yml` publishes `@neukee/core`, `@neukee/scanner` and `@neukee/cli` on every pull request from this repository and every push to `main`. The three packages drop `"private": true`, because pkg.pr.new skips private packages; the root stays private. They gain `repository`, `homepage` and `bugs` fields, which `--compact` URLs and npm provenance both need. `pkg-pr-new` is a root dev dependency pinned to an exact version, so the lockfile carries its integrity hash.
+- **Safety:** fork pull requests are skipped, so nobody else's code becomes installable under the neukee/neukee name. The workflow's token is read-only; the pkg.pr.new GitHub App posts the comment. Accidental npm publishing stays blocked by 2FA and by having no npm token anywhere (ADR-009).
+- **Consequences:** previews install from URLs like `https://pkg.pr.new/neukee/neukee/@neukee/cli@<sha>`; after the packages exist on npm, `--compact` shortens them on its own. One manual step: install the pkg.pr.new GitHub App on neukee/neukee.
+
 ## ADR-018 · Lead offer, audit pricing, pitch and market stance (2026-11-23)
 
 - **Context:** the brief priced the audit as an assumption ($300–1,500) and listed competitors without a clear stance on each. NodeSource and the OpenJS Foundation give Node.js-only upgrade assessments for free and sell a paid blueprint from $2,499, so Node.js end-of-life alone is not a strong headline.

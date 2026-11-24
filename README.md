@@ -10,6 +10,7 @@
   <a href="https://scorecard.dev/viewer/?uri=github.com/neukee/neukee"><img alt="OpenSSF Scorecard" src="https://img.shields.io/ossf-scorecard/github.com/neukee/neukee?label=openssf%20scorecard&labelColor=0B0B0C"></a>
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-2A2A2E?labelColor=0B0B0C"></a>
   <a href="docs/TASKS.md"><img alt="Status: pre-release" src="https://img.shields.io/badge/status-pre--release-2A2A2E?labelColor=0B0B0C"></a>
+  <a href="https://pkg.pr.new/~/neukee/neukee"><img alt="pkg.pr.new" src="https://pkg.pr.new/badge/neukee/neukee"></a>
 </p>
 
 Neukee is a local-first scanner for Node.js and Next.js upgrades. Point it at a repository and a target version, and it reports what will break before you change a line. It reads your code, lockfile and deployment config on your machine. It never runs your code, never uses the network and never sends anything anywhere.
