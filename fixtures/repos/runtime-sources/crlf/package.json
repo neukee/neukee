@@ -1,0 +1,6 @@
+{
+  "name": "crlf",
+  "engines": {
+    "node": "20.x"
+  }
+}
