@@ -90,15 +90,15 @@
 
 ### T-005c · Scan-wide matching budget
 
-- Status: in review (PR #11)
+- Status: done (PR #11, `d149e9f`)
 - Depends on: T-005b
 - Human review: no
 - Build: foundational (Opus). On top of ADR-015's budget of 1,000,000 steps per path, cap the `.gitignore` matching work for the whole scan. Once it is spent, the rest of the scan applies no `.gitignore` rules (fail open), with one diagnostic. Sreeram, 2026-11-23.
 - Done when:
-  - [ ] `.gitignore` matching for a whole scan takes under 10 s in the worst case, whatever the repository: tests run T-005a's hostile shapes across many paths.
-  - [ ] Running out of the scan budget keeps the rest of the files in the scan and reports exactly one diagnostic.
-  - [ ] A large real-world `.gitignore` (300 varied rules) never runs out of the scan budget on a 25,000-path repository (Sreeram, 2026-11-23).
-  - [ ] A `.gitignore` that can't be applied (over a cap, unreadable, or past the rules-in-force limit) makes its folder's subtree apply no inherited rules either, so a parent rule can't exclude a file the skipped file would have re-included (fail open; CodeRabbit on PR #10, folded in by Sreeram, 2026-11-24).
+  - [x] `.gitignore` matching for a whole scan takes under 10 s in the worst case, whatever the repository: tests run T-005a's hostile shapes across many paths.
+  - [x] Running out of the scan budget keeps the rest of the files in the scan and reports exactly one diagnostic.
+  - [x] A large real-world `.gitignore` (300 varied rules) never runs out of the scan budget on a 25,000-path repository (Sreeram, 2026-11-23).
+  - [x] A `.gitignore` that can't be applied (over a cap, unreadable, or past the rules-in-force limit) makes its folder's subtree apply no inherited rules either, so a parent rule can't exclude a file the skipped file would have re-included (fail open; CodeRabbit on PR #10, folded in by Sreeram, 2026-11-24).
 
 ## Phase 1a — Thin end-to-end path (Sreeram, 2026-11-23)
 
