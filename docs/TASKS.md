@@ -156,6 +156,17 @@ Guardrails (Sreeram, 2026-11-23):
 
 ## Phase 1 — Detectors
 
+### T-005d · Dropped negations fail open
+
+- Status: todo
+- Depends on: T-005c, T-033 (after the thin path; it must not delay T-010)
+- Human review: no
+- Build: foundational (Opus). A `.gitignore` line that `parseIgnoreFile` drops (a POSIX class, over 1 KiB, an unclosed `[`, a trailing backslash) might be a negation that re-includes files. Treat a `.gitignore` with a dropped `!` line like one that can't be applied: rules from parent folders stop applying in its folder and below (fail open), with a diagnostic that says so. Sreeram, 2026-11-24.
+- Done when:
+  - [ ] A regression test: a root `.gitignore` of `*.js`, and `src/.gitignore` holding `!*[[:digit:]].js` (dropped as a POSIX class). `src/1.js` is scanned; `dropped.js` at the root stays ignored.
+  - [ ] A dropped line that isn't a negation changes nothing beyond today's diagnostic.
+  - [ ] ADR-015 records the rule.
+
 ### T-011 · Runtime sources: Dockerfiles
 
 - Status: todo
