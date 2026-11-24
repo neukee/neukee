@@ -9,7 +9,7 @@ import type { Diagnostic, Location } from "@neukee/core";
  */
 
 /** A declared Node.js version, normalized: `v22` → `22`, ranges kept as written. */
-export type DeclaredVersion =
+type DeclaredVersion =
   /** A full or partial version: "22", "22.11", "22.11.0" (no leading `v`). */
   | { kind: "version"; version: string }
   /** A semver range as written, such as ">=20 <23" (engines.node, or a volta.node range). */
@@ -34,9 +34,9 @@ export interface RuntimeSources {
 export function readRuntimeSources(file: { path: string; content: string }): RuntimeSources {
   switch (file.path.split("/").at(-1)) {
     case ".nvmrc":
-      return readVersionFile(file, "nvmrc", ".nvmrc");
+      return readVersionFile(file, "nvmrc");
     case ".node-version":
-      return readVersionFile(file, "node-version", ".node-version");
+      return readVersionFile(file, "node-version");
     case "package.json":
       return readPackageJson(file);
     default:
@@ -49,8 +49,34 @@ const VERSION = /^v?((?:0|[1-9]\d{0,8})(?:\.(?:0|[1-9]\d{0,8})){0,2})$/;
 // nvm's aliases; codenames are lowercase in nvm's README (`lts/argon`, `lts/jod`).
 const UNPINNED = new Set(["lts/*", "node", "stable", "current", "unstable", "iojs", "system"]);
 const LTS_LINE = /^lts\/([a-z]{1,32})$/;
-// The characters a semver range uses, and a sane length.
-const RANGE = /^[0-9A-Za-z.+\-<>=~^|* ]{1,256}$/;
+// One semver comparator token: an optional operator, then a version whose parts may be x, X
+// or *, with an optional prerelease and build. Letters appear only as x, X, v, or after `-` or
+// `+`, so free text and markup are not ranges. Linear: no nested quantifiers that overlap.
+const COMPARATOR =
+  /^(?:[<>]=?|=|~|\^)?v?(?:\d{1,9}|[xX*])(?:\.(?:\d{1,9}|[xX*])){0,2}(?:-[0-9A-Za-z.-]{1,64})?(?:\+[0-9A-Za-z.-]{1,64})?$/;
+const OPERATOR = /^(?:[<>]=?|=|~|\^)$/;
+
+/**
+ * Whether `text` is a semver range (npm's grammar): comparator sets joined by `||`, each a list
+ * of comparators, `a - b` hyphen ranges, or an operator separated from its version by a space.
+ * Empty means any version, as npm documents for engines.
+ */
+function isRange(text: string): boolean {
+  if (text.length > 256) return false;
+  for (const set of text.split("||")) {
+    const tokens = set
+      .trim()
+      .split(/[ \t]+/)
+      .filter((token) => token !== "");
+    for (const [i, token] of tokens.entries()) {
+      if (COMPARATOR.test(token)) continue;
+      if (token === "-" && i > 0 && i < tokens.length - 1) continue; // hyphen range
+      if (OPERATOR.test(token) && i < tokens.length - 1) continue; // ">= 20"
+      return false;
+    }
+  }
+  return true;
+}
 
 /** A control character other than tab makes a .nvmrc invalid (nvm's README). */
 function hasControlCharacter(line: string): boolean {
@@ -78,8 +104,8 @@ function toVersion(token: string): DeclaredVersion | undefined {
 function readVersionFile(
   file: { path: string; content: string },
   source: "nvmrc" | "node-version",
-  name: string,
 ): RuntimeSources {
+  const name = `.${source}`;
   const fail = (reason: string): RuntimeSources => ({
     declarations: [],
     diagnostics: [
@@ -90,7 +116,7 @@ function readVersionFile(
       },
     ],
   });
-  const text = file.content.startsWith("﻿") ? file.content.slice(1) : file.content;
+  const text = file.content.startsWith("\uFEFF") ? file.content.slice(1) : file.content;
   const found: { line: number; column: number; token: string }[] = [];
   for (const [index, raw] of text.split("\n").entries()) {
     const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
@@ -98,7 +124,7 @@ function readVersionFile(
       return fail("contains a control character; nvm rejects the file");
     }
     const body = source === "nvmrc" ? (line.split("#")[0] ?? "") : line;
-    const token = body.trim();
+    const token = body.replace(/^[ \t]+|[ \t]+$/g, "");
     if (token === "" || (source === "nvmrc" && token.includes("="))) continue;
     found.push({ line: index + 1, column: body.indexOf(token) + 1, token });
   }
@@ -128,38 +154,41 @@ function readVersionFile(
 /** `engines.node` is a semver range (npm docs); `volta.node` is usually an exact version. */
 function readPackageJson(file: { path: string; content: string }): RuntimeSources {
   const result: RuntimeSources = { declarations: [], diagnostics: [] };
-  const fail = (reason: string): RuntimeSources => ({
-    declarations: [],
-    diagnostics: [
-      {
-        level: "warning",
-        message: `This package.json ${reason}, so its Node.js version wasn't read.`,
-        file: file.path,
-      },
-    ],
+  const problem = (reason: string): Diagnostic => ({
+    level: "warning",
+    message: `This package.json ${reason}, so its Node.js version wasn't read.`,
+    file: file.path,
   });
-  const text = file.content.startsWith("﻿") ? file.content.slice(1) : file.content;
+  const text = file.content.startsWith("\uFEFF") ? file.content.slice(1) : file.content;
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    return fail("isn't valid JSON");
+    return { declarations: [], diagnostics: [problem("isn't valid JSON")] };
   }
   for (const source of ["engines", "volta"] as const) {
     const value = nodeField(parsed, source);
     if (value === undefined) continue;
     const field = source === "engines" ? "an engines.node" : "a volta.node";
-    if (typeof value !== "string") return fail(`has ${field} that isn't a string`);
+    // One bad field never costs a good one: report it and read the next.
+    if (typeof value !== "string") {
+      result.diagnostics.push(problem(`has ${field} that isn't a string`));
+      continue;
+    }
     const raw = value.trim();
     const exact = source === "volta" ? VERSION.exec(raw)?.[1] : undefined;
-    if (exact === undefined && !RANGE.test(raw)) {
-      return fail(`has ${field} that isn't a version range the scanner understands`);
+    if (exact === undefined && !isRange(raw)) {
+      result.diagnostics.push(
+        problem(`has ${field} that isn't a version range the scanner understands`),
+      );
+      continue;
     }
     const offset = locate(text, source, "node");
     if (offset === undefined) continue; // unreachable for valid JSON; never guess a location
     result.declarations.push({
       source,
-      location: { file: file.path, ...lineAndColumn(text, offset) },
+      // The version text itself, just inside the opening quote, as for version files.
+      location: { file: file.path, ...lineAndColumn(text, offset + 1) },
       version:
         exact === undefined ? { kind: "range", range: raw } : { kind: "version", version: exact },
     });
