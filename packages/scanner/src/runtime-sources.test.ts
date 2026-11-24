@@ -301,6 +301,9 @@ describe("package.json", () => {
     "v20",
     ">=20.0.0-rc.1",
     "22.1.0+build.7",
+    "1.2.3-rc.1",
+    ">=0.10.3 <15",
+    "0.10.3",
   ])("accepts the range %j", (range) => {
     expect(read("package.json", pkg({ engines: { node: range } })).declarations).toEqual([
       expect.objectContaining({ version: { kind: "range", range } }),
@@ -315,6 +318,13 @@ describe("package.json", () => {
     "20.1.2.3",
     "^",
     "a1b2c3d4e5",
+    ">= = 20",
+    ">= >= 20",
+    "01.2.3",
+    "1.2.3-rc..1",
+    "1.2.3-",
+    "1 - 2 - 3",
+    ">=1 - 2",
   ])("rejects %j as a range", (range) => {
     expect(read("package.json", pkg({ engines: { node: range } })).declarations).toEqual([]);
   });

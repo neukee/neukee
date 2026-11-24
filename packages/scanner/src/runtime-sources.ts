@@ -49,30 +49,34 @@ const VERSION = /^v?((?:0|[1-9]\d{0,8})(?:\.(?:0|[1-9]\d{0,8})){0,2})$/;
 // nvm's aliases; codenames are lowercase in nvm's README (`lts/argon`, `lts/jod`).
 const UNPINNED = new Set(["lts/*", "node", "stable", "current", "unstable", "iojs", "system"]);
 const LTS_LINE = /^lts\/([a-z]{1,32})$/;
-// One semver comparator token: an optional operator, then a version whose parts may be x, X
-// or *, with an optional prerelease and build. Letters appear only as x, X, v, or after `-` or
-// `+`, so free text and markup are not ranges. Linear: no nested quantifiers that overlap.
-const COMPARATOR =
-  /^(?:[<>]=?|=|~|\^)?v?(?:\d{1,9}|[xX*])(?:\.(?:\d{1,9}|[xX*])){0,2}(?:-[0-9A-Za-z.-]{1,64})?(?:\+[0-9A-Za-z.-]{1,64})?$/;
-const OPERATOR = /^(?:[<>]=?|=|~|\^)$/;
+// A semver version as ranges write it: parts without leading zeros, or x, X or *; then an
+// optional prerelease and build, each made of non-empty dot-separated identifiers. Letters
+// appear only as x, X, v or inside those identifiers, so free text and markup are not ranges.
+// Linear: the `.` separators can't overlap the identifier class.
+const BARE_VERSION =
+  /^v?(?:0|[1-9]\d{0,8}|[xX*])(?:\.(?:0|[1-9]\d{0,8}|[xX*])){0,2}(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+const OPERATOR = /^(?:[<>]=?|=|~|\^)/;
 
 /**
- * Whether `text` is a semver range (npm's grammar): comparator sets joined by `||`, each a list
- * of comparators, `a - b` hyphen ranges, or an operator separated from its version by a space.
- * Empty means any version, as npm documents for engines.
+ * Whether `text` is a semver range (npm's grammar): comparator sets joined by `||`. A set is a
+ * hyphen range (`1.2.3 - 2.3.4`) or a list of comparators, each a version with an optional
+ * operator, which may stand apart from its version (`>= 20`). Empty means any version, as npm
+ * documents for engines.
  */
 function isRange(text: string): boolean {
   if (text.length > 256) return false;
   for (const set of text.split("||")) {
-    const tokens = set
-      .trim()
-      .split(/[ \t]+/)
-      .filter((token) => token !== "");
-    for (const [i, token] of tokens.entries()) {
-      if (COMPARATOR.test(token)) continue;
-      if (token === "-" && i > 0 && i < tokens.length - 1) continue; // hyphen range
-      if (OPERATOR.test(token) && i < tokens.length - 1) continue; // ">= 20"
+    const tokens = set.split(/[ \t]+/).filter((token) => token !== "");
+    if (tokens[1] === "-") {
+      const [low = "", , high = ""] = tokens;
+      if (tokens.length === 3 && BARE_VERSION.test(low) && BARE_VERSION.test(high)) continue;
       return false;
+    }
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i] ?? "";
+      const operator = OPERATOR.exec(token)?.[0] ?? "";
+      const version = operator === token ? tokens[++i] : token.slice(operator.length);
+      if (version === undefined || !BARE_VERSION.test(version)) return false;
     }
   }
   return true;
