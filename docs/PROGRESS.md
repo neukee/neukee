@@ -4,36 +4,25 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-24, evening IST (Sreeram approved merging #11 and #13, and added T-005d).
-- **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23). The session ended with nothing uncommitted. The only unpushed commit is this wrap, on `docs-sync/2026-11-24`.
-- **Branches and worktrees:**
-  - `main` at `f26b722`: T-005a, T-005b, the presence kit and the 2026-11-23 docs-sync (#10) are merged. `pnpm verify` green (550 tests).
-  - `t-005c-scan-budget` at `aa4b8ff` (PR #11), in the worktree `../neukee-wt/t005c`.
-  - `ci/pkg-pr-new` at `3591317` (PR #13, from the strategy chat), in the worktree `../neukee-wt/pkgprnew`; `main` merged in, with ADR-019 above ADR-018.
-  - `docs-sync/2026-11-24`, in the worktree `../neukee-wt/docs-sync`: this wrap, not pushed.
-- **Last finished:** T-005b (file discovery), merged as `43767f3`.
-- **In progress:** T-005c (scan-wide matching budget), foundational (Opus), PR #11. It's ready:
-  - reviewer (Opus) PASS at head `aa4b8ff`;
-  - CodeRabbit approved `aa4b8ff`; CI green; no open threads.
-    It changes ADR-015's hostile-input defenses, so it waits for Sreeram's explicit merge approval rather than standing approval.
-- **Exact next step (Sreeram, 2026-11-24 evening):**
-  1. This docs-sync branch is pushed and open as PR #14 (docs-only); merge it so `main` has the current Resume here.
-  2. Bring PR #11 (T-005c) up to date with `main`, have the reviewer (Opus) check the merge commit, then merge it when green with CodeRabbit's review of the head (approved by Sreeram).
-  3. Bring PR #13 (pkg.pr.new, ADR-019) up to date with `main`, then merge it once CI is green, CodeRabbit has reviewed the new head and every thread is resolved (approved by Sreeram).
-  4. Start the thin end-to-end path with T-010 (TASKS Phase 1a, routine), following the CLAUDE.md order: commit, then review, then quote the PASS with the head SHA. T-005d (dropped negations fail open) comes after T-033 and must not delay it.
+- **Last updated:** 2026-11-25, 20:40 IST.
+- **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
+- **Branches and worktrees:** `main` at `f983a69`, no open task PRs. `docs-sync/2026-11-24` (worktree `../neukee-wt/docs-sync`) carries 2026-11-24 and 2026-11-25 updates; it was never merged at a `/wrap`.
+- **Last finished:** T-010 (runtime sources), merged as `f983a69` under standing approval. Reviewer PASS at head `6974be5` (Sonnet, after Opus rounds), CodeRabbit approved. MVP: 9 of 28 launch tasks done (32%).
+- **In progress:** T-014 (runtime findings), built and committed on `t-014-runtime-findings` (`a75c21a`), in review by the reviewer subagent (Opus). Resume it there: fix any findings, then open its PR. It adds the `semver` dependency, so its merge needs Sreeram's approval.
+- **Exact next step:** T-014 (runtime findings, thin path). Sreeram answered the monorepo question on 2026-11-25: `sources-disagree` is scoped per package, never across packages. SPEC-SCANNER §2.1 and an ADR in T-014's PR record it. T-014 also needs Node release data from the official schedule.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - Report progress at every 10% of the work in hand, against a stated step list (2026-11-23).
-  - Report overall MVP progress as launch tasks done out of 28 (7 done: 25%).
+  - Report overall MVP progress as launch tasks done out of 28 (9 done: 32%, on 2026-11-25).
 - **Blocked / waiting on Sreeram:**
-  - Run `/checkpoint` (T-005b has merged; decision 10). If it shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation.
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
   - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
   - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio.
   - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (13 days). Launch Tuesday, Dec 8 (14 days). 21 launch tasks remain (7 of 28 done; T-005c ready to merge): about 1.6 a day needed. Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28.
+- **`/checkpoint`:** Sreeram runs it on Saturday, Nov 28, after the thin path (2026-11-24).
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (12 days). Launch Tuesday, Dec 8 (13 days). 19 launch tasks remain (9 of 28 done; T-014 in progress): about 1.6 a day needed. Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28.
 
 ## Dated checkpoints
 
@@ -88,6 +77,11 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
+
+### 2026-11-25 · T-010 merged; a merge sent before its PR quoted the verdict
+
+- **T-010 (PR #15)** merged as `f983a69`. Reviews: Opus CHANGES REQUIRED on `1abff65` (a bad field dropped a good one; free text as ranges) and `70aaea3` (a quadratic trim regex), PASS on `6c91fc0`. CodeRabbit then found the range check looser than semver; Sreeram chose to fix it in the PR. Sonnet PASS on `6974be5`; that review first stopped on the 5-hour usage limit and was resumed this session.
+- **Process slip:** the PR-description update quoting the head verdict failed (the scratchpad copy of the body was gone), and the merge, sent in parallel, ran first. Every merge condition held: the verdict was given before the merge and is in the squash message. The description was corrected right after. From now on, a merge runs only after its last precondition step is confirmed, never in the same batch.
 
 ### 2026-11-24 (early) · PR #10 merged; T-005c ready; pkg.pr.new branch updated
 
