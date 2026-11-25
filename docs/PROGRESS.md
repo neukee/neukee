@@ -9,7 +9,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 - **Branches and worktrees:** `main` at `f983a69`, no open task PRs. `docs-sync/2026-11-24` (worktree `../neukee-wt/docs-sync`) carries 2026-11-24 and 2026-11-25 updates; it was never merged at a `/wrap`.
 - **Last finished:** T-010 (runtime sources), merged as `f983a69` under standing approval. Reviewer PASS at head `6974be5` (Sonnet, after Opus rounds), CodeRabbit approved. MVP: 9 of 28 launch tasks done (32%).
 - **In progress:** nothing.
-- **Exact next step:** `/next` picks T-014 (runtime findings, thin path), which needs Sreeram's monorepo answer first (REVIEW-QUEUE): should `sources-disagree` compare every `.nvmrc` and `package.json` at any depth, only the root, or each package with its own files? T-014 also needs Node release data from the official schedule.
+- **Exact next step:** T-014 (runtime findings, thin path). Sreeram answered the monorepo question on 2026-11-25: `sources-disagree` is scoped per package, never across packages. SPEC-SCANNER §2.1 and an ADR in T-014's PR record it. T-014 also needs Node release data from the official schedule.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
