@@ -1,0 +1,21 @@
+# Source: npm Docs, package.json, "engines" (fetched 2026-11-25).
+# "You can specify the version of node that your stuff works on"
+# nvm's README: "nvm use et. al. will traverse directory structure upwards from the current
+# directory looking for the .nvmrc file" (https://github.com/nvm-sh/nvm), which is how a pin
+# applies to a package (SPEC-SCANNER §2.1, ADR-020).
+id: runtime/sources-disagree
+title: Node.js version sources disagree
+applies:
+  tool: node
+severity: warning
+detector: runtime/sources
+message: >-
+  Two places that decide which Node.js version runs this package name different major versions,
+  or the pinned version is outside the range the package's engines.node says it works on. Tools
+  that read different files then run different versions, which is the most common reason an
+  upgrade that passes locally still runs the old runtime elsewhere.
+fix: Make every pin and the engines.node range agree on one major version.
+sourceUrl: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines
+fixtures:
+  positive: fixtures/rules/runtime-sources-disagree/positive
+  negative: fixtures/rules/runtime-sources-disagree/negative

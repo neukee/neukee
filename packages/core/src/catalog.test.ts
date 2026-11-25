@@ -315,18 +315,20 @@ describe("loadCatalog: invalid entries give clear errors naming the file", () =>
     expect(errors).toEqual([
       {
         file: at,
-        message: `${at}: sourceUrl must be a canonical https URL on an official host (nextjs.org, nodejs.org, react.dev, www.prisma.io), with no credentials or port (got ${JSON.stringify(url)}).`,
+        message: `${at}: sourceUrl must be a canonical https URL on an official host (nextjs.org, nodejs.org, react.dev, www.prisma.io, docs.npmjs.com), with no credentials or port (got ${JSON.stringify(url)}).`,
       },
     ]);
   });
 
-  it.each(["https://www.prisma.io/docs/orm", "https://nextjs.org/", "https://react.dev/blog#x"])(
-    "accepts the official source %j",
-    (url) => {
-      const { errors } = one(VALID.replace(/^sourceUrl: .*$/m, `sourceUrl: "${url}"`));
-      expect(errors).toEqual([]);
-    },
-  );
+  it.each([
+    "https://www.prisma.io/docs/orm",
+    "https://nextjs.org/",
+    "https://react.dev/blog#x",
+    "https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines",
+  ])("accepts the official source %j", (url) => {
+    const { errors } = one(VALID.replace(/^sourceUrl: .*$/m, `sourceUrl: "${url}"`));
+    expect(errors).toEqual([]);
+  });
 
   it.each(cases)("$name", ({ yaml, message }) => {
     const { entries, errors } = one(yaml);

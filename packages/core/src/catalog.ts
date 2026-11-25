@@ -40,7 +40,7 @@ const SEVERITIES: Record<Severity, true> = { "action-required": true, warning: t
 const TOOLS: Record<Tool, true> = { node: true, next: true, react: true, prisma: true };
 
 /** ADR-003, ADR-014: official sources only. Adding a host needs an ADR line. */
-const OFFICIAL_HOSTS = ["nextjs.org", "nodejs.org", "react.dev", "www.prisma.io"];
+const OFFICIAL_HOSTS = ["nextjs.org", "nodejs.org", "react.dev", "www.prisma.io", "docs.npmjs.com"];
 const VERSION = /^\d+\.\d+\.\d+$/;
 /** Real entries are about 1 KB; anything this big is a mistake, not an entry. */
 const MAX_BYTES = 64 * 1024;

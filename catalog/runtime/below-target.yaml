@@ -1,0 +1,17 @@
+# Source: Node.js Releases, nodejs.org (fetched 2026-11-25).
+# "Production applications should only use Active LTS or Maintenance LTS releases."
+# The rule needs no further claim: the upgrade target is the version the user asked to run.
+id: runtime/below-target
+title: Declared Node.js version is below the upgrade target
+applies:
+  tool: node
+severity: action-required
+detector: runtime/sources
+message: >-
+  This declaration pins, or only allows, Node.js versions older than the upgrade target, so the
+  environments that read it keep running the old runtime after the upgrade.
+fix: Update this declaration to the target's major version.
+sourceUrl: https://nodejs.org/en/about/previous-releases
+fixtures:
+  positive: fixtures/rules/runtime-below-target/positive
+  negative: fixtures/rules/runtime-below-target/negative

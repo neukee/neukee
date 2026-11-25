@@ -1,0 +1,6 @@
+{
+  "name": "lib",
+  "engines": {
+    "node": ">=18"
+  }
+}
