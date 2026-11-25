@@ -43,7 +43,9 @@ export function runtimeFindings(input: {
 
   const reported = new Set<string>();
   const scopes = scopesByDirectory(input.declarations);
-  for (const dir of [...input.packageDirs].sort()) {
+  // Folders are repo-relative with no trailing slash ("apps/web"); tolerate one anyway.
+  const packageDirs = input.packageDirs.map((dir) => (dir.endsWith("/") ? dir.slice(0, -1) : dir));
+  for (const dir of packageDirs.sort()) {
     for (const pair of disagreements(scopes, dir)) {
       const [first, second] = pair.sort((a, b) => byLocation(a.location, b.location));
       const key = JSON.stringify([first.location, second.location]);
@@ -79,8 +81,9 @@ export function runtimeFindings(input: {
   return findings;
 }
 
-// A target major of up to nine digits, alone or before a `.`: "26", "26.1.0".
-const TARGET = /^(\d{1,9})(?:\.|$)/;
+// A target major of up to nine digits without a leading zero, alone or before a `.`: "26",
+// "26.1.0". semver rejects "026", so anything else would make it throw.
+const TARGET = /^(0|[1-9]\d{0,8})(?:\.|$)/;
 const DATE = /^\d{4}-\d{2}-\d{2}/;
 
 /**

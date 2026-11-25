@@ -427,6 +427,18 @@ describe("runtime findings: more coverage and edges", () => {
     ).toEqual([]);
   });
 
+  it("reads a package folder given with a trailing slash", () => {
+    expect(
+      rule(
+        all(
+          [pin("apps/web/.nvmrc", v("24")), engines("apps/web/package.json", "20.x")],
+          ["apps/web/"],
+        ),
+        "runtime/sources-disagree",
+      ),
+    ).toHaveLength(1);
+  });
+
   it("lets a pin in a non-root parent folder reach the packages below it", () => {
     expect(
       rule(
@@ -456,7 +468,7 @@ describe("runtime findings: more coverage and edges", () => {
     expect(findings).toEqual([]);
   });
 
-  it.each(["99999999999999999999", "24garbage", "lts", ""])(
+  it.each(["99999999999999999999", "24garbage", "lts", "", "026", "026.1.0"])(
     "produces nothing, and doesn't throw, for the target %j",
     (version) => {
       expect(all([pin(".nvmrc", v("20"))], [""], [{ tool: "node", version }])).toEqual([]);
