@@ -113,13 +113,13 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-010 · Runtime sources: version files and package.json
 
-- Status: in review (PR #15)
+- Status: done (PR #15, `f983a69`)
 - Depends on: T-005b
 - Human review: no
 - Review: on Opus (Sreeram, 2026-11-24). The first detector sets the pattern later runtime sources copy; routine detectors after it use Sonnet.
 - Build: Read `.nvmrc`, `.node-version`, `package.json` `engines.node` and `volta.node`. Normalize (`v22` → `22`, ranges kept as ranges, `lts/*` → unpinned).
 - Done when:
-  - [ ] Fixtures cover each source and each odd format; every declared version comes back with its file and line.
+  - [x] Fixtures cover each source and each odd format; every declared version comes back with its file and line.
 
 ### T-014 · Runtime findings
 

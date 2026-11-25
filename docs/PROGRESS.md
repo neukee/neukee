@@ -4,12 +4,12 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-24, evening IST.
+- **Last updated:** 2026-11-25, 20:40 IST.
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
-- **Branches and worktrees:** `main` at `4fa9eaf`, `pnpm verify` green (592 tests), no open PRs. `docs-sync/2026-11-24` (worktree `../neukee-wt/docs-sync`) carries this update; it is merged at `/wrap`.
-- **Last finished:** T-005c (scan-wide matching budget), merged as `d149e9f`. Also merged today: PR #14 (docs-sync) as `0a5aff8` and PR #13 (pkg.pr.new, ADR-019) as `4fa9eaf`, both approved by Sreeram.
-- **In progress:** T-010 (runtime sources), PR #15. Reviewer (Opus) PASS at `6c91fc0` after two CHANGES REQUIRED rounds; CI and CodeRabbit running. It merges under standing approval when every condition holds.
-- **Exact next step:** `/next` picks T-010 (runtime sources: version files and `package.json`), the first task of the thin end-to-end path (TASKS Phase 1a). Its review is on Opus (Sreeram, 2026-11-24): the first detector sets the pattern later runtime sources copy. Routine detectors after it use Sonnet. Follow the CLAUDE.md order: commit, then review, then quote the PASS with the head SHA. T-005d (dropped negations fail open) waits until after T-033.
+- **Branches and worktrees:** `main` at `f983a69`, no open task PRs. `docs-sync/2026-11-24` (worktree `../neukee-wt/docs-sync`) carries 2026-11-24 and 2026-11-25 updates; it was never merged at a `/wrap`.
+- **Last finished:** T-010 (runtime sources), merged as `f983a69` under standing approval. Reviewer PASS at head `6974be5` (Sonnet, after Opus rounds), CodeRabbit approved. MVP: 9 of 28 launch tasks done (32%).
+- **In progress:** nothing.
+- **Exact next step:** `/next` picks T-014 (runtime findings, thin path), which needs Sreeram's monorepo answer first (REVIEW-QUEUE): should `sources-disagree` compare every `.nvmrc` and `package.json` at any depth, only the root, or each package with its own files? T-014 also needs Node release data from the official schedule.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
@@ -77,6 +77,11 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
+
+### 2026-11-25 · T-010 merged; a merge sent before its PR quoted the verdict
+
+- **T-010 (PR #15)** merged as `f983a69`. Reviews: Opus CHANGES REQUIRED on `1abff65` (a bad field dropped a good one; free text as ranges) and `70aaea3` (a quadratic trim regex), PASS on `6c91fc0`. CodeRabbit then found the range check looser than semver; Sreeram chose to fix it in the PR. Sonnet PASS on `6974be5`; that review first stopped on the 5-hour usage limit and was resumed this session.
+- **Process slip:** the PR-description update quoting the head verdict failed (the scratchpad copy of the body was gone), and the merge, sent in parallel, ran first. Every merge condition held: the verdict was given before the merge and is in the squash message. The description was corrected right after. From now on, a merge runs only after its last precondition step is confirmed, never in the same batch.
 
 ### 2026-11-24 (early) · PR #10 merged; T-005c ready; pkg.pr.new branch updated
 
