@@ -4,6 +4,21 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-020 · Runtime findings: per-package scope, ungated catalog entries, semver (2026-11-25)
+
+- **Context:** T-014 turns T-010's Node.js version declarations into findings. Three questions came up: how monorepos scope `runtime/sources-disagree`, how rules that aren't tied to a release fit a catalog whose entries all need `applies.introducedIn`, and how to check a pin against an `engines.node` range.
+- **Decision (Sreeram, 2026-11-25):**
+  - **Scope per package, never across packages.** A package is any folder with a `package.json`, the root included. Pins are `.nvmrc`, `.node-version` and `volta.node`; `engines.node` is a range. A package's pin of each kind is its own, else the nearest in a parent folder, the way nvm resolves `.nvmrc`. A package disagrees when two applicable pins name different majors, or an applicable pin is outside its `engines.node`. Majors only; `lts/*` never disagrees. Each declaration says which folders it covers, so Dockerfiles (their own folder) and GitHub Actions (repo-wide unless `node-version-file` says otherwise) plug in later without rework. No special cases for `examples/` or `fixtures/`; T-050 shows whether they're noisy. Details in SPEC-SCANNER §2.1.
+  - **`applies.introducedIn` is optional** (amends ADR-014). Without it a rule has no version gate. The three runtime rules are ordinary catalog entries with sources and positive and negative fixtures.
+  - **`semver`** joins the scanner for range checks (`intersects`, `gtr`), as ADR-004 allows. Sreeram approved adding it.
+  - **`docs.npmjs.com` becomes an official host** (amends ADR-014). `runtime/sources-disagree` cites npm's `engines` documentation, because Node's own docs don't describe the field.
+- **Choices in T-014, for review:**
+  - severities: `runtime/below-target` action-required, `runtime/sources-disagree` and `runtime/end-of-life` warning;
+  - runtime findings need a `node` target;
+  - end-of-life is dated by the scan's date against the official release schedule (copied into `packages/scanner/src/node-releases.ts` with its source), so a scan is deterministic for its date;
+  - an `engines.node` range is "below the target" only when every version it allows is.
+- **Consequences:** T-011 and T-012 add their sources by extending the declaration's `source` and its coverage; the compiler flags every switch to update. T-030 assembles these findings into the report.
+
 ## ADR-019 · Continuous preview packages with pkg.pr.new (2026-11-24)
 
 - **Context:** reviewers and design partners need to try a pull request's build without cloning the repo, and nothing goes to npm before v0.1.0 (ADR-009, T-055). pkg.pr.new publishes npm-compatible preview packages to its own URLs, not to npm.

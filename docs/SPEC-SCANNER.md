@@ -40,7 +40,16 @@ Every place that declares which Node.js version runs the app:
 | `vercel.json`, `netlify.toml`               | Node version settings (`NODE_VERSION` in Netlify)                                        |
 | `serverless.yml`, `template.yaml` (AWS SAM) | `runtime: nodejsXX.x`                                                                    |
 
-**Produces:** a list of declared versions with their source location. **Findings:** (a) a declared version below the target, (b) sources that disagree with each other (e.g. `.nvmrc` says 24, Dockerfile says 20) — the most common reason a "successful" upgrade still runs the old runtime in production, (c) a declared version past end-of-life.
+**Produces:** a list of declared versions with their source location. **Findings:** (a) a declared version below the target, (b) sources that disagree with each other (e.g. `.nvmrc` says 24, Dockerfile says 20) — the most common reason a "successful" upgrade still runs the old runtime in production, (c) a declared version past end-of-life. Runtime findings need a `node` target; end-of-life is dated by the scan's date and the official release schedule.
+
+**Which declarations disagree (Sreeram, 2026-11-25, ADR-020).** Disagreement is scoped per package, never across packages:
+
+- A package is any folder with a `package.json`, the root included.
+- Pins are `.nvmrc`, `.node-version` and `volta.node`; `engines.node` is a range.
+- The pin of each kind that applies to a package is its own, else the nearest one in a parent folder, the way nvm resolves `.nvmrc` ("nvm use et. al. will traverse directory structure upwards from the current directory looking for the `.nvmrc` file", nvm's README).
+- A package disagrees when two applicable pins name different majors, or an applicable pin is outside the package's own `engines.node`. Majors only: `20` satisfies `>=20.9`. `lts/<codename>` counts as its line's major; `lts/*` and other unpinned aliases never disagree.
+- Each declaration covers folders: pins their folder and below, `engines.node` its own package. Later sources plug in the same way: a Dockerfile covers its own folder, a GitHub Actions workflow the whole repository unless `node-version-file` points elsewhere.
+- No special cases for `examples/` or `fixtures/`. Validation (T-050) shows whether they're noisy, and any noise goes in `docs/VALIDATION.md`.
 
 ### 2.2 Lockfiles — `lockfile/*`
 
@@ -81,7 +90,7 @@ Initial rules (each becomes a catalog entry with fixtures; verify every detail a
 
 ### 2.5 Matching and severity
 
-A finding is produced only if the rule's `applies` range is crossed by the upgrade: the detected current version is below `introducedIn` and the target is at or above it. If the current version cannot be detected, the rule still runs and the finding says "current version unknown."
+A finding is produced only if the rule's `applies` range is crossed by the upgrade: the detected current version is below `introducedIn` and the target is at or above it. If the current version cannot be detected, the rule still runs and the finding says "current version unknown." A rule not tied to a release, such as `runtime/*`, has no `introducedIn` and no version gate (ADR-020).
 
 ## 3. Output formats
 
