@@ -14,7 +14,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - Report progress at every 10% of the work in hand, against a stated step list (2026-11-23).
-  - Report overall MVP progress as launch tasks done out of 28 (7 done: 25%).
+  - Report overall MVP progress as launch tasks done out of 28 (9 done: 32%, on 2026-11-25).
 - **Blocked / waiting on Sreeram:**
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
   - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
@@ -22,7 +22,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
 - **`/checkpoint`:** Sreeram runs it on Saturday, Nov 28, after the thin path (2026-11-24).
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (13 days). Launch Tuesday, Dec 8 (14 days). 21 launch tasks remain (7 of 28 done; T-005c ready to merge): about 1.6 a day needed. Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28.
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (12 days). Launch Tuesday, Dec 8 (13 days). 19 launch tasks remain (9 of 28 done; T-014 in progress): about 1.6 a day needed. Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28.
 
 ## Dated checkpoints
 
