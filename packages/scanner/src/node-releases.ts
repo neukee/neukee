@@ -40,6 +40,13 @@ export function releaseLine(version: string): string {
   return major === "0" ? `0.${minor}` : major;
 }
 
+/** Every major line (1 and above), newest first. */
+export function majorLines(): string[] {
+  return RELEASES.filter((release) => !release.line.startsWith("0."))
+    .map((release) => release.line)
+    .reverse();
+}
+
 /** The end-of-life date of a release line, if the schedule lists it. */
 export function endOfLife(line: string): string | undefined {
   return RELEASES.find((release) => release.line === line)?.end;

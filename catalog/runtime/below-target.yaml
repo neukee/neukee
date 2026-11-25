@@ -1,11 +1,13 @@
 # Source: Node.js Releases, nodejs.org (fetched 2026-11-25).
 # "Production applications should only use Active LTS or Maintenance LTS releases."
 # The rule needs no further claim: the upgrade target is the version the user asked to run.
+# Severity (Sreeram, ADR-021): warning; under the default target it softens to info while the
+# declared line has at least 12 months of support left.
 id: runtime/below-target
 title: Declared Node.js version is below the upgrade target
 applies:
   tool: node
-severity: action-required
+severity: warning
 detector: runtime/sources
 message: >-
   This declaration pins, or only allows, Node.js versions older than the upgrade target, so the

@@ -16,10 +16,12 @@ neukee --help
 | Option      | Default                                                             | Behavior                                                                                                                              |
 | ----------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `path`      | `.`                                                                 | Repository root to scan                                                                                                               |
-| `--target`  | `node@24` and the latest supported major of each detected framework | Repeatable. Supported in v0a: `node@24`, `node@26`, `next@15`, `next@16`                                                              |
+| `--target`  | `node@26` and the latest supported major of each detected framework | Repeatable. Supported in v0a: `node@24`, `node@26`, `next@15`, `next@16`                                                              |
 | `--format`  | `terminal`                                                          | `terminal` (colored, human), `markdown` (for PRs and audit reports), `json` (the `ScanReport` schema), `sarif` (GitHub code scanning) |
 | `--output`  | stdout                                                              | Write the report to a file instead                                                                                                    |
 | `--fail-on` | `action-required`                                                   | Exit code 1 when a finding at or above this severity exists; `never` always exits 0                                                   |
+
+**Default target and coverage (Sreeram, ADR-021).** Without `--target`, Node.js is checked against `node@26`. Every report then says plainly that v0.1.0 checks which Node.js version runs where, not your code for APIs removed in Node 23 to 26, and that those rules come after launch. Under the default target, `runtime/below-target` is `info` while the declared line has at least 12 months of support left from `scannedAt`, and `warning` when it has less; an explicit `--target` is never softened.
 
 **Exit codes:** `0` no blocking findings · `1` blocking findings · `2` usage error (bad arguments) · `3` internal error (a bug; prints a short message asking for a report).
 
@@ -46,9 +48,9 @@ Every place that declares which Node.js version runs the app:
 
 - A package is any folder with a `package.json`, the root included.
 - Pins are `.nvmrc`, `.node-version` and `volta.node`; `engines.node` is a range.
-- The pin of each kind that applies to a package is its own, else the nearest one in a parent folder, the way nvm resolves `.nvmrc` ("nvm use et. al. will traverse directory structure upwards from the current directory looking for the `.nvmrc` file", nvm's README).
+- The `.nvmrc` or `.node-version` that applies to a package is its own, else the nearest one in a parent folder, the way nvm resolves `.nvmrc` ("nvm use et. al. will traverse directory structure upwards from the current directory looking for the `.nvmrc` file", nvm's README). `volta.node` applies to its own package only: Volta shares a root pin only through `"extends"`, which isn't followed yet.
 - A package disagrees when two applicable pins name different majors, or an applicable pin is outside the package's own `engines.node`. Majors only: `20` satisfies `>=20.9`. `lts/<codename>` counts as its line's major; `lts/*` and other unpinned aliases never disagree.
-- Each declaration covers folders: pins their folder and below, `engines.node` its own package. Later sources plug in the same way: a Dockerfile covers its own folder, a GitHub Actions workflow the whole repository unless `node-version-file` points elsewhere.
+- Each declaration covers folders: `.nvmrc` and `.node-version` their folder and below, `engines.node` and `volta.node` their own package. Later sources plug in the same way: a Dockerfile covers its own folder, a GitHub Actions workflow the whole repository unless `node-version-file` points elsewhere.
 - No special cases for `examples/` or `fixtures/`. Validation (T-050) shows whether they're noisy, and any noise goes in `docs/VALIDATION.md`.
 
 ### 2.2 Lockfiles — `lockfile/*`

@@ -1,33 +1,37 @@
-import type { CatalogEntry, Finding, Location, Target } from "@neukee/core";
+import type { CatalogEntry, Finding, Location, Severity, Target } from "@neukee/core";
 import { gtr, intersects, validRange } from "semver";
-import { endOfLife, ltsMajor, releaseLine } from "./node-releases.js";
+import { endOfLife, ltsMajor, majorLines, releaseLine } from "./node-releases.js";
 import type { NodeVersionDeclaration } from "./runtime-sources.js";
 
 /**
- * Runtime findings (T-014, docs/SPEC-SCANNER.md §2.1, ADR-020) from T-010's declarations:
- * `runtime/sources-disagree` per package, `runtime/below-target` and `runtime/end-of-life` per
- * declaration. Knowledge (title, severity, why, fix, source) comes from the catalog entries.
+ * Runtime findings (T-014, docs/SPEC-SCANNER.md §1 and §2.1, ADR-020, ADR-021) from T-010's
+ * declarations: `runtime/sources-disagree` per package, `runtime/below-target` and
+ * `runtime/end-of-life` per declaration. Knowledge (title, severity, why, fix, source) comes from
+ * the catalog entries. Never throws.
  */
 export function runtimeFindings(input: {
   declarations: readonly NodeVersionDeclaration[];
   /** Repo-relative folders that hold a package.json ("" for the root). */
   packageDirs: readonly string[];
   targets: readonly Target[];
+  /** The node target came from the default, not from `--target` (softens below-target). */
+  defaultTarget: boolean;
   entries: readonly CatalogEntry[];
-  /** The scan's date, YYYY-MM-DD, so end-of-life is deterministic for a given scan. */
-  today: string;
+  /** The report's scannedAt; its date dates end-of-life and support left. */
+  scannedAt: string;
 }): Finding[] {
   const target = input.targets.find((t) => t.tool === "node");
-  const targetMajor = target === undefined ? undefined : /^\d+/.exec(target.version)?.[0];
+  const targetMajor = target === undefined ? undefined : TARGET.exec(target.version)?.[1];
   if (target === undefined || targetMajor === undefined) return [];
-  const entry = (id: string) => input.entries.find((e) => e.id === id);
+  // A date we can't read dates nothing: no end-of-life, no softening.
+  const date = DATE.exec(input.scannedAt)?.[0];
   const findings: Finding[] = [];
-  const add = (id: string, detail: string, locations: Location[]) => {
-    const rule = entry(id);
+  const add = (id: string, detail: string, locations: Location[], severity?: Severity) => {
+    const rule = input.entries.find((e) => e.id === id);
     if (rule === undefined) return;
     findings.push({
       ruleId: rule.id,
-      severity: rule.severity,
+      severity: severity ?? rule.severity,
       title: rule.title,
       message: `${detail}. ${rule.message}`,
       ...(rule.fix === undefined ? {} : { fix: rule.fix }),
@@ -38,37 +42,35 @@ export function runtimeFindings(input: {
   };
 
   const reported = new Set<string>();
+  const scopes = scopesByDirectory(input.declarations);
   for (const dir of [...input.packageDirs].sort()) {
-    for (const [a, b] of disagreements(input.declarations, dir)) {
-      const locations = [a.location, b.location].sort(byLocation);
-      const key = JSON.stringify(locations);
+    for (const pair of disagreements(scopes, dir)) {
+      const [first, second] = pair.sort((a, b) => byLocation(a.location, b.location));
+      const key = JSON.stringify([first.location, second.location]);
       if (reported.has(key)) continue; // one pair can cover many packages
       reported.add(key);
-      const [first, second] = byLocation(a.location, b.location) <= 0 ? [a, b] : [b, a];
-      add("runtime/sources-disagree", `${describe(first)}, but ${describe(second)}`, locations);
+      add("runtime/sources-disagree", `${describe(first)}, but ${describe(second)}`, [
+        first.location,
+        second.location,
+      ]);
     }
   }
 
   for (const declaration of input.declarations) {
-    const major = majorOf(declaration);
-    const { version } = declaration;
-    const below =
-      major === undefined
-        ? version.kind === "range" && entirelyBelow(version.range, targetMajor)
-        : Number(major) < Number(targetMajor);
-    if (below) {
-      add(
-        "runtime/below-target",
-        `${describe(declaration)}, below the target Node.js ${targetMajor}`,
-        [declaration.location],
-      );
-    }
+    const line = belowTargetLine(declaration, targetMajor);
+    if (line === undefined) continue;
+    add(
+      "runtime/below-target",
+      `${describe(declaration)}, below the target Node.js ${targetMajor}`,
+      [declaration.location],
+      input.defaultTarget ? softened(line, date) : undefined,
+    );
   }
 
   for (const declaration of input.declarations) {
     const line = lineOf(declaration);
     const end = line === undefined ? undefined : endOfLife(line);
-    if (end !== undefined && input.today > end) {
+    if (end !== undefined && date !== undefined && date > end) {
       add("runtime/end-of-life", `${describe(declaration)}, which reached end-of-life on ${end}`, [
         declaration.location,
       ]);
@@ -77,51 +79,108 @@ export function runtimeFindings(input: {
   return findings;
 }
 
-/** What a declaration decides: its own folder and below (pins), or its own package (engines). */
-type Coverage = { directory: string; reach: "subtree" | "package" };
+// A target major of up to nine digits, alone or before a `.`: "26", "26.1.0".
+const TARGET = /^(\d{1,9})(?:\.|$)/;
+const DATE = /^\d{4}-\d{2}-\d{2}/;
 
-function coverage(declaration: NodeVersionDeclaration): Coverage {
-  const file = declaration.location.file;
-  const directory = file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
-  switch (declaration.source) {
-    case "nvmrc":
-    case "node-version":
-    case "volta":
-      return { directory, reach: "subtree" }; // nvm walks up to the nearest .nvmrc
-    case "engines":
-      return { directory, reach: "package" };
-  }
-}
-
-function covers(scope: Coverage, dir: string): boolean {
-  if (scope.reach === "package") return scope.directory === dir;
-  return scope.directory === "" || scope.directory === dir || dir.startsWith(`${scope.directory}/`);
+/**
+ * Below-target under the default target (Sreeram, ADR-021): info while the declared line has at
+ * least 12 months of support left from the scan date, warning when it has less or the date or
+ * line is unknown. An explicit `--target` keeps the catalog's severity.
+ */
+function softened(line: string, date: string | undefined): Severity {
+  const end = endOfLife(line);
+  if (date === undefined || end === undefined) return "warning";
+  const yearLater = `${Number(date.slice(0, 4)) + 1}${date.slice(4)}`;
+  return end >= yearLater ? "info" : "warning";
 }
 
 /**
- * The pairs that disagree in one package: its applicable pins (per kind, its own or the nearest in
- * a parent folder) with different majors, and each pin its own engines.node doesn't allow.
+ * The release line a declaration keeps the project on when it's below the target: a pin's own
+ * line, or the newest line an engines range allows when every version it allows is below.
+ */
+function belowTargetLine(
+  declaration: NodeVersionDeclaration,
+  targetMajor: string,
+): string | undefined {
+  const major = majorOf(declaration);
+  if (major !== undefined)
+    return Number(major) < Number(targetMajor) ? lineOf(declaration) : undefined;
+  const { version } = declaration;
+  if (version.kind !== "range" || validRange(version.range) === null) return undefined;
+  if (!gtr(`${targetMajor}.0.0`, version.range)) return undefined;
+  return majorLines().find((line) => intersects(version.range, `${line}.x`)) ?? "";
+}
+
+/**
+ * What a declaration decides: `.nvmrc` and `.node-version` cover their folder and below (nvm
+ * walks up to the nearest); `engines.node` and `volta.node` cover their own package only (Volta
+ * needs `extends` to share a pin, which isn't followed yet; ADR-020).
+ */
+type Reach = "subtree" | "package";
+
+function reachOf(declaration: NodeVersionDeclaration): Reach {
+  switch (declaration.source) {
+    case "nvmrc":
+    case "node-version":
+      return "subtree";
+    case "engines":
+    case "volta":
+      return "package";
+    default:
+      return unreachable(declaration.source);
+  }
+}
+
+function directoryOf(declaration: NodeVersionDeclaration): string {
+  const file = declaration.location.file;
+  return file.includes("/") ? file.slice(0, file.lastIndexOf("/")) : "";
+}
+
+/** Declarations grouped by folder once, so each package walks only its own ancestors. */
+function scopesByDirectory(
+  declarations: readonly NodeVersionDeclaration[],
+): Map<string, NodeVersionDeclaration[]> {
+  const byDirectory = new Map<string, NodeVersionDeclaration[]>();
+  for (const declaration of declarations) {
+    const dir = directoryOf(declaration);
+    byDirectory.set(dir, [...(byDirectory.get(dir) ?? []), declaration]);
+  }
+  return byDirectory;
+}
+
+/** `dir`, then each parent folder up to the root (""). */
+function* selfAndAncestors(dir: string): Generator<string> {
+  let current = dir;
+  while (current !== "") {
+    yield current;
+    current = current.includes("/") ? current.slice(0, current.lastIndexOf("/")) : "";
+  }
+  yield "";
+}
+
+/**
+ * The pairs that disagree in one package: its applicable pins (package-reach ones from its own
+ * folder; subtree ones from the nearest folder that has that kind, every one of them) with
+ * different majors, and each pin its own engines.node doesn't allow.
  */
 function disagreements(
-  declarations: readonly NodeVersionDeclaration[],
+  scopes: Map<string, NodeVersionDeclaration[]>,
   dir: string,
 ): [NodeVersionDeclaration, NodeVersionDeclaration][] {
-  const nearest = new Map<string, NodeVersionDeclaration>();
-  const ranges: NodeVersionDeclaration[] = [];
-  for (const declaration of declarations) {
-    const scope = coverage(declaration);
-    if (!covers(scope, dir)) continue;
-    if (declaration.source === "engines") {
-      ranges.push(declaration);
-      continue;
-    }
-    const current = nearest.get(declaration.source);
-    if (current === undefined || coverage(current).directory.length < scope.directory.length) {
-      nearest.set(declaration.source, declaration);
-    }
+  const applicable: NodeVersionDeclaration[] = [];
+  const found = new Set<string>();
+  for (const folder of selfAndAncestors(dir)) {
+    const here = (scopes.get(folder) ?? []).filter(
+      (d) => (folder === dir || reachOf(d) === "subtree") && !found.has(d.source),
+    );
+    applicable.push(...here);
+    for (const d of here) found.add(d.source);
   }
+  const ranges = applicable.filter((d) => d.source === "engines");
   // Each pin with the major it selects; unpinned aliases and ranges select none.
-  const pins = [...nearest.values()].flatMap((declaration) => {
+  const pins = applicable.flatMap((declaration) => {
+    if (declaration.source === "engines") return [];
     const major = majorOf(declaration);
     return major === undefined ? [] : [{ declaration, major }];
   });
@@ -151,10 +210,12 @@ function majorOf(declaration: NodeVersionDeclaration): string | undefined {
     case "range":
     case "unpinned":
       return undefined;
+    default:
+      return unreachable(version);
   }
 }
 
-/** The release line a pin selects (0.x lines keep their minor), for end-of-life. */
+/** The release line a pin selects (0.x lines keep their minor). */
 function lineOf(declaration: NodeVersionDeclaration): string | undefined {
   const { version } = declaration;
   if (version.kind === "version") return releaseLine(version.version);
@@ -167,11 +228,6 @@ function allowsMajor(range: string, major: string): boolean {
   return intersects(range, `${major}.x`);
 }
 
-/** Whether every version the range allows is below the target major. */
-function entirelyBelow(range: string, targetMajor: string): boolean {
-  return validRange(range) !== null && gtr(`${targetMajor}.0.0`, range);
-}
-
 function describe(declaration: NodeVersionDeclaration): string {
   const { file } = declaration.location;
   const { version } = declaration;
@@ -180,16 +236,21 @@ function describe(declaration: NodeVersionDeclaration): string {
       return `${file} ${declaration.source}.node allows "${version.range}"`;
     case "version":
       return `${file}${declaration.source === "volta" ? " volta.node" : ""} pins Node.js ${version.version}`;
-    case "lts": {
-      const major = ltsMajor(version.codename);
-      return `${file} pins lts/${version.codename}${major === undefined ? "" : ` (Node.js ${major})`}`;
-    }
+    case "lts":
+      return `${file} pins lts/${version.codename} (Node.js ${ltsMajor(version.codename) ?? "unknown"})`;
     case "unpinned":
       return `${file} pins ${version.alias}`;
+    default:
+      return unreachable(version);
   }
 }
 
 function byLocation(a: Location, b: Location): number {
   if (a.file !== b.file) return a.file < b.file ? -1 : 1;
   return (a.line ?? 0) - (b.line ?? 0) || (a.column ?? 0) - (b.column ?? 0);
+}
+
+/** Makes a switch over a union exhaustive: a new case fails to compile here. */
+function unreachable(value: never): never {
+  throw new Error(`Unhandled case: ${JSON.stringify(value)}`);
 }

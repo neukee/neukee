@@ -12,8 +12,8 @@ detector: runtime/sources
 message: >-
   Two places that decide which Node.js version runs this package name different major versions,
   or the pinned version is outside the range the package's engines.node says it works on. Tools
-  that read different files then run different versions, which is the most common reason an
-  upgrade that passes locally still runs the old runtime elsewhere.
+  that read different files then run different versions, so an
+  upgrade that passes locally can still run the old runtime elsewhere.
 fix: Make every pin and the engines.node range agree on one major version.
 sourceUrl: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines
 fixtures:

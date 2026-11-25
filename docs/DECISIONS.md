@@ -4,18 +4,28 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 
 ---
 
+## ADR-021 · Default target node@26 at launch, with a coverage note and a softened below-target (2026-11-25)
+
+- **Context:** Node.js 26 entered Active LTS on 2026-10-28 and Node.js 24 moved to Maintenance LTS on 2026-10-20 (the official release schedule). The scanner's default target was `node@24`. But v0.1.0 has no rules for APIs removed in Node 23 to 26 (T-024 and T-025 are post-launch, ADR-013), and an implicit target would make `runtime/below-target` flag every repository on a supported LTS.
+- **Decision (Sreeram, 2026-11-25):**
+  - **The default target is `node@26`** (and the latest supported major of each detected framework, as before). SPEC-SCANNER §1.
+  - **Coverage note.** Every report says plainly that v0.1.0 checks which Node.js version runs where, not your code for APIs removed in Node 23 to 26, and that those rules come after launch. The renderers and the CLI (T-031, T-033) print it.
+  - **Softened below-target, exactly:** when the target came from the default (no `--target`), `runtime/below-target` is `info` if the declared line has at least 12 months of support left from the scan date (`scannedAt`), and `warning` if it has less. An explicit `--target` is never softened. Its catalog severity is `warning`. On 2026-11-25 that makes Node 24 `info` and Node 22 a `warning`. Fixtures: 24 (info), 22 (warning), and 22 with `--target node@26` (warning).
+  - **T-024 stays where it is.** The `/checkpoint` on Saturday, Nov 28 decides whether it moves up.
+- **Consequences:** `runtimeFindings` takes whether the node target came from the default; T-033 sets it. T-031 and T-033 print the coverage note.
+
 ## ADR-020 · Runtime findings: per-package scope, ungated catalog entries, semver (2026-11-25)
 
 - **Context:** T-014 turns T-010's Node.js version declarations into findings. Three questions came up: how monorepos scope `runtime/sources-disagree`, how rules that aren't tied to a release fit a catalog whose entries all need `applies.introducedIn`, and how to check a pin against an `engines.node` range.
 - **Decision (Sreeram, 2026-11-25):**
-  - **Scope per package, never across packages.** A package is any folder with a `package.json`, the root included. Pins are `.nvmrc`, `.node-version` and `volta.node`; `engines.node` is a range. A package's pin of each kind is its own, else the nearest in a parent folder, the way nvm resolves `.nvmrc`. A package disagrees when two applicable pins name different majors, or an applicable pin is outside its `engines.node`. Majors only; `lts/*` never disagrees. Each declaration says which folders it covers, so Dockerfiles (their own folder) and GitHub Actions (repo-wide unless `node-version-file` says otherwise) plug in later without rework. No special cases for `examples/` or `fixtures/`; T-050 shows whether they're noisy. Details in SPEC-SCANNER §2.1.
+  - **Scope per package, never across packages.** A package is any folder with a `package.json`, the root included. Pins are `.nvmrc`, `.node-version` and `volta.node`; `engines.node` is a range. A package's `.nvmrc` or `.node-version` is its own, else the nearest in a parent folder, the way nvm resolves `.nvmrc`. `volta.node` applies to its own package only (Sreeram, 2026-11-25): Volta's docs say a nested package shares a root pin only through `"extends"`, which isn't followed yet, so such a package gets no Volta pin rather than a wrong one. A package disagrees when two applicable pins name different majors, or an applicable pin is outside its `engines.node`. Majors only; `lts/*` never disagrees. Each declaration says which folders it covers, so Dockerfiles (their own folder) and GitHub Actions (repo-wide unless `node-version-file` says otherwise) plug in later without rework. No special cases for `examples/` or `fixtures/`; T-050 shows whether they're noisy. Details in SPEC-SCANNER §2.1.
   - **`applies.introducedIn` is optional** (amends ADR-014). Without it a rule has no version gate. The three runtime rules are ordinary catalog entries with sources and positive and negative fixtures.
   - **`semver`** joins the scanner for range checks (`intersects`, `gtr`), as ADR-004 allows. Sreeram approved adding it.
   - **`docs.npmjs.com` becomes an official host** (amends ADR-014). `runtime/sources-disagree` cites npm's `engines` documentation, because Node's own docs don't describe the field.
 - **Choices in T-014, for review:**
-  - severities: `runtime/below-target` action-required, `runtime/sources-disagree` and `runtime/end-of-life` warning;
+  - severities: all three are `warning`; `runtime/below-target` softens to `info` under the default target (ADR-021);
   - runtime findings need a `node` target;
-  - end-of-life is dated by the scan's date against the official release schedule (copied into `packages/scanner/src/node-releases.ts` with its source), so a scan is deterministic for its date;
+  - end-of-life is dated by the date in the report's `scannedAt` against the official release schedule (copied into `packages/scanner/src/node-releases.ts` with its source), so a scan is deterministic for its date; `runtime/end-of-life` cites https://nodejs.org/en/about/eol;
   - an `engines.node` range is "below the target" only when every version it allows is.
 - **Consequences:** T-011 and T-012 add their sources by extending the declaration's `source` and its coverage; the compiler flags every switch to update. T-030 assembles these findings into the report.
 
@@ -130,7 +140,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
 - **Context:** T-003 builds `loadCatalog`. The task says "id matches file path", and catalog/README.md had suggested `catalog/<tool>/<name>.yaml`. With that layout one id could live in two folders, and `node24/x` and `node26/x` would collide. The reviewer subagent also found that the loader crashed on one bad file and that a runtime check for fixture folders would fail in the npm package.
 - **Decision:**
   - **Path = id:** an entry lives at `catalog/<id>.yaml` (`catalog/next16/sync-request-apis.yaml`). Duplicate ids are impossible, and ids with three or more segments map to nested folders.
-  - **Official hosts:** `nextjs.org`, `nodejs.org`, `react.dev`, `www.prisma.io`. Adding a host needs a line in this ADR, approved through its PR. The check uses the URL API, no regex (Sreeram, after a CodeQL alert on the old regex):
+  - **Official hosts:** `nextjs.org`, `nodejs.org`, `react.dev`, `www.prisma.io`, and `docs.npmjs.com` (added by ADR-020 for npm's `engines` documentation). Adding a host needs a line in this ADR, approved through its PR. The check uses the URL API, no regex (Sreeram, after a CodeQL alert on the old regex):
     - https only, with no username, password or port;
     - the hostname must equal an official host exactly;
     - the URL must already be canonical (`new URL(v).href === v`), because the parser silently strips whitespace, drops an explicit `:443` and lowercases the host. So an uppercase host is rejected, not normalized.

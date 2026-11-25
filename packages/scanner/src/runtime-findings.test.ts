@@ -8,10 +8,14 @@ import { type NodeVersionDeclaration, readRuntimeSources } from "./runtime-sourc
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const { entries } = loadCatalog(`${repoRoot}catalog`);
 const NODE_24: Target = { tool: "node", version: "24" };
-const TODAY = "2026-11-25";
+const SCANNED_AT = "2026-11-25T12:00:00.000Z";
 
 /** Runs discovery and the runtime readers over a fixture, as the pipeline does. */
-function findingsIn(fixture: string, targets: Target[] = [NODE_24]): Finding[] {
+function findingsIn(
+  fixture: string,
+  targets: Target[] = [NODE_24],
+  defaultTarget = false,
+): Finding[] {
   const declarations: NodeVersionDeclaration[] = [];
   const packageDirs: string[] = [];
   for (const event of discoverFiles(`${repoRoot}${fixture}`)) {
@@ -22,7 +26,14 @@ function findingsIn(fixture: string, targets: Target[] = [NODE_24]): Finding[] {
       packageDirs.push(event.file.path.slice(0, -"/package.json".length));
     }
   }
-  return runtimeFindings({ declarations, packageDirs, targets, entries, today: TODAY });
+  return runtimeFindings({
+    declarations,
+    packageDirs,
+    targets,
+    entries,
+    scannedAt: SCANNED_AT,
+    defaultTarget,
+  });
 }
 
 function rule(findings: Finding[], id: string): Finding[] {
@@ -84,7 +95,8 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
       packageDirs: ["", "apps/a", "apps/b"],
       targets: [NODE_24],
       entries,
-      today: TODAY,
+      scannedAt: SCANNED_AT,
+      defaultTarget: false,
     });
     expect(rule(findings, "runtime/sources-disagree").map((f) => f.locations)).toEqual([
       [
@@ -104,7 +116,8 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
       packageDirs: ["apps/web"],
       targets: [NODE_24],
       entries,
-      today: TODAY,
+      scannedAt: SCANNED_AT,
+      defaultTarget: false,
     });
     expect(rule(findings, "runtime/sources-disagree")).toEqual([]);
   });
@@ -115,7 +128,8 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
       packageDirs: ["apps/a", "apps/b"],
       targets: [NODE_24],
       entries,
-      today: TODAY,
+      scannedAt: SCANNED_AT,
+      defaultTarget: false,
     });
     expect(rule(findings, "runtime/sources-disagree")).toEqual([]);
   });
@@ -128,7 +142,8 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
           packageDirs: [""],
           targets: [NODE_24],
           entries,
-          today: TODAY,
+          scannedAt: SCANNED_AT,
+          defaultTarget: false,
         }),
         "runtime/sources-disagree",
       ).length;
@@ -147,7 +162,8 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
           packageDirs: [""],
           targets: [NODE_24],
           entries,
-          today: TODAY,
+          scannedAt: SCANNED_AT,
+          defaultTarget: false,
         }),
         "runtime/sources-disagree",
       ).length;
@@ -161,7 +177,14 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
 describe("which packages a declaration covers", () => {
   const disagreeing = (declarations: NodeVersionDeclaration[], packageDirs: string[]) =>
     rule(
-      runtimeFindings({ declarations, packageDirs, targets: [NODE_24], entries, today: TODAY }),
+      runtimeFindings({
+        declarations,
+        packageDirs,
+        targets: [NODE_24],
+        entries,
+        scannedAt: SCANNED_AT,
+        defaultTarget: false,
+      }),
       "runtime/sources-disagree",
     );
 
@@ -258,12 +281,12 @@ describe("runtime/below-target", () => {
     expect(findings.map((f) => [f.locations, f.severity, f.message.split(". ")[0]])).toEqual([
       [
         [{ file: ".nvmrc", line: 1, column: 1 }],
-        "action-required",
+        "warning",
         ".nvmrc pins Node.js 20, below the target Node.js 24",
       ],
       [
         [{ file: "package.json", line: 4, column: 14 }],
-        "action-required",
+        "warning",
         'package.json engines.node allows "20.x", below the target Node.js 24',
       ],
     ]);
@@ -303,9 +326,10 @@ describe("runtime/end-of-life", () => {
         packageDirs: [""],
         targets: [NODE_24],
         entries,
-        today,
+        scannedAt: `${today}T23:59:59.000Z`,
+        defaultTarget: false,
       }).filter((f) => f.ruleId === "runtime/end-of-life").length;
-    expect(run("2026-04-30")).toBe(0); // Node.js 20's last day
+    expect(run("2026-04-30")).toBe(0); // Node.js 20's last day, even late in the day
     expect(run("2026-05-01")).toBe(1);
   });
 });
@@ -317,11 +341,152 @@ describe("runtime/end-of-life for LTS codenames", () => {
       packageDirs: [""],
       targets: [NODE_24],
       entries,
-      today: TODAY,
+      scannedAt: SCANNED_AT,
+      defaultTarget: false,
     });
     expect(rule(findings, "runtime/end-of-life").map((f) => f.message.split(". ")[0])).toEqual([
       ".nvmrc pins lts/hydrogen (Node.js 18), which reached end-of-life on 2025-04-30",
     ]);
+  });
+});
+
+describe("runtime/below-target under the default target (Sreeram, ADR-021)", () => {
+  const NODE_26: Target = { tool: "node", version: "26" };
+  const severity = (fixture: string, defaultTarget: boolean) =>
+    rule(findingsIn(fixture, [NODE_26], defaultTarget), "runtime/below-target").map(
+      (f) => f.severity,
+    );
+
+  it("is info for Node.js 24, which has at least 12 months of support left", () => {
+    expect(severity("fixtures/rules/runtime-below-target/default-target-24", true)).toEqual([
+      "info",
+    ]);
+  });
+
+  it("is a warning for Node.js 22, which has less than 12 months left", () => {
+    expect(severity("fixtures/rules/runtime-below-target/default-target-22", true)).toEqual([
+      "warning",
+    ]);
+  });
+
+  it("is never softened for an explicit --target", () => {
+    expect(severity("fixtures/rules/runtime-below-target/default-target-22", false)).toEqual([
+      "warning",
+    ]);
+    expect(severity("fixtures/rules/runtime-below-target/default-target-24", false)).toEqual([
+      "warning",
+    ]);
+  });
+
+  it("counts the 12 months from the scan date, and softens a range by its newest line", () => {
+    const run = (version: NodeVersionDeclaration["version"], scannedAt: string) =>
+      runtimeFindings({
+        declarations: [
+          { source: "nvmrc", location: { file: ".nvmrc", line: 1, column: 1 }, version },
+        ],
+        packageDirs: [""],
+        targets: [NODE_26],
+        defaultTarget: true,
+        entries,
+        scannedAt,
+      }).map((f) => f.severity);
+    // Node.js 24 ends 2028-04-30: info until 2027-04-30, a warning after.
+    expect(run(v("24"), "2027-04-30T00:00:00Z")).toEqual(["info"]);
+    expect(run(v("24"), "2027-05-01T00:00:00Z")).toEqual(["warning"]);
+    expect(run({ kind: "range", range: "^22 || ^24" }, SCANNED_AT)).toEqual(["info"]);
+    expect(run(v("24"), "not a date")).toEqual(["warning"]);
+  });
+});
+
+describe("runtime findings: more coverage and edges", () => {
+  const all = (
+    declarations: NodeVersionDeclaration[],
+    packageDirs: string[] = [""],
+    targets = [NODE_24],
+  ) =>
+    runtimeFindings({
+      declarations,
+      packageDirs,
+      targets,
+      entries,
+      scannedAt: SCANNED_AT,
+      defaultTarget: false,
+    });
+
+  it("applies volta.node to its own package only (Volta needs extends to share it)", () => {
+    const volta: NodeVersionDeclaration = {
+      source: "volta",
+      location: { file: "package.json", line: 6, column: 14 },
+      version: v("20.16.0"),
+    };
+    expect(
+      rule(
+        all([volta, engines("apps/web/package.json", "24.x")], ["", "apps/web"]),
+        "runtime/sources-disagree",
+      ),
+    ).toEqual([]);
+  });
+
+  it("lets a pin in a non-root parent folder reach the packages below it", () => {
+    expect(
+      rule(
+        all([pin("apps/.nvmrc", v("20")), engines("apps/web/package.json", "24.x")], ["apps/web"]),
+        "runtime/sources-disagree",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it.each([">=26", "^22 || ^26", ">=24", "*"])(
+    "doesn't flag the range %j as below the target",
+    (range) => {
+      expect(rule(all([engines("package.json", range)]), "runtime/below-target")).toEqual([]);
+    },
+  );
+
+  it("dates 0.x lines by their own line", () => {
+    expect(
+      rule(all([pin(".nvmrc", v("0.10"))]), "runtime/end-of-life").map(
+        (f) => f.message.split(". ")[0],
+      ),
+    ).toEqual([".nvmrc pins Node.js 0.10, which reached end-of-life on 2016-10-31"]);
+  });
+
+  it("never treats a range semver can't read as a disagreement or below the target", () => {
+    const findings = all([pin(".nvmrc", v("24")), engines("package.json", "not a range")]);
+    expect(findings).toEqual([]);
+  });
+
+  it.each(["99999999999999999999", "24garbage", "lts", ""])(
+    "produces nothing, and doesn't throw, for the target %j",
+    (version) => {
+      expect(all([pin(".nvmrc", v("20"))], [""], [{ tool: "node", version }])).toEqual([]);
+    },
+  );
+
+  it("skips end-of-life when the scan date can't be read", () => {
+    const findings = runtimeFindings({
+      declarations: [pin(".nvmrc", v("18"))],
+      packageDirs: [""],
+      targets: [NODE_24],
+      entries,
+      scannedAt: "yesterday",
+      defaultTarget: false,
+    });
+    expect(rule(findings, "runtime/end-of-life")).toEqual([]);
+  });
+
+  it("stays fast for a repository with 10,000 packages", () => {
+    const packageDirs = Array.from(
+      { length: 10_000 },
+      (_, i) => `packages/group${i % 100}/pkg${i}`,
+    );
+    const declarations = [
+      pin(".nvmrc", v("24")),
+      ...packageDirs.map((dir) => engines(`${dir}/package.json`, ">=20")),
+    ];
+    const start = performance.now();
+    expect(all(declarations, packageDirs)).toEqual([]);
+    expect(performance.now() - start).toBeLessThan(2000);
   });
 });
 
@@ -354,7 +519,8 @@ describe("runtime findings in general", () => {
       packageDirs: [""],
       targets: [NODE_24],
       entries: withoutFix,
-      today: TODAY,
+      scannedAt: SCANNED_AT,
+      defaultTarget: false,
     });
     expect(findings.map((f) => f.ruleId)).toEqual(["runtime/below-target"]);
     expect(findings[0]).not.toHaveProperty("fix");

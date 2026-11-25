@@ -1,6 +1,7 @@
-# Source: Node.js Releases, nodejs.org (fetched 2026-11-25); end dates from the Node.js release
-# schedule, https://github.com/nodejs/Release/blob/main/schedule.json.
-# "Production applications should only use Active LTS or Maintenance LTS releases."
+# Source: Node.js, "End-Of-Life", https://nodejs.org/en/about/eol (fetched 2026-11-25).
+# "When a version reaches End-Of-Life, it means that it will no longer receive updates, including
+# security patches." End dates come from the release schedule,
+# https://github.com/nodejs/Release/blob/main/schedule.json.
 id: runtime/end-of-life
 title: Declared Node.js version is past end-of-life
 applies:
@@ -8,11 +9,10 @@ applies:
 severity: warning
 detector: runtime/sources
 message: >-
-  This Node.js major has passed its end-of-life date and no longer gets fixes, including security
-  fixes, from the Node.js project. Production applications should only use Active LTS or
-  Maintenance LTS releases.
+  This Node.js release line has reached End-Of-Life: it no longer receives updates, including
+  security patches, which can leave the application exposed to issues that will never be fixed.
 fix: Move this declaration to an Active LTS or Maintenance LTS release.
-sourceUrl: https://nodejs.org/en/about/previous-releases
+sourceUrl: https://nodejs.org/en/about/eol
 fixtures:
   positive: fixtures/rules/runtime-end-of-life/positive
   negative: fixtures/rules/runtime-end-of-life/negative

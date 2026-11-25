@@ -187,7 +187,7 @@ fixtures:
 
 **Catalog rules (enforced by `loadCatalog` and its tests, ADR-003, ADR-014):**
 
-- Every entry has a `sourceUrl` on an official host: `nextjs.org`, `nodejs.org`, `react.dev` or `www.prisma.io`. It must be a canonical https URL (unchanged by `new URL()`) with no credentials or port, and the hostname must equal an official host exactly. Adding a host needs an ADR line. No entry is written from memory.
+- Every entry has a `sourceUrl` on an official host: `nextjs.org`, `nodejs.org`, `react.dev`, `www.prisma.io` or `docs.npmjs.com` (ADR-020). It must be a canonical https URL (unchanged by `new URL()`) with no credentials or port, and the hostname must equal an official host exactly. Adding a host needs an ADR line. No entry is written from memory.
 - Every entry has a positive fixture (must produce the finding) and a negative fixture (must not), both folders under the top-level `fixtures/`. The loader checks the paths; the tests check the folders exist, because the npm package ships the catalog without fixtures.
 - The file path is the id, with the lowercase `.yaml` extension. Fields are closed (no unknown keys). `applies.introducedIn`, when present, is `x.y.z`; rules not tied to a release omit it (ADR-020). `title` is one line.
 - Every `catalog/**/*.yaml` is an entry, so data that isn't an entry (such as Node release dates for T-014) lives somewhere else.

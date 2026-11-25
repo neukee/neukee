@@ -182,6 +182,11 @@ describe("loadCatalog: invalid entries give clear errors naming the file", () =>
       message: `${at}: applies.introducedIn must be a version like "16.0.0" (got an object).`,
     },
     {
+      name: "an introducedIn that is present but empty",
+      yaml: VALID.replace('introducedIn: "16.0.0"', "introducedIn: ~"),
+      message: `${at}: applies.introducedIn must be a version like "16.0.0" (got null).`,
+    },
+    {
       name: "applies that isn't a mapping",
       yaml: VALID.replace(/^applies:\n(?: {2}.*\n)+/m, "applies: next\n"),
       message: `${at}: applies must be a mapping (tool, introducedIn).`,
