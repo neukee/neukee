@@ -80,6 +80,13 @@ describe("loadCatalog: valid entries", () => {
     expect(entries[0]).not.toHaveProperty("fix");
   });
 
+  // ADR-020: a rule not tied to a release (runtime/*) has no version gate.
+  it("accepts an entry without the optional introducedIn", () => {
+    const { entries, errors } = one(VALID.replace('  introducedIn: "16.0.0"\n', ""));
+    expect(errors).toEqual([]);
+    expect(entries[0]?.applies).toEqual({ tool: "next" });
+  });
+
   it("reads CRLF files the same as LF files", () => {
     expect(one(VALID.replaceAll("\n", "\r\n"))).toEqual({ entries: [EXPECTED], errors: [] });
   });

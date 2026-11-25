@@ -9,7 +9,11 @@ export interface CatalogEntry {
   /** Same grammar as a report's `ruleId`, e.g. "next16/sync-request-apis". */
   id: string;
   title: string;
-  applies: { tool: Tool; introducedIn: string };
+  /**
+   * `introducedIn` gates the rule to upgrades that cross it (SPEC-SCANNER §2.5). Rules that aren't
+   * tied to a release, such as `runtime/*`, have none (ADR-020).
+   */
+  applies: { tool: Tool; introducedIn?: string };
   severity: Severity;
   /** Which code-level detector produces the facts, e.g. "ast/sync-request-api". */
   detector: string;
@@ -53,7 +57,7 @@ const FIELDS = {
   sourceUrl: true,
   fixtures: true,
 };
-const APPLIES_FIELDS = { tool: true, introducedIn: true };
+const APPLIES_FIELDS = { tool: true, introducedIn: false };
 const FIXTURE_FIELDS = { positive: true, negative: true };
 
 /**
@@ -160,7 +164,10 @@ function readEntry(fullPath: string, path: string, file: string): CatalogEntry |
   if (!isTool(tool)) {
     return `${file}: applies.tool must be one of ${quotedList(Object.keys(TOOLS))} (got ${describe(tool)}).`;
   }
-  if (typeof introducedIn !== "string" || !VERSION.test(introducedIn)) {
+  if (
+    introducedIn !== undefined &&
+    (typeof introducedIn !== "string" || !VERSION.test(introducedIn))
+  ) {
     return `${file}: applies.introducedIn must be a version like "16.0.0" (got ${describe(introducedIn)}).`;
   }
   if (!isSeverity(severity)) {
@@ -185,7 +192,7 @@ function readEntry(fullPath: string, path: string, file: string): CatalogEntry |
   return {
     id,
     title,
-    applies: { tool, introducedIn },
+    applies: { tool, ...(introducedIn === undefined ? {} : { introducedIn }) },
     severity,
     detector,
     message,
