@@ -194,8 +194,13 @@ describe("renderMarkdown", () => {
     expect(row).toContain("\\<img src=x onerror=1\\>");
     expect(row).toContain("a\\|b \\*bold\\* \\_it\\_ \\`code\\` x@<span></span>y.z");
     expect(row).toContain("`p\\|q.json`"); // a pipe stays escaped inside a cell, even in a code span
-    // Every "<" is escaped, or is part of exactly our own empty span.
-    expect(row).not.toMatch(/(?<!\\|<span>)<(?!span><\/span>)/);
+    // Remove the only allowed forms (an escaped backslash, an escaped "<", our empty span), then
+    // require that no "<" is left: "\\<" is a backslash followed by a raw "<", not an escaped one.
+    const rest = row
+      .replace(/\\\\/g, "")
+      .replace(/\\</g, "")
+      .replace(/<span><\/span>/g, "");
+    expect(rest).not.toContain("<");
   });
 
   it("keeps a multi-line message in one table row and neutralises control and bidi characters", () => {
