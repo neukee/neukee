@@ -4,26 +4,26 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-26, 19:30 IST.
+- **Last updated:** 2026-11-26, 20:45 IST.
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
-- **Branches and worktrees:** `main` at `7473949`. `t-014-runtime-findings` at `4851d8b` (main checkout), PR #17 open. `docs-sync/2026-11-26` (worktree `../neukee-wt/docs-sync`) carries today's updates, including the 2026-11-25 `/wrap` that was never committed.
-- **Last finished:** T-010 (runtime sources), merged as `f983a69`. MVP: 9 of 28 launch tasks done (32%).
-- **In progress:** T-014 (runtime findings), PR #17 at `4851d8b`. Reviewer (Opus) PASS at `4851d8b`; CI and the quality job green. CodeRabbit requested changes once (Minor): `engines.node` doesn't select a runtime, so below-target's message ("keep running the old runtime") and sources-disagree's ("decide which Node.js version runs") overstate what a range does. The fix changes finding text and golden snapshots.
-- **Exact next step:** with Sreeram's OK, fix the wording in #17, re-run `pnpm verify`, have the reviewer check that commit, resolve the thread, then get Sreeram's merge approval: the `semver` dependency, the core type change (`applies.introducedIn` optional) and the new official host `docs.npmjs.com`. Then T-030 (report assembly; passes `defaultTarget` and `scannedAt` to T-014), T-031, T-033.
+- **Branches and worktrees:** `main` at `26b53eb`. Main checkout on `t-014-wording-comments` (`5056285`): PR #19, a small follow-up, Sonnet PASS. `docs-sync/2026-11-26b` (worktree `../neukee-wt/docs-sync`) carries these updates.
+- **Last finished:** T-014 (runtime findings), merged as `26b53eb` after Sreeram's approval (semver, optional `applies.introducedIn`, `docs.npmjs.com`). Reviewer PASS at `4851d8b` (Opus) and `71e9cff` (Sonnet); CodeRabbit approved. MVP: 10 of 28 launch tasks done (36%).
+- **In progress:** T-030 (report assembly), routine, so Sonnet. Not started in code. The wording follow-up (PR #19: comments in `runtime-findings.ts` and SPEC §2.1 line 34, so a range never "selects" a runtime) has its Sonnet PASS and waits for CI, CodeRabbit and Sreeram's merge.
+- **Exact next step:** T-030 on a new branch `t-030-report-assembly`: tests first. It runs the detectors that exist (T-010's sources into T-014's findings), deduplicates, sorts deterministically and attaches diagnostics. It passes `defaultTarget` (true when `--target` isn't given) and `scannedAt` to `runtimeFindings`. Then T-031 (renderers plus the coverage note) and T-033 (CLI, default `node@26`). The thin-path target is Sat Nov 28.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - Report only overall MVP progress, as launch tasks done out of 28, never step progress (2026-11-25; replaces "every 10%").
   - If Saturday's `/checkpoint` shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation. T-024 stays in place until then.
 - **Blocked / waiting on Sreeram:**
-  - PR #17 (T-014): the CodeRabbit wording fix, then merge approval (see above). REVIEW-QUEUE has the reviewer's four open points.
+  - The wording follow-up PR #19: Sonnet PASS at `5056285`; waiting for CodeRabbit, CI and Sreeram's merge approval.
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
   - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
   - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio.
   - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
 - **`/checkpoint`:** Sreeram runs it on Saturday, Nov 28, after the thin path (2026-11-24).
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (11 days). Launch Tuesday, Dec 8 (12 days). 19 launch tasks remain (9 of 28 done; T-014 in review): about 1.7 a day needed. The pace is about 1 a day, which lands around Dec 14–15: **Dec 7 is at risk by more than 3 days** (flagged 2026-11-26). Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28 (2 days; T-014, T-030, T-031 and T-033 still open).
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (11 days). Launch Tuesday, Dec 8 (12 days). 18 launch tasks remain (10 of 28 done): about 1.6 a day needed against about 1 a day so far, so Dec 7 is still at risk by more than 3 days (flagged 2026-11-26). Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28; T-030, T-031 and T-033 remain.
 
 ## Dated checkpoints
 
@@ -42,7 +42,7 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 ## Current state
 
 - **Phase:** 1a — Thin end-to-end path
-- **Current task:** T-014 (PR #17), in review
+- **Current task:** T-030 (report assembly), starting
 - **Scanner launch target:** Tuesday, December 8, 2026 (ADR-013)
 - **On track?** Behind: about 1 task a day against 1.7 needed. Sreeram's `/checkpoint` on Saturday, Nov 28 decides (Dec 15 fallback, ADR-017).
 
@@ -76,10 +76,20 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 | 2026-11-23 | T-005b | L    | 1               | —             | done   | Copilot's discovery reworked on T-005a: single-handle reads, symlinks never followed, races tested. Reviewer: CHANGES REQUIRED (untested Windows path), then PASS on each later commit. 2 CodeRabbit findings fixed. PR #8 |
 | 2026-11-24 | T-005c | M    | 1               | —             | done   | Scan-wide budget; parsing charged at 48 steps per byte; subtree fail-open folded in from CodeRabbit on #10. Reviewer (Opus) PASS at `aa4b8ff`. PR #11                                                                      |
 | 2026-11-25 | T-010  | M    | 1               | —             | done   | First detector. Reviewer (Opus): 2 rounds of CHANGES REQUIRED (a bad field dropped a good one; a quadratic trim regex), then PASS. CodeRabbit: range check looser than semver, fixed in the PR. PR #15                     |
+| 2026-11-26 | T-014  | L    | 1               | —             | done   | Runtime findings: sources-disagree per package, below-target, end-of-life; default target node@26 (ADR-021). Reviewer (Opus): CHANGES REQUIRED twice (non-exhaustive switches, an EOL claim its source didn't support, quadratic scoping, throws on bad targets, a leading-zero target), then PASS; Sonnet PASS on the wording commit. CodeRabbit: `engines.node` is advisory, fixed in the catalog text. 399 source lines (waived). PR #17 |
 
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
+
+### 2026-11-26 (evening) · #18 and #17 merged; wording rule for catalog text
+
+- **Merged:** #18 (`092fe4b`, docs, approved by Sreeram since it changes `CLAUDE.md` and `.claude/`) and #17 (T-014, `26b53eb`).
+- **Sreeram decided:**
+  - Wording rule for all catalog text: only pins (`.nvmrc`, `.node-version`, `volta.node`, later Dockerfile and CI versions) may be described as selecting or keeping a runtime; `engines.node` may only be described as allowing or excluding versions, since npm documents it as advisory unless `engine-strict` is set. Recorded in `catalog/README.md`; both runtime entries cite npm's docs.
+  - A small follow-up PR fixes two code comments and SPEC §2.1's first line to the same rule (Sonnet review, then his merge).
+  - Reviewer suggestions on `volta.node` ranges, a second source field and message length are post-launch (REVIEW-QUEUE).
+- **Process:** the `docs-sync` worktree had disappeared after #18's merge; recreated on `docs-sync/2026-11-26b`.
 
 ### 2026-11-26 · Session start: the 11-25 wrap was never committed
 
