@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -8,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { run } from "./run.js";
@@ -235,13 +236,24 @@ describe("neukee scan", () => {
       for (const out of [
         join(repo, "reports", "report.md"),
         join(repo, "a", "b", "c", "report.md"),
-        join(repo, "a", "..", "reports", "report.md"),
+        `${repo}${sep}a${sep}..${sep}reports${sep}report.md`, // a raw ".." the OS never sees
       ]) {
         const result = run(["scan", repo, "--output", out], options);
         expect(result.code, out).toBe(2);
         expect(result.stderr, out).toContain("symbolic link");
       }
       expect(readdirSync(outside)).toEqual([]); // nothing was written outside the repository
+    });
+
+    it("writes exactly where it checked: a '..' after a link is collapsed first, as on Windows", () => {
+      const { repo, outside } = repoWithLink();
+      // On POSIX the OS would follow the link `a/b` and then apply `..` inside its target,
+      // landing in the folder above `outside`; the CLI collapses `..` by text before it writes.
+      const out = `${repo}${sep}a${sep}b${sep}..${sep}x.md`;
+      expect(run(["scan", repo, "--output", out], options).code).toBe(0);
+      expect(existsSync(join(repo, "a", "x.md"))).toBe(true);
+      expect(existsSync(join(dirname(outside), "x.md"))).toBe(false);
+      expect(readdirSync(outside)).toEqual([]);
     });
 
     it("still writes into a real folder inside the scanned folder", () => {

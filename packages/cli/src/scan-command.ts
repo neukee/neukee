@@ -102,7 +102,7 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
       : renderTerminal(report, { color: options.color && args.output === undefined, failOn });
   if (args.output === undefined) return { code, stdout: text, stderr: "" };
   try {
-    writeFileSync(args.output, text);
+    writeFileSync(resolve(args.output), text); // the path the guard checked, `..` already collapsed
   } catch (error) {
     return usageError(`Could not write the report to ${args.output} (${errorCode(error)}).`, false);
   }
