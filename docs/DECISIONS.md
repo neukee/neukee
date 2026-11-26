@@ -11,7 +11,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - **One target per tool for v0.1.0.** `--target node@24 --target node@26` is a usage error that says to run once per target. (`runtimeFindings` uses one Node.js target; fleet and the audits may want several later.)
   - **A named target replaces the default only for its own tool.** `--target next@16` still checks Node.js against the default `node@26`, with ADR-021's softening, because that Node.js target came from the default.
   - **The report says where each target came from (approved by Sreeram, 2026-11-27: a core type and schema change).** `ScanReport.targets` is a list of `ReportTarget`, a `Target` plus `source`: `"flag"` for a target named with `--target`, `"default"` for one the scanner added. The `Targets` line prints `node@26 (default)` from it, and `runtimeFindings` softens below-target when the Node.js target's source is `"default"`, so there is no separate flag to pass around. `Finding.target` stays a plain `Target`.
-  - **`schemaVersion` stays 1.** `source` is a required field, and the compatibility policy would bump the version for that, but nothing is published yet (v0.1.0 is unreleased), so no consumer exists. After v0.1.0 a change like this bumps `schemaVersion`.
+  - **`schemaVersion` stays 1.** `source` is a required field, and the compatibility policy would bump the version for that. There is no npm release yet (the pkg.pr.new previews of ADR-019 are per-commit builds, not releases), so no consumer depends on the schema. After v0.1.0 is published, a change like this bumps `schemaVersion`.
   - **An incomplete catalog exits 3**, like a missing, broken or empty one, naming the rule ids it lacks (`missingRuleIds` in the scanner).
   - **The catalog ships inside `@neukee/cli`** (task T-033b), so a preview or published install can scan.
 - **Consequences:** SPEC-SCANNER §1 and ARCHITECTURE §5 record all of it. ADR-021's "no `--target`" now reads "no Node.js `--target`". The core types, `packages/core/schema/scan-report.v1.json` and the constraint snapshot change in the same PR; the golden reports gain `"source"` in `targets`. T-032's JSON and SARIF output carry the source.
@@ -24,7 +24,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - **Coverage note.** Every report says plainly that v0.1.0 checks which Node.js version runs where, not your code for APIs removed in Node 23 to 26, and that those rules come after launch. The renderers and the CLI (T-031, T-033) print it.
   - **Softened below-target, exactly:** when the Node.js target came from the default (no Node.js `--target`), `runtime/below-target` is `info` if the declared line has at least 12 months of support left from the scan date (`scannedAt`), and `warning` if it has less. An explicit `--target` is never softened. Its catalog severity is `warning`. On 2026-11-25 that makes Node 24 `info` and Node 22 a `warning`. Fixtures: 24 (info), 22 (warning), and 22 with `--target node@26` (warning).
   - **T-024 stays where it is.** The `/checkpoint` on Saturday, Nov 28 decides whether it moves up.
-- **Consequences:** `runtimeFindings` takes whether the node target came from the default; T-033 sets it. T-031 and T-033 print the coverage note.
+- **Consequences:** `runtimeFindings` reads the Node.js target's `source` (`"default"` softens below-target; ADR-022), and T-033 sets it. T-031 and T-033 print the coverage note.
 
 ## ADR-020 · Runtime findings: per-package scope, ungated catalog entries, semver (2026-11-25)
 
