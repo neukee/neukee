@@ -148,7 +148,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-033 · CLI
 
-- Status: in-progress (two PRs: part A the CLI, part B Sreeram's decisions and the `targets[].source` schema change, ADR-022)
+- Status: in-progress (two PRs: part A the CLI, merged as PR #22, `29a0717`; part B Sreeram's decisions and the `targets[].source` schema change, ADR-022, in review)
 - Depends on: T-031
 - Human review: no
 - Build: `neukee scan` with the options in `docs/SPEC-SCANNER.md` §1 except the JSON and SARIF formats, which T-032 adds (thin path, 2026-11-23), exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
