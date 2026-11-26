@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -205,6 +213,55 @@ describe("neukee scan", () => {
   it("points the user at --help after a usage mistake", () => {
     const result = run(["scan", fixture("empty"), "--fail-on", "x"], options);
     expect(result.stderr).toContain("neukee --help");
+  });
+
+  describe("--output and symbolic links in the scanned folder (CodeRabbit on #22, Sreeram)", () => {
+    // A directory link: a junction on Windows needs no privilege, so no skipping is needed.
+    function repoWithLink(): { repo: string; outside: string } {
+      const dir = tempDir();
+      const repo = join(dir, "repo");
+      const outside = join(dir, "outside");
+      mkdirSync(join(repo, "a"), { recursive: true });
+      mkdirSync(outside);
+      writeFileSync(join(repo, ".nvmrc"), "26\n");
+      symlinkSync(outside, join(repo, "reports"), "junction");
+      symlinkSync(outside, join(repo, "a", "b"), "junction");
+      mkdirSync(join(repo, "plain"));
+      return { repo, outside };
+    }
+
+    it("refuses an output path that goes through a link inside the scanned folder", () => {
+      const { repo, outside } = repoWithLink();
+      for (const out of [
+        join(repo, "reports", "report.md"),
+        join(repo, "a", "b", "c", "report.md"),
+        join(repo, "a", "..", "reports", "report.md"),
+      ]) {
+        const result = run(["scan", repo, "--output", out], options);
+        expect(result.code, out).toBe(2);
+        expect(result.stderr, out).toContain("symbolic link");
+      }
+      expect(readdirSync(outside)).toEqual([]); // nothing was written outside the repository
+    });
+
+    it("still writes into a real folder inside the scanned folder", () => {
+      const { repo } = repoWithLink();
+      const out = join(repo, "plain", "report.md");
+      expect(run(["scan", repo, "--output", out], options).code).toBe(0);
+      expect(readFileSync(out, "utf8")).toContain("Neukee scan report");
+    });
+
+    it("checks only the file itself for an output path outside the scanned folder", () => {
+      const { repo, outside } = repoWithLink();
+      const dir = tempDir();
+      const real = join(dir, "real");
+      mkdirSync(real);
+      symlinkSync(real, join(dir, "linked"), "junction"); // like /tmp on macOS: a link above the output
+      const out = join(dir, "linked", "report.md");
+      expect(run(["scan", repo, "--output", out], options).code).toBe(0);
+      expect(readFileSync(join(real, "report.md"), "utf8")).toContain("Neukee scan report");
+      expect(readdirSync(outside)).toEqual([]);
+    });
   });
 
   it("won't write through a symbolic link, which a scanned repo could have planted", (context) => {

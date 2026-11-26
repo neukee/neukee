@@ -1,4 +1,5 @@
 import { existsSync, lstatSync, statSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCatalog, type Target } from "@neukee/core";
 import {
@@ -73,9 +74,10 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   if (!isFolder(root)) {
     return usageError(`${root} is not a folder. Pass the path of the project to scan.`);
   }
-  // A scanned repo could plant a link at a predictable name such as neukee-report.md.
-  if (args.output !== undefined && isSymbolicLink(args.output)) {
-    return usageError(`Won't write the report to ${args.output}: it is a symbolic link.`);
+  if (args.output !== undefined && writesThroughLink(root, args.output)) {
+    return usageError(
+      `Won't write the report to ${args.output}: it is, or is inside, a symbolic link.`,
+    );
   }
 
   const catalog = loadCatalog(options.catalogDir ?? defaultCatalogDir());
@@ -132,6 +134,27 @@ function isFolder(path: string): boolean {
   } catch {
     return false; // missing, unreadable or not a valid path
   }
+}
+
+/**
+ * Whether writing `output` would follow a symbolic link a scanned repository could have planted,
+ * at a predictable name such as `neukee-report.md` or as a folder such as `reports`. The file
+ * itself is always checked. When it lies inside the scanned folder, so is every folder between
+ * the scanned folder and it. Links above the scanned folder are the user's own (`/tmp` is one on
+ * macOS) and are left alone.
+ */
+function writesThroughLink(root: string, output: string): boolean {
+  const target = resolve(output);
+  const inside = relative(resolve(root), target);
+  const outside =
+    inside === "" || inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside);
+  if (outside) return isSymbolicLink(target);
+  let current = resolve(root);
+  for (const part of inside.split(sep)) {
+    current = join(current, part);
+    if (isSymbolicLink(current)) return true;
+  }
+  return false;
 }
 
 function isSymbolicLink(path: string): boolean {
