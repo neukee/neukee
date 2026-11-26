@@ -4,19 +4,19 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-26, 23:50 IST.
+- **Last updated:** 2026-11-27, 04:30 IST.
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
-- **Branches and worktrees:** `main` at `2a04356`. Main checkout on `t-014-wording-comments` (PR #19, waiting for Sreeram). `../neukee-wt/t-031` on `t-031-renderers` (PR #21). `../neukee-wt/t-033` on `t-033-cli`, stacked on `t-031-renderers`, no PR yet. `../neukee-wt/docs-sync` on `docs-sync/2026-11-26b`.
-- **Last finished:** T-030 (report assembly), merged as `2a04356` under standing approval. Reviewer (Sonnet): CHANGES REQUIRED on `51cd4e2` (an empty `engines.node` made `detected.node` invalid), PASS on `4a361c9`; CodeRabbit approved. MVP: 11 of 28 launch tasks done (39%).
-- **In progress:** T-033 (CLI), routine, so Sonnet. Built on top of the T-031 branch. Committed through `c65a61b`; Sonnet PASS at `71432ce` (after one CHANGES REQUIRED round on `7e2f341`), with a test-only cleanup commit `c65a61b` in its last review. Not yet a PR: it is stacked on #21, so after #21 merges: `git rebase --onto origin/main t-031-renderers t-033-cli`, push, re-review the rebased head, open the PR. T-031 (PR #21) has its Sonnet PASS at `674d280`, CI green, CodeRabbit approved, and is held on a Minor CodeRabbit finding (does GitHub still link `\@name`?) that Sreeram settles with his paste test.
-- **Exact next step:** Sreeram's paste test (files in the session scratchpad; `fixtures/expected/runtime-sources.md` is the real report) settles #21. If `@` is safe: reply to CodeRabbit and merge #21. If not: zero-width-space fix, Sonnet re-review, merge. Then rebase T-033 and open its PR. After T-033: T-005d, then the Dec 7 work (T-050 validation prep). The thin path ran on 8 real repos on 2026-11-26 (see `docs/VALIDATION.md`).
+- **Branches and worktrees:** `main` at `e4e09ea`. `../neukee-wt/t-033` holds T-033 as two branches: `t-033-cli-a` (part A, the CLI, `bb7b941`, no PR yet) and `t-033-cli` (part B, decisions and the schema change, `a11d602`, on top of A). The main checkout is on the merged `t-014-wording-comments`. `../neukee-wt/docs-sync` on `docs-sync/2026-11-26b`.
+- **Last finished:** T-031 (renderers), merged as `e4e09ea` under standing approval after a long round of reviews: Sreeram's paste test through GitHub's Markdown API showed backslash escapes fail (mentions, issue links, emoji, mailto), so values are code spans and prose gets an empty `<span></span>` after `@`, `#` and emoji colons (an empty comment fails in table cells; the reviewer found it and I confirmed). MVP: 12 of 29 launch tasks done (41%; T-033b was added on 2026-11-27).
+- **In progress:** T-033 (CLI). Part A (`t-033-cli-a`): Sonnet PASS at `c65a61b`, with the two merge commits since in review. Part B (`t-033-cli`): Sonnet PASS at `c0a0ed9`, plus a docs-only commit `a11d602`. B adds Sreeram's 2026-11-27 decisions, ADR-022 and the approved schema change (`targets[].source` is `flag` or `default`; `schemaVersion` stays 1; core types, JSON schema and constraint snapshot change).
+- **Exact next step:** open part A's PR from `t-033-cli-a` once its merge commits have a PASS; merge it under standing approval when CI, CodeRabbit and the verdict hold. Then merge main into `t-033-cli`, have the reviewer check `a11d602` and the merge, open part B's PR and ask Sreeram to confirm the merge (a core type and schema change fails the four-line check; he approved the change on 2026-11-27). Then T-033b (ship the catalog in `@neukee/cli`, pnpm pack test: the pkg.pr.new preview must work by Saturday), then T-005d.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - Report only overall MVP progress, as launch tasks done out of 28, never step progress (2026-11-25; replaces "every 10%").
   - If Saturday's `/checkpoint` shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation. T-024 stays in place until then.
 - **Blocked / waiting on Sreeram:**
-  - PR #19 (wording follow-up, Sonnet PASS at `5056285`, CI and CodeRabbit green): merge approval.
+  - Part B's merge confirmation (core type and schema change), when its PR is open.
   - PR #21 (T-031 renderers): the paste test for the `@mention` finding (above), then the manual GitHub rendering check from T-031's done-when.
   - T-033 decisions (REVIEW-QUEUE): one target per tool, a `--target next@16`-only scan running no Node.js check, a catalog without `runtime/*` rules giving a clean scan, and the published package not yet shipping `catalog/` (T-053).
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
@@ -25,7 +25,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
 - **`/checkpoint`:** Sreeram runs it on Saturday, Nov 28, after the thin path (2026-11-24).
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (11 days). Launch Tuesday, Dec 8 (12 days). 17 launch tasks remain (11 of 28 done; T-031 and T-033 are built and in review, so 13 of 28 once they merge): about 1.5 a day needed against about 1 a day so far. Dec 7 is still at risk by more than 3 days (flagged 2026-11-26), though the thin path (`neukee scan` printing real findings on real repos) was met on Thu Nov 26, two days early.
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (10 days). Launch Tuesday, Dec 8 (11 days). 17 launch tasks remain (12 of 29 done; T-033 is built and in review): about 1.5 a day needed against about 1 a day so far, so Dec 7 is still at risk by more than 3 days (flagged 2026-11-26). The thin path (`neukee scan` printing real findings on real repos) was met on Thu Nov 26.
 
 ## Dated checkpoints
 
@@ -80,10 +80,22 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 | 2026-11-25 | T-010  | M    | 1               | —             | done   | First detector. Reviewer (Opus): 2 rounds of CHANGES REQUIRED (a bad field dropped a good one; a quadratic trim regex), then PASS. CodeRabbit: range check looser than semver, fixed in the PR. PR #15                     |
 | 2026-11-26 | T-014  | L    | 1               | —             | done   | Runtime findings: sources-disagree per package, below-target, end-of-life; default target node@26 (ADR-021). Reviewer (Opus): CHANGES REQUIRED twice (non-exhaustive switches, an EOL claim its source didn't support, quadratic scoping, throws on bad targets, a leading-zero target), then PASS; Sonnet PASS on the wording commit. CodeRabbit: `engines.node` is advisory, fixed in the catalog text. 399 source lines (waived). PR #17 |
 | 2026-11-26 | T-030  | M    | 1               | —             | done   | Report assembly: `scan()` runs the runtime detectors, sorts and dedupes, fills `detected.node`. Reviewer (Sonnet): CHANGES REQUIRED once (an empty `engines.node` made the report invalid), then PASS. CodeRabbit approved with no findings. PR #20 |
+| 2026-11-27 | T-031  | L    | 1               | —             | done   | Terminal and markdown renderers, `--fail-on` logic, the coverage note. Reviewer (Sonnet): 5 rounds of CHANGES REQUIRED across invisible characters, per-field tests, and markdown that survives GitHub (code spans for values; an empty span, not a comment, in table cells). Sreeram's paste test drove the markdown rules. 254 source lines. PR #21 |
 
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
+
+### 2026-11-27 · #19 and #21 merged; T-033 split in two; targets carry their source
+
+- **Merged:** #19 (`9da50b7`, the wording follow-up) and #21 (T-031, `e4e09ea`).
+- **Sreeram decided:**
+  - T-033: one target per tool for v0.1.0 (the error says to run once per target); a named target replaces the default only for its own tool (`--target next@16` still checks `node@26`); a catalog without a rule the scanner needs exits 3 naming the ids; a new task T-033b ships `catalog/` in `@neukee/cli` so the pkg.pr.new preview works by Saturday.
+  - Markdown: the paste test through GitHub's Markdown API showed backslash escapes and HTML entities don't stop mentions, issue links, emoji or mailto links; zero-width characters are out. Values become code spans; prose gets an empty element after `@`, `#` and emoji colons.
+  - Schema: add `targets[].source` (`"default"` or `"flag"`) to `ScanReport` now, before T-032, keeping `schemaVersion` 1 because nothing is published. Recorded in ADR-022.
+- **Reviews:** T-033 was 357 source lines, over the guideline, so it was split: part A (the CLI, 298 lines) and part B (the decisions and schema change, 132 lines). The reviewer's catches: a decoy `node_modules/catalog` giving a clean scan (the catalog is now read only from the package's own folder, or the checkout's); exit 1 for a crash (now 3); `--output` through a symlink (refused); an e2e time bomb on the real clock.
+- **Process:** two of my docs-sync scripts silently applied only part of an update (a missing argument); I caught both and redid them.
+- **Real repos:** the thin path ran on 8 public repositories on 2026-11-26 (`docs/VALIDATION.md`).
 
 ### 2026-11-26 (evening) · #18 and #17 merged; wording rule for catalog text
 

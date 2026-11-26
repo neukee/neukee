@@ -140,7 +140,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-031 · Terminal and markdown renderers
 
-- Status: in-progress
+- Status: done (PR #21, `e4e09ea`)
 - Depends on: T-030
 - Human review: no
 - Note: any text that came from the scanned repo (paths in diagnostics, version strings, package names) is untrusted. Neutralise control and bidi-override characters and escape markdown before rendering.
@@ -148,7 +148,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-033 · CLI
 
-- Status: todo
+- Status: in-progress (two PRs: part A the CLI, part B Sreeram's decisions and the `targets[].source` schema change, ADR-022)
 - Depends on: T-031
 - Human review: no
 - Build: `neukee scan` with the options in `docs/SPEC-SCANNER.md` §1 except the JSON and SARIF formats, which T-032 adds (thin path, 2026-11-23), exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
