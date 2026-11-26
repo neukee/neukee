@@ -42,7 +42,7 @@ Every place that declares which Node.js version runs the app:
 | `vercel.json`, `netlify.toml`               | Node version settings (`NODE_VERSION` in Netlify)                                        |
 | `serverless.yml`, `template.yaml` (AWS SAM) | `runtime: nodejsXX.x`                                                                    |
 
-**Produces:** a list of declared versions with their source location. **Findings:** (a) a declared version below the target, (b) sources that disagree with each other (e.g. `.nvmrc` says 24, Dockerfile says 20) — the most common reason a "successful" upgrade still runs the old runtime in production, (c) a declared version past end-of-life. Runtime findings need a `node` target; end-of-life is dated by the scan's date and the official release schedule.
+**Produces:** a list of declared versions with their source location. The report's `detected.node` lists the distinct declared values as written (`22`, `>=20 <23`, `lts/iron`), sorted. **Findings:** (a) a declared version below the target, (b) sources that disagree with each other (e.g. `.nvmrc` says 24, Dockerfile says 20) — the most common reason a "successful" upgrade still runs the old runtime in production, (c) a declared version past end-of-life. Runtime findings need a `node` target; end-of-life is dated by the scan's date and the official release schedule.
 
 **Which declarations disagree (Sreeram, 2026-11-25, ADR-020).** Disagreement is scoped per package, never across packages:
 
