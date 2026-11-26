@@ -15,6 +15,7 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - Report only overall MVP progress, as launch tasks done out of 28, never step progress (2026-11-25; replaces "every 10%").
   - If Saturday's `/checkpoint` shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation. T-024 stays in place until then.
+  - Claude in the chat works in parallel (Sreeram, 2026-11-27): T-050 prep (the answer-key list of 10 to 20 real repositories with merged Next 16 / Node 24 to 26 upgrades and what broke), official-source research for the remaining catalog rules, and first drafts of the launch docs. It doesn't touch `packages/` or open code PRs; its work lands in `docs/validation/` and `docs/research/` on its own branch. **Check it before use**: a catalog entry still needs the official source fetched and read here (CLAUDE.md), and a validation answer must be checked against the repository.
 - **Blocked / waiting on Sreeram:**
   - Part B's merge confirmation (core type and schema change), when its PR is open.
   - PR #21 (T-031 renderers): the paste test for the `@mention` finding (above), then the manual GitHub rendering check from T-031's done-when.
