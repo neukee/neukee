@@ -162,7 +162,7 @@ describe("renderMarkdown", () => {
     expect(md).toContain("| Rule | Where | What was found | Fix | Source |");
     expect(md).toContain("[Source](https://nodejs.org/en/about/previous-releases)");
     expect(md).toContain("## Diagnostics (1)");
-    expect(md).toContain("| error | a.js | Parser failed. |");
+    expect(md).toContain("| error | `a.js` | Parser failed. |");
     expect(md).toContain("> **Coverage.** Neukee v0.1.0 checks which Node.js version runs where");
     expect(md.endsWith("\n")).toBe(true);
   });
@@ -171,38 +171,38 @@ describe("renderMarkdown", () => {
     expect(renderMarkdown(report())).toContain("No findings.");
   });
 
-  it("puts every location in the Where cell", () => {
+  it("puts every location in the Where cell, each as a code span", () => {
     const md = renderMarkdown(
       report({
         findings: [finding({ locations: [{ file: "a", line: 2, column: 3 }, { file: "b" }] })],
       }),
     );
-    expect(md).toContain("a:2:3<br>b");
+    expect(md).toContain("`a:2:3`<br>`b`");
   });
 
-  it("escapes markdown, HTML, pipes and autolinks in text from the repo", () => {
+  it("escapes markdown, HTML and autolinks in prose, and keeps paths in code spans", () => {
     const hostile =
       "[click](https://evil.example) <img src=x onerror=1> a|b *bold* _it_ `code` x@y.z";
     const md = renderMarkdown(
       report({ findings: [finding({ message: hostile, locations: [{ file: "p|q.json" }] })] }),
     );
-    const row = md.split("\n").find((line) => line.startsWith("| runtime/below-target")) ?? "";
+    const rows = md.split("\n").filter((line) => line.startsWith("| `runtime/below-target`"));
+    expect(rows).toHaveLength(1);
+    const row = rows[0] ?? "";
     expect(row).toContain("\\[click\\]");
     expect(row).toContain("https\\://evil.example");
     expect(row).toContain("\\<img src=x onerror=1\\>");
-    expect(row).toContain("a\\|b \\*bold\\* \\_it\\_ \\`code\\` x\\@y.z");
-    expect(row).toContain("p\\|q.json");
-    expect(row).not.toMatch(/(?<!\\)</); // every "<" is escaped
-    expect(md.split("\n").filter((line) => line.startsWith("| runtime/below-target"))).toHaveLength(
-      1,
-    );
+    expect(row).toContain("a\\|b \\*bold\\* \\_it\\_ \\`code\\` x@<span></span>y.z");
+    expect(row).toContain("`p\\|q.json`"); // a pipe stays escaped inside a cell, even in a code span
+    // Every "<" is escaped, or is part of exactly our own empty span.
+    expect(row).not.toMatch(/(?<!\\|<span>)<(?!span><\/span>)/);
   });
 
   it("keeps a multi-line message in one table row and neutralises control and bidi characters", () => {
     const md = renderMarkdown(
       report({ findings: [finding({ message: `one\r\ntwo${ESC}${RLO}three` })] }),
     );
-    // The visible escape's own backslash is escaped too, so it renders as \u{1b}.
+    // In prose the visible escape's own backslash is escaped too, so it renders as \u{1b}.
     expect(md).toContain("one  two\\\\u{1b}\\\\u{202e}three");
     expect(md).not.toContain(ESC);
     expect(md).not.toContain(RLO);
@@ -219,34 +219,101 @@ describe("renderMarkdown", () => {
     expect(md).toContain("javascript:alert(1)");
   });
 
-  it("escapes the targets, detected versions and diagnostics too", () => {
+  it("shows targets, detected versions and diagnostic files as code spans", () => {
     const md = renderMarkdown(
       report({
         detected: { node: ["<b>x</b>"], frameworks: {} },
         diagnostics: [{ level: "warning", message: "[x](y)", file: "f|g" }],
       }),
     );
-    expect(md).toContain("\\<b\\>x\\</b\\>");
-    expect(md).toContain("| warning | f\\|g | \\[x\\](y) |");
+    expect(md).toContain("- **Targets:** `node@26`\n");
+    expect(md).toContain("- **Detected Node.js:** `<b>x</b>`\n");
+    expect(md).toContain("| warning | `f\\|g` | \\[x\\](y) |");
+  });
+
+  it("fences a value with backticks by a longer run, padded when it starts or ends with one", () => {
+    const md = (file: string) =>
+      renderMarkdown(report({ findings: [finding({ locations: [{ file }] })] }));
+    expect(md("odd`name``x.js")).toContain("```odd`name``x.js```");
+    expect(md("`lead.js")).toContain("`` `lead.js ``");
+    expect(md("trail.js`")).toContain("`` trail.js` ``");
+    expect(md("`")).toContain("`` ` ``");
+  });
+
+  it("keeps a value's own enclosing spaces, which markdown would otherwise strip", () => {
+    const md = (file: string) =>
+      renderMarkdown(report({ findings: [finding({ locations: [{ file }] })] }));
+    // CommonMark removes one space from each end of a code span that begins and ends with one,
+    // unless it is all spaces, so a value with enclosing spaces gets one more on each side.
+    expect(md(" name ")).toContain("`  name  `");
+    expect(md("name ")).toContain("` name  `");
+    expect(md(" name")).toContain("`  name `");
+    expect(md("   ")).toContain("`   `");
+    expect(md(" ` ")).toContain("``  `  ``");
+  });
+
+  it("keeps mentions, issue references, emoji and emails from linking in prose", () => {
+    const message =
+      "@Venu2328 @next/swc-linux-x64-gnu #1 neukee/neukee#1 :+1: x@y.z https://example.com www.example.com";
+    const md = renderMarkdown(report({ findings: [finding({ message })] }));
+    expect(md).toContain("@<span></span>Venu2328 @<span></span>next/swc-linux-x64-gnu");
+    expect(md).toContain("#<span></span>1 neukee/neukee#<span></span>1");
+    expect(md).toContain(":<span></span>+1:");
+    expect(md).toContain("x@<span></span>y.z");
+    expect(md).toContain("https\\://example.com www\\.example.com");
   });
 });
 
-// Every string field the renderers print, with the report built around one value.
-const FIELDS: [string, (value: string) => ScanReport][] = [
-  ["tool version", (v) => report({ tool: { name: "neukee", version: v } })],
-  ["scannedAt", (v) => report({ scannedAt: v })],
-  ["target version", (v) => report({ targets: [{ tool: "node", version: v }] })],
-  ["detected.node", (v) => report({ detected: { node: [v], frameworks: {} } })],
-  ["ruleId", (v) => report({ findings: [finding({ ruleId: v })] })],
-  ["message", (v) => report({ findings: [finding({ message: v })] })],
-  ["fix", (v) => report({ findings: [finding({ fix: v })] })],
-  ["sourceUrl", (v) => report({ findings: [finding({ sourceUrl: v })] })],
-  ["location file", (v) => report({ findings: [finding({ locations: [{ file: v }] })] })],
-  [
-    "diagnostic file",
-    (v) => report({ diagnostics: [{ level: "warning", message: "m", file: v }] }),
-  ],
-  ["diagnostic message", (v) => report({ diagnostics: [{ level: "warning", message: v }] })],
+// Every string field the renderers print, with the report built around one value. In markdown a
+// value (a path, a version, a rule id) goes in a code span, in a table cell or on a line of its
+// own; prose (a message) is escaped. `prefix` is the text the renderer puts in front inside the span.
+type Field = {
+  name: string;
+  kind: "prose" | "cell" | "line";
+  prefix?: string;
+  build: (value: string) => ScanReport;
+};
+const FIELDS: Field[] = [
+  {
+    name: "tool version",
+    kind: "prose",
+    build: (v) => report({ tool: { name: "neukee", version: v } }),
+  },
+  { name: "scannedAt", kind: "line", build: (v) => report({ scannedAt: v }) },
+  {
+    name: "target version",
+    kind: "line",
+    prefix: "node@",
+    build: (v) => report({ targets: [{ tool: "node", version: v }] }),
+  },
+  {
+    name: "detected.node",
+    kind: "line",
+    build: (v) => report({ detected: { node: [v], frameworks: {} } }),
+  },
+  { name: "ruleId", kind: "cell", build: (v) => report({ findings: [finding({ ruleId: v })] }) },
+  { name: "message", kind: "prose", build: (v) => report({ findings: [finding({ message: v })] }) },
+  { name: "fix", kind: "prose", build: (v) => report({ findings: [finding({ fix: v })] }) },
+  {
+    name: "sourceUrl",
+    kind: "prose",
+    build: (v) => report({ findings: [finding({ sourceUrl: v })] }),
+  },
+  {
+    name: "location file",
+    kind: "cell",
+    build: (v) => report({ findings: [finding({ locations: [{ file: v }] })] }),
+  },
+  {
+    name: "diagnostic file",
+    kind: "cell",
+    build: (v) => report({ diagnostics: [{ level: "warning", message: "m", file: v }] }),
+  },
+  {
+    name: "diagnostic message",
+    kind: "prose",
+    build: (v) => report({ diagnostics: [{ level: "warning", message: v }] }),
+  },
 ];
 
 // Characters that hide or reorder text, one or more per class, as code points: controls, format
@@ -280,8 +347,11 @@ const HIDDEN: [string, string][] = HIDDEN_CODE_POINTS.map((codePoint) => [
   String.fromCodePoint(codePoint),
 ]);
 
-// Text that would format, link or embed if it reached markdown as written, with its escaped form.
-const MARKDOWN_ESCAPES: [string, string][] = [
+// Prose that would format, link, mention or embed if it reached markdown as written, with its
+// neutralised form. Backslash escapes work for formatting, but GitHub still links an escaped
+// `\@name` or `\#1`, so those get an empty `<span></span>` after them instead. (An empty HTML
+// comment does the same in a paragraph but not in a table cell, where the prose lives.)
+const PROSE_ESCAPES: [string, string][] = [
   ["`", "\\`"],
   ["*", "\\*"],
   ["_", "\\_"],
@@ -294,27 +364,48 @@ const MARKDOWN_ESCAPES: [string, string][] = [
   ["&lt;", "\\&lt;"],
   ["~~", "\\~\\~"],
   ["![", "\\!\\["],
-  ["#", "\\#"],
-  ["@octocat", "\\@octocat"],
+  ["#1", "#<span></span>1"],
+  ["@octocat", "@<span></span>octocat"],
+  ["x@y.z", "x@<span></span>y.z"],
+  [":+1:", ":<span></span>+1:"],
+  [":white_check_mark:", ":<span></span>white\\_check\\_mark:"],
+  [":+1://x", ":<span></span>+1\\://x"],
   ["https://x.example", "https\\://x.example"],
   ["www.x.example", "www\\.x.example"],
   ["WWW.x.example", "WWW\\.x.example"],
 ];
 
-describe.each(FIELDS)("hostile text in %s", (_name, build) => {
+// The same kinds of input in a value: a code span shows them as written. Only a pipe, which would
+// end a table cell, stays escaped (in a cell), and a backtick makes the fence longer.
+const CODE_SPAN_INPUTS = ["`", "|", "@octocat", "#1", "*_[]<>&~!", "https://x.example", ":+1:"];
+
+function expectedSpan(field: Field, raw: string): string {
+  const shown = raw === "|" && field.kind === "cell" ? "\\|" : raw;
+  const inner = `${field.prefix ?? ""}a${shown}b`;
+  return raw === "`" ? `\`\`${inner}\`\`` : `\`${inner}\``;
+}
+
+describe.each(FIELDS)("hostile text in $name", (field) => {
   it.each(HIDDEN)("shows U+%s as a visible escape in both formats", (hex, raw) => {
     const value = `a${raw}b`;
-    const terminal = renderTerminal(build(value), plain);
-    const markdown = renderMarkdown(build(value));
+    const terminal = renderTerminal(field.build(value), plain);
+    const markdown = renderMarkdown(field.build(value));
     expect(terminal).not.toContain(raw);
     expect(markdown).not.toContain(raw);
     expect(terminal).toContain(`a\\u{${hex}}b`);
-    expect(markdown).toContain(`a\\\\u{${hex}}b`); // the escape's own backslash is escaped too
+    // In prose the escape's own backslash is escaped too; a code span shows it as it is.
+    expect(markdown).toContain(field.kind === "prose" ? `a\\\\u{${hex}}b` : `a\\u{${hex}}b`);
   });
 
-  it.each(MARKDOWN_ESCAPES)("escapes %j in markdown", (raw, escaped) => {
-    expect(renderMarkdown(build(`a${raw}b`))).toContain(`a${escaped}b`);
-  });
+  if (field.kind === "prose") {
+    it.each(PROSE_ESCAPES)("neutralises %j in markdown prose", (raw, escaped) => {
+      expect(renderMarkdown(field.build(`a${raw}b`))).toContain(`a${escaped}b`);
+    });
+  } else {
+    it.each(CODE_SPAN_INPUTS)("shows %j in a markdown code span", (raw) => {
+      expect(renderMarkdown(field.build(`a${raw}b`))).toContain(expectedSpan(field, raw));
+    });
+  }
 });
 
 describe("hostile text elsewhere", () => {
@@ -327,9 +418,23 @@ describe("hostile text elsewhere", () => {
   it("handles a million characters of markdown punctuation and link starts", () => {
     const bracket = "[".repeat(1_000_000);
     const www = "www.".repeat(250_000);
-    const md = renderMarkdown(report({ findings: [finding({ message: `${bracket}${www}` })] }));
+    const at = "@".repeat(250_000);
+    const ticks = "`".repeat(1_000_000);
+    const md = renderMarkdown(
+      report({
+        findings: [finding({ message: `${bracket}${www}${at}`, locations: [{ file: ticks }] })],
+      }),
+    );
     expect(md).toContain("\\[".repeat(1_000_000));
     expect(md).toContain("www\\.".repeat(250_000));
+    expect(md).toContain("@<span></span>".repeat(250_000));
+    expect(md).toContain(`${"`".repeat(1_000_001)} ${ticks} ${"`".repeat(1_000_001)}`);
+  });
+
+  it("handles two hundred thousand separate runs of backticks without throwing", () => {
+    const file = "` ".repeat(200_000);
+    const md = renderMarkdown(report({ findings: [finding({ locations: [{ file }] })] }));
+    expect(md).toContain("`` ` ` ` ");
   });
 
   it("does not let a link destination split a table cell or smuggle characters", () => {
@@ -359,5 +464,41 @@ describe.each(["empty", "runtime-sources", "render-mixed"])("rendering the %s fi
 
   it("matches the golden markdown", async () => {
     await matchGoldenText(name, ".md", renderMarkdown(scanned()));
+  });
+});
+
+// The cases that broke on GitHub when backslash escapes were used (Sreeram's paste test, 2026-11-27):
+// mentions, scoped package names, issue references, emoji, emails and values with backticks.
+// These tests pin the string only. What GitHub does with it shows only in its renderer, and in a
+// table cell differently from a paragraph, so after changing `fixtures/expected/hostile.md` render
+// it once: `gh api markdown -F text=@fixtures/expected/hostile.md -f mode=gfm -f context=owner/repo`
+// (without a context a bare `#1` never becomes an issue link, so the check would pass for nothing)
+// must show no user-mention, issue-link or mailto element and no emoji character.
+describe("rendering hostile text", () => {
+  const hostile = report({
+    detected: { node: ["22", "`x` || >=20"], frameworks: {} },
+    findings: [
+      finding({
+        message:
+          "@Venu2328 @next/swc-linux-x64-gnu #1 neukee/neukee#1 :+1: x@y.z https://example.com www.example.com",
+        fix: "Ask @maintainer about #2, then rerun.",
+        locations: [
+          { file: "packages/@scope/a#b/.nvmrc", line: 1, column: 1 },
+          { file: "odd`name``x.js", line: 2 },
+          { file: "`lead.js" },
+        ],
+      }),
+    ],
+    diagnostics: [
+      {
+        level: "warning",
+        file: "packages/@scope/a#b/package.json",
+        message: "Could not read @scope/pkg#3 :tada:",
+      },
+    ],
+  });
+
+  it("matches the golden markdown", async () => {
+    await matchGoldenText("hostile", ".md", renderMarkdown(hostile));
   });
 });
