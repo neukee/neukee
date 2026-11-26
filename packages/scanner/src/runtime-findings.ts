@@ -99,8 +99,9 @@ function softened(line: string, date: string | undefined): Severity {
 }
 
 /**
- * The release line a declaration keeps the project on when it's below the target: a pin's own
- * line, or the newest line an engines range allows when every version it allows is below.
+ * The release line to report when a declaration is below the target: the line a pin selects, or
+ * the newest line an `engines.node` range allows when every version it allows is below. A range
+ * only allows versions; it never selects a runtime.
  */
 function belowTargetLine(
   declaration: NodeVersionDeclaration,
@@ -116,9 +117,9 @@ function belowTargetLine(
 }
 
 /**
- * What a declaration decides: `.nvmrc` and `.node-version` cover their folder and below (nvm
- * walks up to the nearest); `engines.node` and `volta.node` cover their own package only (Volta
- * needs `extends` to share a pin, which isn't followed yet; ADR-020).
+ * How far a declaration reaches: `.nvmrc` and `.node-version` pins cover their folder and below
+ * (nvm walks up to the nearest); the `volta.node` pin and the `engines.node` range cover their own
+ * package only (Volta needs `extends` to share a pin, which isn't followed yet; ADR-020).
  */
 type Reach = "subtree" | "package";
 
@@ -243,6 +244,22 @@ function describe(declaration: NodeVersionDeclaration): string {
       return `${file} pins lts/${version.codename} (Node.js ${ltsMajor(version.codename) ?? "unknown"})`;
     case "unpinned":
       return `${file} pins ${version.alias}`;
+    default:
+      return unreachable(version);
+  }
+}
+
+/** A declaration's version as one string, as `detected.node` lists it: `22`, `>=20 <23`, `lts/iron`. */
+export function declaredValue({ version }: NodeVersionDeclaration): string {
+  switch (version.kind) {
+    case "version":
+      return version.version;
+    case "range":
+      return version.range;
+    case "lts":
+      return `lts/${version.codename}`;
+    case "unpinned":
+      return version.alias;
     default:
       return unreachable(version);
   }
