@@ -132,7 +132,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-030 · Report assembly
 
-- Status: in-progress
+- Status: done (PR #20, `2a04356`)
 - Depends on: T-014
 - Human review: no
 - Build: run the detectors that exist, deduplicate, sort deterministically, compute stats, attach diagnostics. Scope (thin path, 2026-11-23): runtime findings first; framework-rule findings join when T-019 lands.
@@ -140,7 +140,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-031 · Terminal and markdown renderers
 
-- Status: todo
+- Status: in-progress
 - Depends on: T-030
 - Human review: no
 - Note: any text that came from the scanned repo (paths in diagnostics, version strings, package names) is untrusted. Neutralise control and bidi-override characters and escape markdown before rendering.
