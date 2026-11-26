@@ -1,5 +1,5 @@
-import { existsSync, lstatSync, statSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { existsSync, lstatSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCatalog, type Target } from "@neukee/core";
 import {
@@ -139,30 +139,37 @@ function isFolder(path: string): boolean {
 /**
  * Whether writing `output` would follow a symbolic link a scanned repository could have planted,
  * at a predictable name such as `neukee-report.md` or as a folder such as `reports`. The file
- * itself is always checked. When it lies inside the scanned folder, so is every folder between
- * the scanned folder and it. Links above the scanned folder are the user's own (`/tmp` is one on
- * macOS) and are left alone.
+ * itself is never followed. A link on the way counts when it sits inside the scanned folder;
+ * links above it are the user's own (`/tmp` is one on macOS) and are followed. Everything is judged
+ * on real paths (`realpath.native` also fixes the letter case), so another spelling of the same
+ * folder, such as a logical path against the physical one, can't hide a planted link.
  */
 function writesThroughLink(root: string, output: string): boolean {
-  const target = resolve(output);
-  const inside = relative(resolve(root), target);
-  const outside =
-    inside === "" || inside === ".." || inside.startsWith(`..${sep}`) || isAbsolute(inside);
-  if (outside) return isSymbolicLink(target);
-  let current = resolve(root);
-  for (const part of inside.split(sep)) {
-    current = join(current, part);
-    if (isSymbolicLink(current)) return true;
+  try {
+    const realRoot = realpathSync.native(root);
+    const target = resolve(output);
+    const top = parse(target).root;
+    const parts = relative(top, target).split(sep);
+    let dir = top;
+    for (const [index, part] of parts.entries()) {
+      const here = join(dir, part);
+      if (
+        lstatSync(here).isSymbolicLink() &&
+        (index === parts.length - 1 || isInside(realRoot, here))
+      ) {
+        return true;
+      }
+      dir = realpathSync.native(here);
+    }
+    return false;
+  } catch {
+    return false; // nothing exists from here on, or it can't be read: the write reports it
   }
-  return false;
 }
 
-function isSymbolicLink(path: string): boolean {
-  try {
-    return lstatSync(path).isSymbolicLink();
-  } catch {
-    return false; // nothing there yet, or not a valid path: the write reports it
-  }
+function isInside(folder: string, path: string): boolean {
+  const inside = relative(folder, path);
+  return inside !== "" && inside !== ".." && !inside.startsWith(`..${sep}`) && !isAbsolute(inside);
 }
 
 /**

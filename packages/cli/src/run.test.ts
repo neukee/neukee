@@ -4,6 +4,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -254,6 +255,43 @@ describe("neukee scan", () => {
       expect(existsSync(join(repo, "a", "x.md"))).toBe(true);
       expect(existsSync(join(dirname(outside), "x.md"))).toBe(false);
       expect(readdirSync(outside)).toEqual([]);
+    });
+
+    it("sees a planted link when the folder is spelled differently from the output path", () => {
+      const { repo } = repoWithLink();
+      const alias = join(dirname(repo), "alias"); // another name for the scanned folder
+      symlinkSync(repo, alias, "junction");
+      const real = join(repo, "reports", "r.md");
+      expect(run(["scan", alias, "--output", real], options).code).toBe(2);
+      expect(run(["scan", repo, "--output", join(alias, "reports", "r.md")], options).code).toBe(2);
+      expect(readdirSync(join(dirname(repo), "outside"))).toEqual([]);
+    });
+
+    it("sees a planted link when /tmp and /private/tmp name the same folder (macOS)", (context) => {
+      if (process.platform !== "darwin") context.skip();
+      const logical = mkdtempSync("/tmp/neukee-cli-");
+      temps.push(logical);
+      mkdirSync(join(logical, "repo"));
+      mkdirSync(join(logical, "outside"));
+      symlinkSync(join(logical, "outside"), join(logical, "repo", "reports"), "junction");
+      const physical = realpathSync(logical);
+      expect(physical).not.toBe(logical); // /tmp is a link to /private/tmp
+      const viaLogical = join(logical, "repo", "reports", "r.md");
+      const viaPhysical = join(physical, "repo", "reports", "r.md");
+      expect(run(["scan", join(physical, "repo"), "--output", viaLogical], options).code).toBe(2);
+      expect(run(["scan", join(logical, "repo"), "--output", viaPhysical], options).code).toBe(2);
+      expect(readdirSync(join(logical, "outside"))).toEqual([]);
+    });
+
+    it("sees a planted link when the letter case differs on a case-insensitive file system", (context) => {
+      const dir = tempDir();
+      mkdirSync(join(dir, "Repo"));
+      mkdirSync(join(dir, "outside"));
+      if (!existsSync(join(dir, "repo"))) context.skip(); // a case-sensitive file system
+      symlinkSync(join(dir, "outside"), join(dir, "Repo", "reports"), "junction");
+      const out = join(dir, "repo", "reports", "r.md");
+      expect(run(["scan", join(dir, "REPO"), "--output", out], options).code).toBe(2);
+      expect(readdirSync(join(dir, "outside"))).toEqual([]);
     });
 
     it("still writes into a real folder inside the scanned folder", () => {
