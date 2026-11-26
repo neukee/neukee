@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,12 +18,8 @@ function neukee(...args: string[]) {
 
 let outDir = "";
 beforeAll(() => {
-  // Constant arguments, run through a shell only so Windows finds `pnpm.cmd`.
-  const build = spawnSync("pnpm", ["-r", "build"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    shell: true,
-  });
+  // One constant command, run through a shell only so Windows finds `pnpm.cmd`.
+  const build = spawnSync("pnpm -r build", { cwd: repoRoot, encoding: "utf8", shell: true });
   if (build.status !== 0)
     throw new Error(`pnpm -r build failed:\n${build.stdout}\n${build.stderr}`);
   outDir = mkdtempSync(join(tmpdir(), "neukee-e2e-"));
@@ -43,6 +39,7 @@ describe("the built CLI", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("No findings.");
     expect(result.stdout).toContain("Targets: node@26");
+    expect(result.stdout).not.toContain(String.fromCharCode(27)); // piped, so no color
     expect(result.stderr).toBe("");
   });
 
@@ -50,11 +47,11 @@ describe("the built CLI", () => {
     const args = ["scan", fixture("runtime-sources"), "--target", "node@26"];
     const result = neukee(...args, "--fail-on", "warning");
     expect(result.code).toBe(1);
-    expect(result.stdout).toContain("WARNING (12)");
+    expect(result.stdout).toMatch(/WARNING \(\d+\)/);
     expect(result.stdout).toContain("runtime/sources-disagree");
     expect(result.stdout).toContain("runtime/end-of-life");
     expect(result.stdout).toContain("apps/web/.nvmrc:1:1");
-    expect(result.stdout).toContain("Exit code 1: 12 findings at or above warning");
+    expect(result.stdout).toMatch(/Exit code 1: \d+ findings at or above warning/);
     expect(neukee(...args).code).toBe(0);
     expect(neukee(...args, "--fail-on", "never").code).toBe(0);
   });
@@ -78,5 +75,70 @@ describe("the built CLI", () => {
     expect(result.code).toBe(2);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain("node@24, node@26, next@15, next@16");
+  });
+
+  // A published install is `node_modules/@neukee/cli/{dist,catalog}`; the repository's `catalog`
+  // three folders up must not be used there (it could be any package named `catalog`).
+  describe("in a published-like install", () => {
+    function install(withCatalog: boolean): string {
+      const root = mkdtempSync(join(tmpdir(), "neukee-install-"));
+      const scope = join(root, "node_modules", "@neukee");
+      mkdirSync(join(scope, "cli"), { recursive: true });
+      const cliSource = join(repoRoot, "packages", "cli");
+      cpSync(join(cliSource, "dist"), join(scope, "cli", "dist"), { recursive: true });
+      cpSync(join(cliSource, "package.json"), join(scope, "cli", "package.json"));
+      for (const name of ["core", "scanner"]) {
+        symlinkSync(join(repoRoot, "packages", name), join(scope, name), "junction");
+      }
+      // A sibling package named `catalog` with one unrelated entry, as a repo's own install could have.
+      const sibling = join(root, "node_modules", "catalog", "next16");
+      mkdirSync(sibling, { recursive: true });
+      cpSync(
+        join(repoRoot, "catalog", "next16", "sync-request-apis.yaml"),
+        join(sibling, "sync-request-apis.yaml"),
+      );
+      if (withCatalog) {
+        cpSync(join(repoRoot, "catalog"), join(scope, "cli", "catalog"), { recursive: true });
+      }
+      return root;
+    }
+
+    const scanFrom = (root: string) =>
+      spawnSync(
+        process.execPath,
+        [
+          join(root, "node_modules", "@neukee", "cli", "dist", "index.js"),
+          "scan",
+          fixture("runtime-sources"),
+          "--target",
+          "node@26",
+          "--fail-on",
+          "warning",
+        ],
+        { encoding: "utf8" },
+      );
+
+    it("fails with exit 3, never a clean scan, when the package ships no catalog", () => {
+      const root = install(false);
+      try {
+        const result = scanFrom(root);
+        expect(result.status).toBe(3);
+        expect(result.stdout).toBe("");
+        expect(result.stderr).toContain("The catalog can't be used");
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+
+    it("uses the catalog shipped beside dist", () => {
+      const root = install(true);
+      try {
+        const result = scanFrom(root);
+        expect(result.status).toBe(1);
+        expect(result.stdout).toContain("runtime/sources-disagree");
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
   });
 });

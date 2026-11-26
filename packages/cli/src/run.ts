@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { type RunOptions, type RunResult, scanCommand } from "./scan-command.js";
+import { ISSUES, type RunOptions, type RunResult, scanCommand } from "./scan-command.js";
 
 export type { RunOptions, RunResult };
 
@@ -40,26 +40,48 @@ function version(): string {
   throw new Error("The package.json of @neukee/cli has no version.");
 }
 
-const usageError = (message: string): RunResult => ({
+/** Bad arguments, exit code 2, with the whole usage text. */
+const parseError = (message: string): RunResult => ({
   code: 2,
   stdout: "",
   stderr: `${message}\n\n${HELP}\n`,
 });
 
+/**
+ * An unexpected failure, exit code 3: only the error's name, never its message, a path or a stack
+ * (they can carry repository content). Exit 1 means "blocking findings", so a crash must not use it.
+ */
+function internalError(error: unknown): RunResult {
+  const name = error instanceof Error ? error.name : "unknown";
+  return {
+    code: 3,
+    stdout: "",
+    stderr: `Neukee hit an internal error (${name}). This is a bug: please report it at ${ISSUES} and say which command you ran.\n`,
+  };
+}
+
 /** Pure entry point: takes arguments, returns output. The bin file only prints it. */
 export function run(argv: string[], options: RunOptions): RunResult {
+  try {
+    return runCommand(argv, options);
+  } catch (error) {
+    return internalError(error);
+  }
+}
+
+function runCommand(argv: string[], options: RunOptions): RunResult {
   let parsed: ReturnType<typeof parseCommandLine>;
   try {
     parsed = parseCommandLine(argv);
   } catch (error) {
-    return usageError(error instanceof Error ? error.message : String(error));
+    return parseError(error instanceof Error ? error.message : String(error));
   }
   const { values, positionals } = parsed;
   if (values.version) return { code: 0, stdout: `${version()}\n`, stderr: "" };
   const [command, path, ...rest] = positionals;
   if (values.help || command === undefined) return { code: 0, stdout: `${HELP}\n`, stderr: "" };
-  if (command !== "scan") return usageError(`Unknown command: ${command}`);
-  const result = scanCommand(
+  if (command !== "scan") return parseError(`Unknown command: ${command}`);
+  return scanCommand(
     {
       path,
       extra: rest.length,
@@ -71,9 +93,6 @@ export function run(argv: string[], options: RunOptions): RunResult {
     options,
     version(),
   );
-  return result.code === 2
-    ? { ...result, stderr: `${result.stderr}\nRun neukee --help for usage.\n` }
-    : result;
 }
 
 function parseCommandLine(argv: string[]) {

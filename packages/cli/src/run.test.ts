@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -194,11 +194,33 @@ describe("neukee scan", () => {
     expect(run([...args, "--output", out], options).code).toBe(1);
   });
 
-  it("exits 2 when the report can't be written", () => {
+  it("exits 2 when the report can't be written, without a misleading usage hint", () => {
     const out = join(tempDir(), "missing-folder", "report.txt");
     const result = run(["scan", fixture("empty"), "--output", out], options);
     expect(result.code).toBe(2);
     expect(result.stderr).toContain("Could not write");
+    expect(result.stderr).not.toContain("--help");
+  });
+
+  it("points the user at --help after a usage mistake", () => {
+    const result = run(["scan", fixture("empty"), "--fail-on", "x"], options);
+    expect(result.stderr).toContain("neukee --help");
+  });
+
+  it("won't write through a symbolic link, which a scanned repo could have planted", (context) => {
+    const dir = tempDir();
+    const victim = join(dir, "victim.txt");
+    const link = join(dir, "neukee-report.md");
+    writeFileSync(victim, "precious");
+    try {
+      symlinkSync(victim, link);
+    } catch {
+      context.skip(); // creating a file symlink needs a privilege on some Windows setups
+    }
+    const result = run(["scan", fixture("empty"), "--output", link], options);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain("symbolic link");
+    expect(readFileSync(victim, "utf8")).toBe("precious");
   });
 });
 

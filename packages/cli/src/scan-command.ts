@@ -1,4 +1,4 @@
-import { existsSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, statSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { loadCatalog, type Target } from "@neukee/core";
 import {
@@ -42,12 +42,13 @@ const SUPPORTED_TARGETS: readonly Target[] = [
 ];
 const DEFAULT_TARGET: Target = { tool: "node", version: "26" };
 const FAIL_ON: readonly FailOn[] = ["action-required", "warning", "never"];
-const ISSUES = "https://github.com/neukee/neukee/issues";
+export const ISSUES = "https://github.com/neukee/neukee/issues";
 
-const usageError = (message: string): RunResult => ({
+/** A usage error, exit code 2. `hint` points at --help; a failed write isn't a usage mistake. */
+const usageError = (message: string, hint = true): RunResult => ({
   code: 2,
   stdout: "",
-  stderr: `${message}\n`,
+  stderr: `${message}\n${hint ? "Run neukee --help for usage.\n" : ""}`,
 });
 
 /** `neukee scan` (SPEC-SCANNER §1): check the arguments, scan, render, and pick the exit code. */
@@ -72,42 +73,38 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   if (!isFolder(root)) {
     return usageError(`${root} is not a folder. Pass the path of the project to scan.`);
   }
-
-  try {
-    const catalog = loadCatalog(options.catalogDir ?? defaultCatalogDir());
-    if (catalog.errors.length > 0 || catalog.entries.length === 0) {
-      return catalogFailure(catalog.errors);
-    }
-    const report = scan(
-      root,
-      parsed.targets,
-      { name: "neukee", version },
-      {
-        entries: catalog.entries,
-        defaultTarget: parsed.isDefault,
-        ...(options.scannedAt === undefined ? {} : { scannedAt: options.scannedAt }),
-      },
-    );
-    const code = blockingFindings(report.findings, failOn).length > 0 ? 1 : 0;
-    // A file never gets color codes; the terminal gets them only when it can show them.
-    const text =
-      format === "markdown"
-        ? renderMarkdown(report)
-        : renderTerminal(report, { color: options.color && args.output === undefined, failOn });
-    if (args.output === undefined) return { code, stdout: text, stderr: "" };
-    try {
-      writeFileSync(args.output, text);
-    } catch (error) {
-      return usageError(`Could not write the report to ${args.output} (${errorCode(error)}).`);
-    }
-    return { code, stdout: "", stderr: `Wrote the ${format} report to ${args.output}.\n` };
-  } catch (error) {
-    return {
-      code: 3,
-      stdout: "",
-      stderr: `Neukee hit an internal error (${error instanceof Error ? error.name : "unknown"}). This is a bug: please report it at ${ISSUES} and say which command you ran.\n`,
-    };
+  // A scanned repo could plant a link at a predictable name such as neukee-report.md.
+  if (args.output !== undefined && isSymbolicLink(args.output)) {
+    return usageError(`Won't write the report to ${args.output}: it is a symbolic link.`);
   }
+
+  const catalog = loadCatalog(options.catalogDir ?? defaultCatalogDir());
+  if (catalog.errors.length > 0 || catalog.entries.length === 0) {
+    return catalogFailure(catalog.errors);
+  }
+  const report = scan(
+    root,
+    parsed.targets,
+    { name: "neukee", version },
+    {
+      entries: catalog.entries,
+      defaultTarget: parsed.isDefault,
+      ...(options.scannedAt === undefined ? {} : { scannedAt: options.scannedAt }),
+    },
+  );
+  const code = blockingFindings(report.findings, failOn).length > 0 ? 1 : 0;
+  // A file never gets color codes; the terminal gets them only when it can show them.
+  const text =
+    format === "markdown"
+      ? renderMarkdown(report)
+      : renderTerminal(report, { color: options.color && args.output === undefined, failOn });
+  if (args.output === undefined) return { code, stdout: text, stderr: "" };
+  try {
+    writeFileSync(args.output, text);
+  } catch (error) {
+    return usageError(`Could not write the report to ${args.output} (${errorCode(error)}).`, false);
+  }
+  return { code, stdout: "", stderr: `Wrote the ${format} report to ${args.output}.\n` };
 }
 
 /** With no `--target`, the default Node.js target; the default softens below-target (ADR-021). */
@@ -137,12 +134,26 @@ function isFolder(path: string): boolean {
   }
 }
 
-/** This package's own catalog when published; the repository's in a checkout. */
+function isSymbolicLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false; // nothing there yet, or not a valid path: the write reports it
+  }
+}
+
+/**
+ * This package's own `catalog` folder when it ships one. The repository's catalog is used only in
+ * a checkout (the pnpm workspace file is three folders up): in an install, three folders up is
+ * `node_modules`, where any package named `catalog` could sit.
+ */
 function defaultCatalogDir(): string {
   const shipped = fileURLToPath(new URL("../catalog", import.meta.url));
-  return existsSync(shipped)
-    ? shipped
-    : fileURLToPath(new URL("../../../catalog", import.meta.url));
+  const workspaceFile = fileURLToPath(new URL("../../../pnpm-workspace.yaml", import.meta.url));
+  if (!existsSync(shipped) && existsSync(workspaceFile)) {
+    return fileURLToPath(new URL("../../../catalog", import.meta.url));
+  }
+  return shipped;
 }
 
 /** A broken or missing catalog is a packaging bug: scanning without it would hide findings. */
