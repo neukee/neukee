@@ -1,6 +1,11 @@
 # Source: Node.js Releases, nodejs.org (fetched 2026-11-25).
 # "Production applications should only use Active LTS or Maintenance LTS releases."
 # The rule needs no further claim: the upgrade target is the version the user asked to run.
+# For `engines.node`, npm's package.json docs, "engines"
+# (https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines, fetched 2026-11-26):
+# "Unless the user has set the engine-strict config flag, this field is advisory only and will
+# only produce warnings when your package is installed as a dependency." So a range is described
+# as excluding the target, never as selecting a runtime (catalog/README.md, wording rule).
 # Severity (Sreeram, ADR-021): warning; under the default target it softens to info while the
 # declared line has at least 12 months of support left.
 id: runtime/below-target
@@ -10,8 +15,10 @@ applies:
 severity: warning
 detector: runtime/sources
 message: >-
-  This declaration pins, or only allows, Node.js versions older than the upgrade target, so the
-  environments that read it keep running the old runtime after the upgrade.
+  This declaration is below the upgrade target. A version pin (such as `.nvmrc`) makes the tools
+  that read it keep running the old Node.js after the upgrade. An `engines.node` range doesn't
+  select a runtime: it only excludes the target version, and npm treats it as advisory unless
+  `engine-strict` is set.
 fix: Update this declaration to the target's major version.
 sourceUrl: https://nodejs.org/en/about/previous-releases
 fixtures:
