@@ -248,6 +248,22 @@ function describe(declaration: NodeVersionDeclaration): string {
   }
 }
 
+/** A declaration's version as one string, as `detected.node` lists it: `22`, `>=20 <23`, `lts/iron`. */
+export function declaredValue({ version }: NodeVersionDeclaration): string {
+  switch (version.kind) {
+    case "version":
+      return version.version;
+    case "range":
+      return version.range;
+    case "lts":
+      return `lts/${version.codename}`;
+    case "unpinned":
+      return version.alias;
+    default:
+      return unreachable(version);
+  }
+}
+
 function byLocation(a: Location, b: Location): number {
   if (a.file !== b.file) return a.file < b.file ? -1 : 1;
   return (a.line ?? 0) - (b.line ?? 0) || (a.column ?? 0) - (b.column ?? 0);

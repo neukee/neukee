@@ -1,7 +1,7 @@
 import type { Diagnostic } from "@neukee/core";
 import { parseSync } from "oxc-parser";
 
-export { scan } from "./scan.js";
+export { type ScanOptions, scan } from "./scan.js";
 
 export interface SyntaxCheck {
   ok: boolean;

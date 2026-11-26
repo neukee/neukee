@@ -1,15 +1,16 @@
 import { lstatSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { type ScanReport, type Target, validateReport } from "@neukee/core";
+import { loadCatalog, type ScanReport, type Target, validateReport } from "@neukee/core";
 import { expect } from "vitest";
-import { scan } from "../scan.js";
+import { type ScanOptions, scan } from "../scan.js";
 
 // Test-only helpers: excluded from the build and the npm package.
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "fixtures");
 const fixtureRepos = join(fixtures, "repos");
 const expectedReports = join(fixtures, "expected");
+const catalog = loadCatalog(join(fixtures, "..", "catalog"));
 
 function isWithin(parent: string, candidate: string): boolean {
   const relativePath = relative(parent, candidate);
@@ -41,10 +42,23 @@ export const FIXED_SCANNED_AT = "1970-01-01T00:00:00Z";
 /** A fixed tool version, so golden reports don't change with every release. */
 const TEST_TOOL = { name: "neukee", version: "0.0.0-test" };
 
-/** Scans `fixtures/repos/<name>` and returns the normalized report, checked against the schema. */
-export function scanFixture(name: string, targets: Target[] = []): ScanReport {
-  const report = scan(resolveFixture(name), targets, TEST_TOOL);
-  const check = validateReport({ ...report, scannedAt: FIXED_SCANNED_AT });
+/**
+ * Scans `fixtures/repos/<name>` against the real catalog and returns the report, checked against
+ * the schema. `scannedAt` is fixed, so the report is the same on every run; a test that depends
+ * on the date (end-of-life, softening) passes its own.
+ */
+export function scanFixture(
+  name: string,
+  targets: Target[] = [],
+  options: Partial<ScanOptions> = {},
+): ScanReport {
+  const report = scan(resolveFixture(name), targets, TEST_TOOL, {
+    entries: catalog.entries,
+    defaultTarget: false,
+    scannedAt: FIXED_SCANNED_AT,
+    ...options,
+  });
+  const check = validateReport(report);
   if (!check.valid) {
     throw new Error(
       `scanFixture("${name}") produced an invalid report: ${check.errors.map((e) => e.message).join(" ")}`,
