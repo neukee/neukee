@@ -67,8 +67,9 @@ export function scanFixture(
   return check.report;
 }
 
-function resolveGolden(name: string): string {
-  const candidate = resolve(expectedReports, `${name}.json`);
+function resolveGolden(file: string): string {
+  const name = file;
+  const candidate = resolve(expectedReports, file);
   if (!name || isAbsolute(name) || !isWithin(expectedReports, candidate)) {
     throw new Error(`Golden report "${name}" must resolve inside fixtures/expected.`);
   }
@@ -94,5 +95,12 @@ function resolveGolden(name: string): string {
  * PROGRESS. CI never writes golden files.
  */
 export async function matchGolden(name: string, report: ScanReport): Promise<void> {
-  await expect(`${JSON.stringify(report, null, 2)}\n`).toMatchFileSnapshot(resolveGolden(name));
+  await expect(`${JSON.stringify(report, null, 2)}\n`).toMatchFileSnapshot(
+    resolveGolden(`${name}.json`),
+  );
+}
+
+/** The same for rendered text: `file` is the whole name, such as `runtime-sources.terminal.txt`. */
+export async function matchGoldenText(file: string, text: string): Promise<void> {
+  await expect(text).toMatchFileSnapshot(resolveGolden(file));
 }

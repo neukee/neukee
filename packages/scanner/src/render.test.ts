@@ -1,0 +1,250 @@
+import type { Diagnostic, Finding, ScanReport } from "@neukee/core";
+import { describe, expect, it } from "vitest";
+import { renderMarkdown, renderTerminal } from "./render.js";
+import { matchGoldenText, scanFixture } from "./testing/scan-fixture.js";
+
+const ESC = String.fromCharCode(27);
+const RLO = "‮"; // right-to-left override
+
+const base: ScanReport = {
+  schemaVersion: 1,
+  tool: { name: "neukee", version: "0.1.0" },
+  scannedAt: "2026-11-26T12:00:00.000Z",
+  root: ".",
+  targets: [{ tool: "node", version: "26" }],
+  detected: { node: ["22"], frameworks: {} },
+  findings: [],
+  diagnostics: [],
+  stats: { filesScanned: 3, filesSkipped: 1 },
+};
+
+function finding(over: Partial<Finding> = {}): Finding {
+  return {
+    ruleId: "runtime/below-target",
+    severity: "warning",
+    title: "Declared Node.js version is below the upgrade target",
+    message: ".nvmrc pins Node.js 22, below the target Node.js 26.",
+    fix: "Update this declaration to the target's major version.",
+    sourceUrl: "https://nodejs.org/en/about/previous-releases",
+    locations: [{ file: ".nvmrc", line: 1, column: 1 }],
+    target: { tool: "node", version: "26" },
+    ...over,
+  };
+}
+
+const report = (over: Partial<ScanReport> = {}): ScanReport => ({ ...base, ...over });
+const withoutFix = (f: Finding): Finding => {
+  const { fix: _fix, ...rest } = f;
+  return rest;
+};
+const plain = { color: false, failOn: "action-required" as const };
+
+describe("renderTerminal", () => {
+  it("says there are no findings, and why the exit code is 0", () => {
+    const text = renderTerminal(report(), plain);
+    expect(text).toContain("No findings.");
+    expect(text).toContain("Summary: 0 findings (0 action-required, 0 warning, 0 info)");
+    expect(text).toContain("3 files scanned, 1 skipped");
+    expect(text).toContain("Exit code 0: no findings at or above action-required");
+    expect(text.endsWith("\n")).toBe(true);
+  });
+
+  it("groups findings by severity, most severe first, each with where, fix and source", () => {
+    const text = renderTerminal(
+      report({
+        findings: [
+          finding({ severity: "action-required", title: "Blocker" }),
+          finding({ title: "Careful" }),
+          finding({ severity: "info", title: "Fyi" }),
+        ],
+      }),
+      plain,
+    );
+    const at = (needle: string) => text.indexOf(needle);
+    expect(at("ACTION REQUIRED (1)")).toBeGreaterThan(-1);
+    expect(at("ACTION REQUIRED (1)")).toBeLessThan(at("WARNING (1)"));
+    expect(at("WARNING (1)")).toBeLessThan(at("INFO (1)"));
+    expect(text).toContain("runtime/below-target: Careful");
+    expect(text).toContain(".nvmrc:1:1");
+    expect(text).toContain(".nvmrc pins Node.js 22, below the target Node.js 26.");
+    expect(text).toContain("Fix: Update this declaration to the target's major version.");
+    expect(text).toContain("Source: https://nodejs.org/en/about/previous-releases");
+  });
+
+  it("lists every location of a finding, and says so when it has none", () => {
+    const text = renderTerminal(
+      report({
+        findings: [
+          finding({ locations: [{ file: "a/.nvmrc", line: 2 }, { file: "package.json" }] }),
+          withoutFix(finding({ title: "Repo-wide", locations: [] })),
+        ],
+      }),
+      plain,
+    );
+    expect(text).toContain("a/.nvmrc:2\n");
+    expect(text).toContain("package.json\n");
+    expect(text).toContain("(no location)");
+    expect(text.split("Fix:").length).toBe(2); // the finding without a fix prints no Fix line
+  });
+
+  it("explains the exit code for each --fail-on value", () => {
+    const findings = [finding({ severity: "action-required" }), finding()];
+    const reason = (failOn: "action-required" | "warning" | "never") =>
+      renderTerminal(report({ findings }), { color: false, failOn });
+    expect(reason("action-required")).toContain(
+      "Exit code 1: 1 finding at or above action-required",
+    );
+    expect(reason("warning")).toContain("Exit code 1: 2 findings at or above warning");
+    expect(reason("never")).toContain("Exit code 0: --fail-on never");
+  });
+
+  it("says plainly what v0.1.0 does not check (ADR-021)", () => {
+    const text = renderTerminal(report(), plain);
+    expect(text).toContain("Neukee v0.1.0 checks which Node.js version runs where");
+    expect(text).toContain("not your code for APIs removed in Node 23 to 26");
+    expect(text).toContain("come after launch");
+  });
+
+  it("lists the targets, detected Node.js versions and diagnostics", () => {
+    const diagnostics: Diagnostic[] = [
+      { level: "warning", message: "Could not read it.", file: "package.json" },
+    ];
+    const text = renderTerminal(report({ diagnostics }), plain);
+    expect(text).toContain("Targets: node@26");
+    expect(text).toContain("Detected Node.js: 22");
+    expect(text).toContain("Diagnostics (1)");
+    expect(text).toContain("warning package.json: Could not read it.");
+  });
+
+  it("uses color only when asked, and only its own", () => {
+    const withFinding = report({ findings: [finding()] });
+    expect(renderTerminal(withFinding, plain)).not.toContain(ESC);
+    const colored = renderTerminal(withFinding, { color: true, failOn: "action-required" });
+    expect(colored).toContain(ESC);
+    expect(colored.replaceAll(new RegExp(`${ESC}\\[[0-9;]*m`, "g"), "")).toBe(
+      renderTerminal(withFinding, plain),
+    );
+  });
+
+  it("shows control and bidi characters from the repo as visible escapes, never raw", () => {
+    const hostile = `evil${ESC}[2J${RLO}fdp.exe\nforged: line\t.`;
+    const text = renderTerminal(
+      report({
+        findings: [finding({ message: hostile, locations: [{ file: `a${RLO}b` }] })],
+        diagnostics: [{ level: "error", message: hostile, file: "x" }],
+      }),
+      { color: true, failOn: "never" },
+    );
+    expect(text).not.toContain(`${ESC}[2J`);
+    expect(text).not.toContain(RLO);
+    expect(text).toContain("evil\\u{1b}[2J\\u{202e}fdp.exe forged: line .");
+    expect(text).toContain("a\\u{202e}b");
+  });
+});
+
+describe("renderMarkdown", () => {
+  it("has a summary table, a table per severity, diagnostics and the coverage note", () => {
+    const md = renderMarkdown(
+      report({
+        findings: [
+          finding({ severity: "action-required" }),
+          finding(),
+          finding({ severity: "info" }),
+        ],
+        diagnostics: [{ level: "error", message: "Parser failed.", file: "a.js" }],
+      }),
+    );
+    expect(md.startsWith("# Neukee scan report\n")).toBe(true);
+    expect(md).toContain("| Action required | 1 |");
+    expect(md).toContain("| Warning | 1 |");
+    expect(md).toContain("| Info | 1 |");
+    expect(md).toContain("## Warning (1)");
+    expect(md).toContain("| Rule | Where | What was found | Fix | Source |");
+    expect(md).toContain("[Source](https://nodejs.org/en/about/previous-releases)");
+    expect(md).toContain("## Diagnostics (1)");
+    expect(md).toContain("| error | a.js | Parser failed. |");
+    expect(md).toContain("> **Coverage.** Neukee v0.1.0 checks which Node.js version runs where");
+    expect(md.endsWith("\n")).toBe(true);
+  });
+
+  it("says there are no findings", () => {
+    expect(renderMarkdown(report())).toContain("No findings.");
+  });
+
+  it("puts every location in the Where cell", () => {
+    const md = renderMarkdown(
+      report({
+        findings: [finding({ locations: [{ file: "a", line: 2, column: 3 }, { file: "b" }] })],
+      }),
+    );
+    expect(md).toContain("a:2:3<br>b");
+  });
+
+  it("escapes markdown, HTML, pipes and autolinks in text from the repo", () => {
+    const hostile =
+      "[click](https://evil.example) <img src=x onerror=1> a|b *bold* _it_ `code` x@y.z";
+    const md = renderMarkdown(
+      report({ findings: [finding({ message: hostile, locations: [{ file: "p|q.json" }] })] }),
+    );
+    const row = md.split("\n").find((line) => line.startsWith("| runtime/below-target")) ?? "";
+    expect(row).toContain("\\[click\\]");
+    expect(row).toContain("https\\://evil.example");
+    expect(row).toContain("\\<img src=x onerror=1\\>");
+    expect(row).toContain("a\\|b \\*bold\\* \\_it\\_ \\`code\\` x\\@y.z");
+    expect(row).toContain("p\\|q.json");
+    expect(row).not.toMatch(/(?<!\\)</); // every "<" is escaped
+    expect(md.split("\n").filter((line) => line.startsWith("| runtime/below-target"))).toHaveLength(
+      1,
+    );
+  });
+
+  it("keeps a multi-line message in one table row and neutralises control and bidi characters", () => {
+    const md = renderMarkdown(
+      report({ findings: [finding({ message: `one\r\ntwo${ESC}${RLO}three` })] }),
+    );
+    // The visible escape's own backslash is escaped too, so it renders as \u{1b}.
+    expect(md).toContain("one  two\\\\u{1b}\\\\u{202e}three");
+    expect(md).not.toContain(ESC);
+    expect(md).not.toContain(RLO);
+  });
+
+  it("links only https sources, with link-breaking characters percent-encoded", () => {
+    const tricky = finding({ sourceUrl: "https://nodejs.org/a(b)c d>e" });
+    expect(renderMarkdown(report({ findings: [tricky] }))).toContain(
+      "[Source](https://nodejs.org/a%28b%29c%20d%3Ee)",
+    );
+    const notHttps = finding({ sourceUrl: "javascript:alert(1)" });
+    const md = renderMarkdown(report({ findings: [notHttps] }));
+    expect(md).not.toContain("](javascript");
+    expect(md).toContain("javascript:alert(1)");
+  });
+
+  it("escapes the targets, detected versions and diagnostics too", () => {
+    const md = renderMarkdown(
+      report({
+        detected: { node: ["<b>x</b>"], frameworks: {} },
+        diagnostics: [{ level: "warning", message: "[x](y)", file: "f|g" }],
+      }),
+    );
+    expect(md).toContain("\\<b\\>x\\</b\\>");
+    expect(md).toContain("| warning | f\\|g | \\[x\\](y) |");
+  });
+});
+
+// Golden renderings of three fixture repos: no findings, every runtime rule, and an info finding
+// with a diagnostic. Changing one needs a reason in the commit message and PROGRESS.
+describe.each(["empty", "runtime-sources", "render-mixed"])("rendering the %s fixture", (name) => {
+  const scanned = () =>
+    scanFixture(name, [{ tool: "node", version: "26" }], {
+      defaultTarget: true,
+      scannedAt: "2026-11-26T12:00:00.000Z",
+    });
+
+  it("matches the golden terminal output", async () => {
+    await matchGoldenText(`${name}.terminal.txt`, renderTerminal(scanned(), plain));
+  });
+
+  it("matches the golden markdown", async () => {
+    await matchGoldenText(`${name}.md`, renderMarkdown(scanned()));
+  });
+});
