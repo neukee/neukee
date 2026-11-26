@@ -1,50 +1,93 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { type RunOptions, type RunResult, scanCommand } from "./scan-command.js";
 
-export interface RunResult {
-  code: number;
-  stdout: string;
-  stderr: string;
-}
+export type { RunOptions, RunResult };
 
 const HELP = `neukee — find what blocks your Node.js and Next.js upgrades
 
 Usage:
-  neukee scan [path] [--target tool@version]... [--format terminal|markdown|json|sarif]
+  neukee scan [path] [--target tool@version]... [--format terminal|markdown]
+              [--output <file>] [--fail-on action-required|warning|never]
   neukee --version
   neukee --help
 
-The scan command is under construction (see docs/TASKS.md, T-033).`;
+Options:
+  --target     What to check against, repeatable, one per tool. Supported: node@24,
+               node@26, next@15, next@16. Default: node@26.
+  --format     terminal (default) or markdown. json and sarif come later.
+  --output     Write the report to a file instead of printing it.
+  --fail-on    Exit with code 1 when a finding is at or above this severity:
+               action-required (default), warning or never.
 
+Exit codes: 0 no blocking findings, 1 blocking findings, 2 usage error, 3 internal error.
+
+Neukee only reads files. It never runs the project it scans, and it uses no network.`;
+
+/** The version in this package's own package.json, checked rather than assumed. */
 function version(): string {
-  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
-    version: string;
-  };
-  return pkg.version;
+  const manifest: unknown = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  if (
+    typeof manifest === "object" &&
+    manifest !== null &&
+    "version" in manifest &&
+    typeof manifest.version === "string"
+  ) {
+    return manifest.version;
+  }
+  throw new Error("The package.json of @neukee/cli has no version.");
 }
 
-/** Pure entry point: takes arguments, returns output. The bin file only prints it. */
-export function run(argv: string[]): RunResult {
-  let parsed: ReturnType<typeof parseArgs>;
-  try {
-    parsed = parseArgs({
-      args: argv,
-      allowPositionals: true,
-      strict: true,
-      options: { version: { type: "boolean", short: "v" }, help: { type: "boolean", short: "h" } },
-    });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    return { code: 2, stdout: "", stderr: `${reason}\n\n${HELP}\n` };
-  }
+const usageError = (message: string): RunResult => ({
+  code: 2,
+  stdout: "",
+  stderr: `${message}\n\n${HELP}\n`,
+});
 
-  if (parsed.values.version) return { code: 0, stdout: `${version()}\n`, stderr: "" };
-  if (parsed.values.help || parsed.positionals.length === 0) {
-    return { code: 0, stdout: `${HELP}\n`, stderr: "" };
+/** Pure entry point: takes arguments, returns output. The bin file only prints it. */
+export function run(argv: string[], options: RunOptions): RunResult {
+  let parsed: ReturnType<typeof parseCommandLine>;
+  try {
+    parsed = parseCommandLine(argv);
+  } catch (error) {
+    return usageError(error instanceof Error ? error.message : String(error));
   }
-  return {
-    code: 2,
-    stdout: "",
-    stderr: `Unknown or unfinished command: ${parsed.positionals[0]}\n\n${HELP}\n`,
-  };
+  const { values, positionals } = parsed;
+  if (values.version) return { code: 0, stdout: `${version()}\n`, stderr: "" };
+  const [command, path, ...rest] = positionals;
+  if (values.help || command === undefined) return { code: 0, stdout: `${HELP}\n`, stderr: "" };
+  if (command !== "scan") return usageError(`Unknown command: ${command}`);
+  const result = scanCommand(
+    {
+      path,
+      extra: rest.length,
+      targets: values.target ?? [],
+      format: values.format,
+      output: values.output,
+      failOn: values["fail-on"],
+    },
+    options,
+    version(),
+  );
+  return result.code === 2
+    ? { ...result, stderr: `${result.stderr}\nRun neukee --help for usage.\n` }
+    : result;
+}
+
+function parseCommandLine(argv: string[]) {
+  return parseArgs({
+    args: argv,
+    allowPositionals: true,
+    strict: true,
+    options: {
+      version: { type: "boolean", short: "v" },
+      help: { type: "boolean", short: "h" },
+      target: { type: "string", multiple: true },
+      format: { type: "string" },
+      output: { type: "string" },
+      "fail-on": { type: "string" },
+    },
+  });
 }
