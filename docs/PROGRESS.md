@@ -4,12 +4,12 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-26, 22:30 IST.
+- **Last updated:** 2026-11-26, 23:50 IST.
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
-- **Branches and worktrees:** `main` at `2a04356`. Main checkout on `t-014-wording-comments` (PR #19, waiting for Sreeram). `../neukee-wt/t-031` on `t-031-renderers` (T-031, in review). `../neukee-wt/t-030` is a finished worktree (branch merged and deleted on GitHub). `../neukee-wt/docs-sync` on `docs-sync/2026-11-26b`.
+- **Branches and worktrees:** `main` at `2a04356`. Main checkout on `t-014-wording-comments` (PR #19, waiting for Sreeram). `../neukee-wt/t-031` on `t-031-renderers` (PR #21). `../neukee-wt/t-033` on `t-033-cli`, stacked on `t-031-renderers`, no PR yet. `../neukee-wt/docs-sync` on `docs-sync/2026-11-26b`.
 - **Last finished:** T-030 (report assembly), merged as `2a04356` under standing approval. Reviewer (Sonnet): CHANGES REQUIRED on `51cd4e2` (an empty `engines.node` made `detected.node` invalid), PASS on `4a361c9`; CodeRabbit approved. MVP: 11 of 28 launch tasks done (39%).
-- **In progress:** T-031 (terminal and markdown renderers), routine, so Sonnet. Committed as `ca571a0` on `t-031-renderers`; the Sonnet review is running. Its manual step is for Sreeram: paste `fixtures/expected/runtime-sources.md` into a test PR once and check it renders on GitHub.
-- **Exact next step:** finish T-031 (review, PR, CodeRabbit, merge under standing approval if the four-line check stays clean). Then T-033 (CLI: `neukee scan`, default `node@26`, `defaultTarget` when `--target` is absent, exit codes via `blockingFindings`, print `loadCatalog` errors). The thin-path target is Sat Nov 28.
+- **In progress:** T-033 (CLI), routine, so Sonnet. Built on top of the T-031 branch. Committed through `c65a61b`; Sonnet PASS at `71432ce` (after one CHANGES REQUIRED round on `7e2f341`), with a test-only cleanup commit `c65a61b` in its last review. Not yet a PR: it is stacked on #21, so after #21 merges: `git rebase --onto origin/main t-031-renderers t-033-cli`, push, re-review the rebased head, open the PR. T-031 (PR #21) has its Sonnet PASS at `674d280`, CI green, CodeRabbit approved, and is held on a Minor CodeRabbit finding (does GitHub still link `\@name`?) that Sreeram settles with his paste test.
+- **Exact next step:** Sreeram's paste test (files in the session scratchpad; `fixtures/expected/runtime-sources.md` is the real report) settles #21. If `@` is safe: reply to CodeRabbit and merge #21. If not: zero-width-space fix, Sonnet re-review, merge. Then rebase T-033 and open its PR. After T-033: T-005d, then the Dec 7 work (T-050 validation prep). The thin path ran on 8 real repos on 2026-11-26 (see `docs/VALIDATION.md`).
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
@@ -17,13 +17,15 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
   - If Saturday's `/checkpoint` shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation. T-024 stays in place until then.
 - **Blocked / waiting on Sreeram:**
   - PR #19 (wording follow-up, Sonnet PASS at `5056285`, CI and CodeRabbit green): merge approval.
+  - PR #21 (T-031 renderers): the paste test for the `@mention` finding (above), then the manual GitHub rendering check from T-031's done-when.
+  - T-033 decisions (REVIEW-QUEUE): one target per tool, a `--target next@16`-only scan running no Node.js check, a catalog without `runtime/*` rules giving a clean scan, and the published package not yet shipping `catalog/` (T-053).
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
   - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
   - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio.
   - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
 - **`/checkpoint`:** Sreeram runs it on Saturday, Nov 28, after the thin path (2026-11-24).
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (11 days). Launch Tuesday, Dec 8 (12 days). 17 launch tasks remain (11 of 28 done): about 1.5 a day needed against about 1 a day so far, so Dec 7 is still at risk by more than 3 days (flagged 2026-11-26). Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28; T-031 and T-033 remain.
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (11 days). Launch Tuesday, Dec 8 (12 days). 17 launch tasks remain (11 of 28 done; T-031 and T-033 are built and in review, so 13 of 28 once they merge): about 1.5 a day needed against about 1 a day so far. Dec 7 is still at risk by more than 3 days (flagged 2026-11-26), though the thin path (`neukee scan` printing real findings on real repos) was met on Thu Nov 26, two days early.
 
 ## Dated checkpoints
 
