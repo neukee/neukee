@@ -123,7 +123,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-014 · Runtime findings
 
-- Status: todo
+- Status: in-progress (PR #17, in review; merge needs Sreeram's approval)
 - Depends on: T-010
 - Human review: no
 - Build: Node release data (not under `catalog/`, where every `*.yaml` is an entry, ADR-014; for example `packages/core/data/node-releases.yaml`) with each Node major's end-of-life date (source: the official Node.js release schedule). Findings: `runtime/below-target`, `runtime/sources-disagree`, `runtime/end-of-life`.
