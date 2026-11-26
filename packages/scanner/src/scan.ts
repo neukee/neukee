@@ -1,5 +1,5 @@
 import { statSync } from "node:fs";
-import type { CatalogEntry, Diagnostic, ScanReport, Target } from "@neukee/core";
+import type { CatalogEntry, Diagnostic, ReportTarget, ScanReport } from "@neukee/core";
 import { discoverFiles } from "./discover.js";
 import { sortAndDedupe, sortDiagnostics } from "./report.js";
 import { declaredValue, runtimeFindings } from "./runtime-findings.js";
@@ -8,8 +8,6 @@ import { type NodeVersionDeclaration, readRuntimeSources } from "./runtime-sourc
 export interface ScanOptions {
   /** The catalog's entries; every finding's knowledge (severity, fix, source) comes from them. */
   entries: readonly CatalogEntry[];
-  /** The node target came from the default, not from `--target` (softens below-target, ADR-021). */
-  defaultTarget: boolean;
   /** The report's timestamp, which also dates end-of-life; the clock when absent. Tests fix it. */
   scannedAt?: string;
 }
@@ -21,7 +19,7 @@ export interface ScanOptions {
  */
 export function scan(
   root: string,
-  targets: Target[],
+  targets: ReportTarget[],
   tool: ScanReport["tool"],
   options: ScanOptions,
 ): ScanReport {
@@ -67,7 +65,6 @@ export function scan(
         declarations,
         packageDirs,
         targets,
-        defaultTarget: options.defaultTarget,
         entries: options.entries,
         scannedAt,
       }),

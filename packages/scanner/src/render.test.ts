@@ -11,7 +11,7 @@ const base: ScanReport = {
   tool: { name: "neukee", version: "0.1.0" },
   scannedAt: "2026-11-26T12:00:00.000Z",
   root: ".",
-  targets: [{ tool: "node", version: "26" }],
+  targets: [{ tool: "node", version: "26", source: "flag" }],
   detected: { node: ["22"], frameworks: {} },
   findings: [],
   diagnostics: [],
@@ -139,6 +139,27 @@ describe("renderTerminal", () => {
     expect(text).not.toContain(RLO);
     expect(text).toContain("evil\\u{1b}[2J\\u{202e}fdp.exe forged: line .");
     expect(text).toContain("a\\u{202e}b");
+  });
+});
+
+describe("marking default targets", () => {
+  const named = { tool: "next" as const, version: "16", source: "flag" as const };
+  const added = { tool: "node" as const, version: "26", source: "default" as const };
+
+  it("marks only the targets whose source is a default, in both formats", () => {
+    const mixed = report({ targets: [named, added] });
+    expect(renderTerminal(mixed, plain)).toContain("Targets: next@16, node@26 (default)");
+    expect(renderMarkdown(mixed)).toContain("- **Targets:** `next@16`, `node@26` (default)");
+  });
+
+  it("marks nothing when every target was named", () => {
+    const named26 = { ...added, source: "flag" as const };
+    expect(renderTerminal(report({ targets: [named, named26] }), plain)).toContain(
+      "Targets: next@16, node@26\n",
+    );
+    expect(renderMarkdown(report({ targets: [named, named26] }))).toContain(
+      "- **Targets:** `next@16`, `node@26`\n",
+    );
   });
 });
 
@@ -289,7 +310,7 @@ const FIELDS: Field[] = [
     name: "target version",
     kind: "line",
     prefix: "node@",
-    build: (v) => report({ targets: [{ tool: "node", version: v }] }),
+    build: (v) => report({ targets: [{ tool: "node", version: v, source: "flag" }] }),
   },
   {
     name: "detected.node",
@@ -458,8 +479,7 @@ describe("hostile text elsewhere", () => {
 // with a diagnostic. Changing one needs a reason in the commit message and PROGRESS.
 describe.each(["empty", "runtime-sources", "render-mixed"])("rendering the %s fixture", (name) => {
   const scanned = () =>
-    scanFixture(name, [{ tool: "node", version: "26" }], {
-      defaultTarget: true,
+    scanFixture(name, [{ tool: "node", version: "26", source: "default" }], {
       scannedAt: "2026-11-26T12:00:00.000Z",
     });
 

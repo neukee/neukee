@@ -1,6 +1,6 @@
 # Neukee scan report
 
-- **Targets:** `node@26`
+- **Targets:** `node@26` (default)
 - **Scanned:** `2026-11-26T12:00:00.000Z`; 10 files scanned, 0 skipped
 - **Detected Node.js:** `20`, `20.x`, `22`, `22.11.0`, `>=20 <23`, `>=22`, `lts/*`, `lts/iron`, `node`
 

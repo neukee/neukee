@@ -1,7 +1,7 @@
 import { lstatSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadCatalog, type ScanReport, type Target, validateReport } from "@neukee/core";
+import { loadCatalog, type ReportTarget, type ScanReport, validateReport } from "@neukee/core";
 import { expect } from "vitest";
 import { type ScanOptions, scan } from "../scan.js";
 
@@ -49,12 +49,11 @@ const TEST_TOOL = { name: "neukee", version: "0.0.0-test" };
  */
 export function scanFixture(
   name: string,
-  targets: Target[] = [],
+  targets: ReportTarget[] = [],
   options: Partial<ScanOptions> = {},
 ): ScanReport {
   const report = scan(resolveFixture(name), targets, TEST_TOOL, {
     entries: catalog.entries,
-    defaultTarget: false,
     scannedAt: FIXED_SCANNED_AT,
     ...options,
   });

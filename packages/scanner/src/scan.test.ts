@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compareFindings, loadCatalog, type Target, validateReport } from "@neukee/core";
+import { compareFindings, loadCatalog, type ReportTarget, validateReport } from "@neukee/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { scan } from "./index.js";
 import { matchGolden, scanFixture } from "./testing/scan-fixture.js";
@@ -12,9 +12,9 @@ const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const discoveryFixture = `${repoRoot}fixtures/repos/discovery/`;
 const { entries } = loadCatalog(`${repoRoot}catalog`);
 const SCANNED_AT = "2026-11-26T12:00:00.000Z";
-const options = { entries, defaultTarget: false, scannedAt: SCANNED_AT };
-const NODE_24: Target = { tool: "node", version: "24" };
-const NODE_26: Target = { tool: "node", version: "26" };
+const options = { entries, scannedAt: SCANNED_AT };
+const NODE_24: ReportTarget = { tool: "node", version: "24", source: "flag" };
+const NODE_26: ReportTarget = { tool: "node", version: "26", source: "flag" };
 
 const roots: string[] = [];
 afterEach(() => {
@@ -41,7 +41,7 @@ describe("scan", () => {
 
   it("stamps scannedAt with the current time unless the caller passes one", () => {
     const before = Date.now();
-    const report = scan(tempRepo(), [], tool, { entries, defaultTarget: false });
+    const report = scan(tempRepo(), [], tool, { entries });
     expect(Date.parse(report.scannedAt)).toBeGreaterThanOrEqual(before - 1000);
     expect(Date.parse(report.scannedAt)).toBeLessThanOrEqual(Date.now() + 1000);
     expect(scan(tempRepo(), [], tool, options).scannedAt).toBe(SCANNED_AT);
@@ -86,10 +86,10 @@ describe("scan: runtime findings", () => {
 
   it("softens below-target only under the default target (ADR-021)", () => {
     const root = tempRepo({ ".nvmrc": "24\n" });
-    const severityOf = (defaultTarget: boolean) =>
-      scan(root, [NODE_26], tool, { ...options, defaultTarget }).findings.map((f) => f.severity);
-    expect(severityOf(true)).toEqual(["info"]);
-    expect(severityOf(false)).toEqual(["warning"]);
+    const severityOf = (source: ReportTarget["source"]) =>
+      scan(root, [{ ...NODE_26, source }], tool, options).findings.map((f) => f.severity);
+    expect(severityOf("default")).toEqual(["info"]);
+    expect(severityOf("flag")).toEqual(["warning"]);
   });
 
   it("dates end-of-life by the scan date it was given", () => {
@@ -152,7 +152,7 @@ describe("scan: runtime findings", () => {
       ".nvmrc": "not a version\n",
       "apps/web/.nvmrc": "24\n",
     });
-    const report = scan(root, [NODE_26], tool, { ...options, defaultTarget: true });
+    const report = scan(root, [{ ...NODE_26, source: "default" }], tool, options);
     expect(report.diagnostics.map((d) => d.file)).toEqual([".nvmrc", "package.json"]);
     expect(report.findings.map((f) => f.ruleId)).toEqual(["runtime/below-target"]);
     expect(validateReport(report).valid).toBe(true);
@@ -166,7 +166,9 @@ describe("scan: runtime findings", () => {
   it("matches the golden report for the runtime-sources repo", async () => {
     await matchGolden(
       "runtime-sources",
-      scanFixture("runtime-sources", [NODE_26], { defaultTarget: true, scannedAt: SCANNED_AT }),
+      scanFixture("runtime-sources", [{ ...NODE_26, source: "default" }], {
+        scannedAt: SCANNED_AT,
+      }),
     );
   });
 });
