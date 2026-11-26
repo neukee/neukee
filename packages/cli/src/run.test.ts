@@ -171,7 +171,7 @@ describe("neukee scan", () => {
     const result = run(["scan", fixture("empty")], options);
     expect(result.stdout).toContain("Targets: node@26 (default)");
     const markdown = run(["scan", fixture("empty"), "--format", "markdown"], options);
-    expect(markdown.stdout).toContain("- **Targets:** node\\@26 (default)");
+    expect(markdown.stdout).toContain("- **Targets:** `node@26` (default)");
   });
 
   it("replaces the default only for the tool it names: next@16 still checks node@26", () => {

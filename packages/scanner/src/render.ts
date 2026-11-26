@@ -71,11 +71,13 @@ export function renderMarkdown(report: ScanReport): string {
   const lines = [
     "# Neukee scan report",
     "",
-    `- **Targets:** ${targetsText(report, escapeMarkdown)}`,
-    `- **Scanned:** ${escapeMarkdown(report.scannedAt)}; ${filesText(report)}`,
+    `- **Targets:** ${targetsText(report, codeSpan)}`,
+    `- **Scanned:** ${codeSpan(report.scannedAt)}; ${filesText(report)}`,
   ];
   if (report.detected.node.length > 0) {
-    lines.push(`- **Detected Node.js:** ${report.detected.node.map(escapeMarkdown).join(", ")}`);
+    lines.push(
+      `- **Detected Node.js:** ${report.detected.node.map((v) => codeSpan(v)).join(", ")}`,
+    );
   }
   lines.push("", `> **Coverage.** ${escapeMarkdown(coverageNote(report))}`, "", "## Summary", "");
   lines.push("| Severity | Findings |", "| --- | ---: |");
@@ -113,10 +115,13 @@ function targetsText(report: ScanReport, safe: (text: string) => string): string
 }
 
 function markdownRow(finding: Finding): string {
-  const locations = finding.locations.length > 0 ? finding.locations.map(where) : ["(no location)"];
+  const locations =
+    finding.locations.length > 0
+      ? finding.locations.map((location) => codeSpan(where(location), true))
+      : ["(no location)"];
   return `| ${[
-    escapeMarkdown(finding.ruleId),
-    locations.map(escapeMarkdown).join("<br>"),
+    codeSpan(finding.ruleId, true),
+    locations.join("<br>"),
     escapeMarkdown(finding.message),
     finding.fix === undefined ? "" : escapeMarkdown(finding.fix),
     sourceLink(finding.sourceUrl),
@@ -124,7 +129,8 @@ function markdownRow(finding: Finding): string {
 }
 
 function diagnosticRow(d: Diagnostic): string {
-  return `| ${escapeMarkdown(d.level)} | ${d.file === undefined ? "" : escapeMarkdown(d.file)} | ${escapeMarkdown(d.message)} |`;
+  const file = d.file === undefined ? "" : codeSpan(d.file, true);
+  return `| ${escapeMarkdown(d.level)} | ${file} | ${escapeMarkdown(d.message)} |`;
 }
 
 /**
@@ -190,10 +196,33 @@ function clean(text: string): string {
   );
 }
 
-// Markdown punctuation, plus the two ways text becomes a link on its own: `https://…` and `www.…`
-// (and `x@y.z`, covered by `@`). Linear: one character class and two short lookarounds.
-const MARKDOWN = /[\\`*_[\]<>|&~!#@]|:(?=\/\/)|(?<=www)\./gi;
+// One pass, so every lookahead sees the original text. The first group is escaped with a backslash:
+// markdown punctuation, plus the two ways text becomes a link on its own, `https://…` and `www.…`.
+// The second gets an empty `<span></span>` right after it: `@` and `#` (a mention or issue link,
+// which GitHub still makes of `\@name` or `\#1`) and the colon of an emoji name (`:+1:`). Unlike an
+// empty HTML comment, the span also works inside a table cell, where all prose is. It shows the
+// text unchanged and hides no character. Linear: a lookahead starts only at a colon.
+const MARKDOWN = /([\\`*_[\]<>|&~!]|:(?=\/\/)|(?<=www)\.)|([@#]|:(?=[\w+-]+:))/gi;
 
+/** Prose from the repo or the catalog (a message, a fix): escaped so it can't format or link. */
 function escapeMarkdown(text: string): string {
-  return clean(text).replace(MARKDOWN, (match) => `\\${match}`);
+  return clean(text).replace(MARKDOWN, (match, escaped: string | undefined) =>
+    escaped === undefined ? `${match}<span></span>` : `\\${match}`,
+  );
+}
+
+/**
+ * A value (a path, a version, a rule id) as a code span, where nothing formats, links or
+ * mentions. The fence is one backtick longer than any run inside. A value that starts or ends with
+ * a backtick or a space gets a space on both sides (markdown strips one from each end of a span
+ * that has one at both ends, unless it is all spaces). In a table cell a pipe stays escaped.
+ */
+function codeSpan(value: string, inTable = false): string {
+  const text = clean(value);
+  if (text === "") return "";
+  let longest = 0;
+  for (const run of text.match(/`+/g) ?? []) longest = Math.max(longest, run.length);
+  const fence = "`".repeat(longest + 1);
+  const pad = /^[ `]|[ `]$/.test(text) && !/^ +$/.test(text) ? " " : "";
+  return `${fence}${pad}${inTable ? text.replaceAll("|", "\\|") : text}${pad}${fence}`;
 }

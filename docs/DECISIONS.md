@@ -265,7 +265,7 @@ One entry per decision that changes architecture, dependencies, schemas, targets
   - T-004: normalization replaces `scannedAt` with a fixed value (`1970-01-01T00:00:00Z`) instead of removing it, so normalized reports still validate. `durationMs` no longer exists. This changes T-004's original wording.
   - T-005: a path that fails the `RepoPath` pattern is skipped with a diagnostic that has no `file`.
   - T-021: columns are 1-based UTF-16 code units.
-  - T-031: renderers neutralise control and bidi characters and escape markdown in any repo-derived text.
+  - T-031: renderers neutralise control and bidi characters and escape markdown in any repo-derived text. Markdown (Sreeram's paste test through GitHub's Markdown API, 2026-11-27): backslash escapes and HTML entities don't stop a mention, an issue link, an emoji or a mailto link, so values (paths, versions, rule ids, targets) are code spans, and prose gets an empty `<span></span>` right after every `@`, `#` and emoji colon (an empty HTML comment fails inside table cells). No zero-width characters, which break copying package names. The output therefore holds raw HTML, which a strict CommonMark viewer shows literally, and `a:b:c` becomes `a:<span></span>b:c` because `:b:` looks like an emoji name.
   - T-032: SARIF sets `columnKind: "utf16CodeUnits"` explicitly, and needs a fallback location for findings with no `locations` if GitHub requires one.
   - T-034: fleet JSON wraps each report as `{ repo, report }`.
   - T-040: if the Action calls `validateReport`, its bundle ships `schema/` beside it.
