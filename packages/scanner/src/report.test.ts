@@ -1,6 +1,6 @@
 import type { Diagnostic, Finding } from "@neukee/core";
 import { describe, expect, it } from "vitest";
-import { sortAndDedupe, sortDiagnostics, sortedUnique } from "./report.js";
+import { sortAndDedupe, sortDiagnostics } from "./report.js";
 
 function finding(over: Partial<Finding> = {}): Finding {
   return {
@@ -81,11 +81,5 @@ describe("sortDiagnostics", () => {
     const lower = note({ file: "a" });
     const upper = note({ file: "B" });
     expect(sortDiagnostics([lower, upper])).toEqual([upper, lower]);
-  });
-});
-
-describe("sortedUnique", () => {
-  it("drops repeats and orders by code unit, never by locale", () => {
-    expect(sortedUnique(["b", "a", "B", "a", ">=20", "22"])).toEqual(["22", ">=20", "B", "a", "b"]);
   });
 });

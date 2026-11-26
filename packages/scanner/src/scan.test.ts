@@ -119,6 +119,16 @@ describe("scan: runtime findings", () => {
     ]);
   });
 
+  it("lists nothing for an empty engines.node, which declares no version, and stays valid", () => {
+    for (const range of ["", "  "]) {
+      const root = tempRepo({ "package.json": JSON.stringify({ engines: { node: range } }) });
+      const report = scan(root, [NODE_26], tool, options);
+      expect(validateReport(report).valid).toBe(true);
+      expect(report.detected.node).toEqual([]);
+      expect(report.findings).toEqual([]);
+    }
+  });
+
   it("sorts findings by the total order and gives the same bytes every time", () => {
     const first = scan(`${repoRoot}fixtures/repos/runtime-sources`, [NODE_26], tool, options);
     const second = scan(`${repoRoot}fixtures/repos/runtime-sources`, [NODE_26], tool, options);

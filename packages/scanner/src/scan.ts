@@ -1,7 +1,7 @@
 import { statSync } from "node:fs";
 import type { CatalogEntry, Diagnostic, ScanReport, Target } from "@neukee/core";
 import { discoverFiles } from "./discover.js";
-import { sortAndDedupe, sortDiagnostics, sortedUnique } from "./report.js";
+import { sortAndDedupe, sortDiagnostics } from "./report.js";
 import { declaredValue, runtimeFindings } from "./runtime-findings.js";
 import { type NodeVersionDeclaration, readRuntimeSources } from "./runtime-sources.js";
 
@@ -61,7 +61,7 @@ export function scan(
     scannedAt,
     root: ".",
     targets,
-    detected: { node: sortedUnique(declarations.map(declaredValue)), frameworks: {} },
+    detected: { node: detectedNode(declarations), frameworks: {} },
     findings: sortAndDedupe(
       runtimeFindings({
         declarations,
@@ -75,6 +75,16 @@ export function scan(
     diagnostics: sortDiagnostics(diagnostics),
     stats: { filesScanned, filesSkipped },
   };
+}
+
+/**
+ * The distinct declared values, sorted (the default sort compares UTF-16 code units, never by
+ * locale). An empty `engines.node` means "any version", so it declares nothing, and the report
+ * schema wants non-empty values.
+ */
+function detectedNode(declarations: readonly NodeVersionDeclaration[]): string[] {
+  const values = declarations.map(declaredValue).filter((value) => value !== "");
+  return [...new Set(values)].sort();
 }
 
 /** The folder of a `package.json` ("" for the root), or undefined for any other file. */
