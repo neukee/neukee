@@ -1,0 +1,6 @@
+{
+  "name": "web",
+  "engines": {
+    "node": "20.x"
+  }
+}

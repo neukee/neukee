@@ -80,6 +80,13 @@ describe("loadCatalog: valid entries", () => {
     expect(entries[0]).not.toHaveProperty("fix");
   });
 
+  // ADR-020: a rule not tied to a release (runtime/*) has no version gate.
+  it("accepts an entry without the optional introducedIn", () => {
+    const { entries, errors } = one(VALID.replace('  introducedIn: "16.0.0"\n', ""));
+    expect(errors).toEqual([]);
+    expect(entries[0]?.applies).toEqual({ tool: "next" });
+  });
+
   it("reads CRLF files the same as LF files", () => {
     expect(one(VALID.replaceAll("\n", "\r\n"))).toEqual({ entries: [EXPECTED], errors: [] });
   });
@@ -173,6 +180,11 @@ describe("loadCatalog: invalid entries give clear errors naming the file", () =>
       name: "a version given as a mapping",
       yaml: VALID.replace('introducedIn: "16.0.0"', "introducedIn: { major: 16 }"),
       message: `${at}: applies.introducedIn must be a version like "16.0.0" (got an object).`,
+    },
+    {
+      name: "an introducedIn that is present but empty",
+      yaml: VALID.replace('introducedIn: "16.0.0"', "introducedIn: ~"),
+      message: `${at}: applies.introducedIn must be a version like "16.0.0" (got null).`,
     },
     {
       name: "applies that isn't a mapping",
@@ -308,18 +320,20 @@ describe("loadCatalog: invalid entries give clear errors naming the file", () =>
     expect(errors).toEqual([
       {
         file: at,
-        message: `${at}: sourceUrl must be a canonical https URL on an official host (nextjs.org, nodejs.org, react.dev, www.prisma.io), with no credentials or port (got ${JSON.stringify(url)}).`,
+        message: `${at}: sourceUrl must be a canonical https URL on an official host (nextjs.org, nodejs.org, react.dev, www.prisma.io, docs.npmjs.com), with no credentials or port (got ${JSON.stringify(url)}).`,
       },
     ]);
   });
 
-  it.each(["https://www.prisma.io/docs/orm", "https://nextjs.org/", "https://react.dev/blog#x"])(
-    "accepts the official source %j",
-    (url) => {
-      const { errors } = one(VALID.replace(/^sourceUrl: .*$/m, `sourceUrl: "${url}"`));
-      expect(errors).toEqual([]);
-    },
-  );
+  it.each([
+    "https://www.prisma.io/docs/orm",
+    "https://nextjs.org/",
+    "https://react.dev/blog#x",
+    "https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines",
+  ])("accepts the official source %j", (url) => {
+    const { errors } = one(VALID.replace(/^sourceUrl: .*$/m, `sourceUrl: "${url}"`));
+    expect(errors).toEqual([]);
+  });
 
   it.each(cases)("$name", ({ yaml, message }) => {
     const { entries, errors } = one(yaml);

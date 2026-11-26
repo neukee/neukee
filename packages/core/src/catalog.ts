@@ -9,7 +9,11 @@ export interface CatalogEntry {
   /** Same grammar as a report's `ruleId`, e.g. "next16/sync-request-apis". */
   id: string;
   title: string;
-  applies: { tool: Tool; introducedIn: string };
+  /**
+   * `introducedIn` gates the rule to upgrades that cross it (SPEC-SCANNER §2.5). Rules that aren't
+   * tied to a release, such as `runtime/*`, have none (ADR-020).
+   */
+  applies: { tool: Tool; introducedIn?: string };
   severity: Severity;
   /** Which code-level detector produces the facts, e.g. "ast/sync-request-api". */
   detector: string;
@@ -36,7 +40,7 @@ const SEVERITIES: Record<Severity, true> = { "action-required": true, warning: t
 const TOOLS: Record<Tool, true> = { node: true, next: true, react: true, prisma: true };
 
 /** ADR-003, ADR-014: official sources only. Adding a host needs an ADR line. */
-const OFFICIAL_HOSTS = ["nextjs.org", "nodejs.org", "react.dev", "www.prisma.io"];
+const OFFICIAL_HOSTS = ["nextjs.org", "nodejs.org", "react.dev", "www.prisma.io", "docs.npmjs.com"];
 const VERSION = /^\d+\.\d+\.\d+$/;
 /** Real entries are about 1 KB; anything this big is a mistake, not an entry. */
 const MAX_BYTES = 64 * 1024;
@@ -53,7 +57,7 @@ const FIELDS = {
   sourceUrl: true,
   fixtures: true,
 };
-const APPLIES_FIELDS = { tool: true, introducedIn: true };
+const APPLIES_FIELDS = { tool: true, introducedIn: false };
 const FIXTURE_FIELDS = { positive: true, negative: true };
 
 /**
@@ -160,7 +164,10 @@ function readEntry(fullPath: string, path: string, file: string): CatalogEntry |
   if (!isTool(tool)) {
     return `${file}: applies.tool must be one of ${quotedList(Object.keys(TOOLS))} (got ${describe(tool)}).`;
   }
-  if (typeof introducedIn !== "string" || !VERSION.test(introducedIn)) {
+  if (
+    introducedIn !== undefined &&
+    (typeof introducedIn !== "string" || !VERSION.test(introducedIn))
+  ) {
     return `${file}: applies.introducedIn must be a version like "16.0.0" (got ${describe(introducedIn)}).`;
   }
   if (!isSeverity(severity)) {
@@ -185,7 +192,7 @@ function readEntry(fullPath: string, path: string, file: string): CatalogEntry |
   return {
     id,
     title,
-    applies: { tool, introducedIn },
+    applies: { tool, ...(introducedIn === undefined ? {} : { introducedIn }) },
     severity,
     detector,
     message,

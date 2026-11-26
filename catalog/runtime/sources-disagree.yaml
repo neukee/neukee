@@ -1,0 +1,26 @@
+# Source: npm Docs, package.json, "engines" (fetched 2026-11-25).
+# "You can specify the version of node that your stuff works on" and "Unless the user has set the
+# engine-strict config flag, this field is advisory only and will only produce warnings when your
+# package is installed as a dependency." (fetched 2026-11-26). So `engines.node` is described as
+# allowing or excluding versions, never as selecting a runtime (catalog/README.md, wording rule).
+# nvm's README: "nvm use et. al. will traverse directory structure upwards from the current
+# directory looking for the .nvmrc file" (https://github.com/nvm-sh/nvm), which is how a pin
+# applies to a package (SPEC-SCANNER §2.1, ADR-020).
+id: runtime/sources-disagree
+title: Node.js version sources disagree
+applies:
+  tool: node
+severity: warning
+detector: runtime/sources
+message: >-
+  Two version pins that apply to this package (such as `.nvmrc` and `.node-version`) name
+  different major versions, or a pin names a major version that the package's `engines.node`
+  range excludes. When pins differ, tools that read different pins run different versions, so an
+  upgrade that passes locally can still run the old runtime elsewhere. An `engines.node` range
+  doesn't select a runtime: it says which versions the package works on, and npm treats it as
+  advisory unless `engine-strict` is set.
+fix: Make every pin and the engines.node range agree on one major version.
+sourceUrl: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines
+fixtures:
+  positive: fixtures/rules/runtime-sources-disagree/positive
+  negative: fixtures/rules/runtime-sources-disagree/negative

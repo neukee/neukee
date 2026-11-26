@@ -30,6 +30,10 @@
   },
   "dependencies": {
     "@neukee/core": "workspace:*",
-    "oxc-parser": "^0.159.0"
+    "oxc-parser": "^0.159.0",
+    "semver": "^7.8.6"
+  },
+  "devDependencies": {
+    "@types/semver": "^7.8.0"
   }
 }
