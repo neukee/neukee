@@ -240,6 +240,18 @@ describe("renderMarkdown", () => {
     expect(md("`")).toContain("`` ` ``");
   });
 
+  it("keeps a value's own enclosing spaces, which markdown would otherwise strip", () => {
+    const md = (file: string) =>
+      renderMarkdown(report({ findings: [finding({ locations: [{ file }] })] }));
+    // CommonMark removes one space from each end of a code span that begins and ends with one,
+    // unless it is all spaces, so a value with enclosing spaces gets one more on each side.
+    expect(md(" name ")).toContain("`  name  `");
+    expect(md("name ")).toContain("` name  `");
+    expect(md(" name")).toContain("`  name `");
+    expect(md("   ")).toContain("`   `");
+    expect(md(" ` ")).toContain("``  `  ``");
+  });
+
   it("keeps mentions, issue references, emoji and emails from linking in prose", () => {
     const message =
       "@Venu2328 @next/swc-linux-x64-gnu #1 neukee/neukee#1 :+1: x@y.z https://example.com www.example.com";

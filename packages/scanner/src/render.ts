@@ -204,8 +204,9 @@ function escapeMarkdown(text: string): string {
 
 /**
  * A value (a path, a version, a rule id) as a code span, where nothing formats, links or
- * mentions. The fence is one backtick longer than any run inside, and a value that starts or ends
- * with a backtick gets a space on both sides. In a table cell a pipe stays escaped, even here.
+ * mentions. The fence is one backtick longer than any run inside. A value that starts or ends with
+ * a backtick or a space gets a space on both sides (markdown strips one from each end of a span
+ * that has one at both ends, unless it is all spaces). In a table cell a pipe stays escaped.
  */
 function codeSpan(value: string, inTable = false): string {
   const text = clean(value);
@@ -213,6 +214,6 @@ function codeSpan(value: string, inTable = false): string {
   let longest = 0;
   for (const run of text.match(/`+/g) ?? []) longest = Math.max(longest, run.length);
   const fence = "`".repeat(longest + 1);
-  const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
+  const pad = /^[ `]|[ `]$/.test(text) && !/^ +$/.test(text) ? " " : "";
   return `${fence}${pad}${inTable ? text.replaceAll("|", "\\|") : text}${pad}${fence}`;
 }
