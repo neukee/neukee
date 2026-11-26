@@ -91,7 +91,7 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
     { name: "neukee", version },
     {
       entries: catalog.entries,
-      defaultTarget: parsed.defaults.length > 0,
+      defaultTarget: parsed.defaults.some((target) => target.tool === "node"),
       ...(options.scannedAt === undefined ? {} : { scannedAt: options.scannedAt }),
     },
   );
@@ -133,8 +133,12 @@ function parseTargets(
     targets.push(target);
   }
   const defaults = targets.some((t) => t.tool === DEFAULT_TARGET.tool) ? [] : [DEFAULT_TARGET];
-  return { targets: [...targets, ...defaults], defaults };
+  // Sorted, so the same targets give the same report in any flag order (ARCHITECTURE §4).
+  const all = [...targets, ...defaults].sort((a, b) => (label(a) < label(b) ? -1 : 1));
+  return { targets: all, defaults };
 }
+
+const label = (target: Target): string => `${target.tool}@${target.version}`;
 
 function isFolder(path: string): boolean {
   try {

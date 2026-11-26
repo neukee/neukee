@@ -159,6 +159,14 @@ describe("marking default targets", () => {
     );
   });
 
+  it("marks a target only when both its tool and its version are the default", () => {
+    const text = renderTerminal(report({ targets: [{ tool: "node", version: "26" }] }), {
+      ...plain,
+      defaultTargets: [{ tool: "node", version: "24" }],
+    });
+    expect(text).toContain("Targets: node@26\n");
+  });
+
   it("marks nothing when no default is given", () => {
     expect(renderTerminal(report({ targets }), plain)).toContain("Targets: next@16, node@26\n");
     expect(renderMarkdown(report({ targets }))).toContain("- **Targets:** next\\@16, node\\@26\n");

@@ -157,7 +157,7 @@ describe("neukee scan", () => {
       options,
     );
     expect(ok.code).toBe(0);
-    expect(ok.stdout).toContain("Targets: node@26, next@16");
+    expect(ok.stdout).toContain("Targets: next@16, node@26"); // sorted, not in flag order
     const twice = run(
       ["scan", fixture("empty"), "--target", "node@24", "--target", "node@26"],
       options,
@@ -178,6 +178,21 @@ describe("neukee scan", () => {
     const result = run(["scan", fixture("render-mixed"), "--target", "next@16"], options);
     expect(result.stdout).toContain("Targets: next@16, node@26 (default)");
     expect(result.stdout).toContain("INFO (1)"); // the default node target softens below-target
+  });
+
+  it("gives the same report for the same targets in any flag order", () => {
+    const scanWith = (...targets: string[]) =>
+      run(["scan", fixture("render-mixed"), ...targets.flatMap((t) => ["--target", t])], options);
+    const forward = scanWith("next@16", "node@26");
+    const backward = scanWith("node@26", "next@16");
+    expect(backward.stdout).toBe(forward.stdout);
+    expect(forward.stdout).toContain("Targets: next@16, node@26\n");
+  });
+
+  it("describes the default accurately in --help", () => {
+    expect(run(["--help"], options).stdout).toContain(
+      "Default: node@26, unless you name a Node.js target.",
+    );
   });
 
   it("does not add a default for a tool whose target was named", () => {
