@@ -31,7 +31,7 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 3. Implement the smallest change that makes them pass. Stay inside the task's scope.
 4. Run `pnpm verify`. Read failures; fix causes, not symptoms.
 5. Commit on a branch named `t-XXX-short-name` with message `T-XXX: <what changed>`. Never commit to `main` directly. Commit before the review, so the SHA you quote is exactly what was reviewed.
-6. Ask the `reviewer` subagent to review that commit: the diff, the task and the spec sections it touches. It runs on Sonnet; pass Opus explicitly for foundational reviews (hostile-input parsing: T-005b, T-005c, T-015, T-016, T-021). Fix what it finds in a new commit, re-run `pnpm verify`, have the reviewer check the new commit, and quote its verdict with the SHA it reviewed in the PR (ADR-016).
+6. Ask the `reviewer` subagent to review that commit: the diff, the task and the spec sections it touches. It runs on Sonnet; pass Opus explicitly only for foundational reviews (hostile-input parsing: T-005b, T-005c, T-015, T-016, T-021) or when Sreeram asks. Fix what it finds in a new commit, re-run `pnpm verify`, have the reviewer check the new commit, and quote its verdict with the SHA it reviewed in the PR (ADR-016).
 7. Put `docs/DECISIONS.md` changes (architecture, schema, dependencies or targets) in the task PR. Updates to `docs/TASKS.md`, `docs/PROGRESS.md` and `docs/REVIEW-QUEUE.md` go on the day's `docs-sync/YYYY-MM-DD` branch, pushed after each update and merged at `/wrap` (ADR-016). Task PRs never touch those three files.
 8. Run `pnpm check:all`, push the task branch, `gh pr create --fill`, comment `@coderabbitai review`, `gh pr checks --watch`. Fix CI failures and real CodeRabbit findings. Then merge as described in "Merging" (ADR-010).
 
@@ -40,7 +40,7 @@ Working name **Neukee** (trademark check pending; rename in T-053). A local-firs
 - **Standing approval for task PRs (ADR-016).** Merge without asking when all of these hold:
   - the 4 verify jobs and the quality job are green;
   - CodeRabbit reviewed the latest commit and every thread is resolved;
-  - the reviewer's **PASS** verdict is quoted in the PR with the SHA it reviewed, and that SHA is the PR's head. A CHANGES REQUIRED verdict blocks the merge until a new review of the head passes. If any commit lands after a PASS, re-run the reviewer on just those commits (Opus for a foundational task or a change to matching logic, Sonnet otherwise) and quote the new verdict with the new head SHA;
+  - the reviewer's **PASS** verdict is quoted in the PR with the SHA it reviewed, and that SHA is the PR's head. A CHANGES REQUIRED verdict blocks the merge until a new review of the head passes. If any commit lands after a PASS, re-run the reviewer on just those commits (Opus only when they change product code on a foundational task or matching logic; Sonnet for merges from main, docs, comments and test-only commits) and quote the new verdict with the new head SHA;
   - the four-line check shows no core type or schema change, no new dependency, and no CI, workflow, permission or security-model change.
     Squash-merge with the PR title in Conventional Commits form. Anything else needs Sreeram's approval, which he may give in advance for a specific PR, with conditions.
 - **A PR that changes only Markdown docs or code comments** (including the daily docs-sync PR) merges under these rules without asking.

@@ -87,6 +87,12 @@ Sreeram's notes and each session's summary. Newest first.
 - **T-014 (PR #17)** opened at `4851d8b` with the reviewer's PASS quoted; CI green. CodeRabbit requested changes once (Minor): `engines.node` is advisory and doesn't select a runtime, so the catalog messages for below-target and sources-disagree overstate what a range does. Waiting for Sreeram's OK to fix it in #17.
 - **Date risk flagged:** 19 launch tasks in 11 days needs about 1.7 a day; the pace is about 1. Options: launch Tue Dec 15 (ADR-017's fallback, Sreeram's preference over cutting validation), or keep Dec 8 by moving more tasks after launch. Saturday's `/checkpoint` decides.
 
+- **Reviewer cost (Sreeram, from `/usage`: 14% of his usage):** the agent file already said Sonnet, but 12 of 15 reviewer runs went to Opus. Five ran before the file had a model line; six were foundational reviews as ruled; one (T-014) was my slip, since it isn't foundational. Sreeram approved three rule changes, in this PR:
+  - CLAUDE.md step 6: Opus only for the listed foundational reviews, or when he asks.
+  - CLAUDE.md "Merging": a follow-up review uses Opus only when the new commits change product code on a foundational task or matching logic; Sonnet for merges from main, docs, comments and test-only commits.
+  - `reviewer.md`: the reviewer no longer runs `pnpm verify` or `pnpm check:all` (33 runs in 15 reviews); the author runs them and CI runs them on every push. It keeps targeted tests, mutation checks and small scripts.
+  - Still Opus: T-015, T-016, T-021.
+
 ### 2026-11-25 (evening) · T-014 built and reviewed; default target node@26
 
 - **T-014** built on `t-014-runtime-findings`: `runtime/sources-disagree` per package, `runtime/below-target`, `runtime/end-of-life`, three catalog entries with official sources, and the release table from the official `schedule.json`. Reviewer (Opus): CHANGES REQUIRED on `a75c21a` (non-exhaustive switches, an EOL claim its source didn't support, quadratic scoping, throws on bad targets) and on `9c4ae0f` (size; a leading-zero target that still threw), then PASS on `4851d8b`. 720 tests.
