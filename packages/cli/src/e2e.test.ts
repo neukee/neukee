@@ -103,6 +103,14 @@ describe("the built CLI", () => {
       return root;
     }
 
+    function uninstall(root: string): void {
+      // Unlink the junctions first, so the recursive remove can never follow one into packages/.
+      for (const name of ["core", "scanner"]) {
+        rmSync(join(root, "node_modules", "@neukee", name), { force: true });
+      }
+      rmSync(root, { recursive: true, force: true });
+    }
+
     const scanFrom = (root: string) =>
       spawnSync(
         process.execPath,
@@ -126,7 +134,7 @@ describe("the built CLI", () => {
         expect(result.stdout).toBe("");
         expect(result.stderr).toContain("The catalog can't be used");
       } finally {
-        rmSync(root, { recursive: true, force: true });
+        uninstall(root);
       }
     });
 
@@ -137,7 +145,7 @@ describe("the built CLI", () => {
         expect(result.status).toBe(1);
         expect(result.stdout).toContain("runtime/sources-disagree");
       } finally {
-        rmSync(root, { recursive: true, force: true });
+        uninstall(root);
       }
     });
   });
