@@ -155,6 +155,16 @@ Guardrails (Sreeram, 2026-11-23):
 - Note: the report has no timing (ADR-011: only `scannedAt` varies). Timing can return later behind an opt-in flag (for example `--timing`, printed to stderr or as a separate field added under the compatibility policy). It is never part of the default output.
 - Done when: e2e tests run the built CLI as a child process on fixtures and check output and exit codes.
 
+### T-033b · Ship the catalog in @neukee/cli
+
+- Status: todo
+- Depends on: T-033
+- Human review: no
+- Why (Sreeram, 2026-11-27): `neukee scan` exits 3 when no `catalog/` folder sits beside `dist`, so a previewed or published `@neukee/cli` fails for everyone. Not waiting for T-053. The pkg.pr.new preview must work by Saturday, Nov 28.
+- Build: `pnpm build` copies the catalog's `*.yaml` entries (not the README) into `packages/cli/catalog`, which is git-ignored and listed in the package's `files`. No workflow change: the pkg.pr.new workflow already runs `pnpm build` before it publishes `./packages/*` (ADR-019). A test packs the CLI with `pnpm pack` and checks the tarball holds `catalog/` and `dist/`.
+- Done when: a test packs `@neukee/core`, `@neukee/scanner` and `@neukee/cli`, unpacks the tarballs into a temp `node_modules` (their dependencies resolve from the repository's install, so the test needs no network), runs `neukee scan` on a fixture, and gets the same exit code and findings as in the repository; it fails if the tarball lacks `catalog/`. Manual check, noted in PROGRESS: `npx https://pkg.pr.new/neukee/neukee/@neukee/cli@<sha> scan <a fixture or repo>` from a pull request's preview works.
+- Note: T-053 keeps the release pipeline; this task covers only what the package contains.
+
 ## Phase 1 — Detectors
 
 ### T-005d · Dropped negations fail open
@@ -288,6 +298,7 @@ Guardrails (Sreeram, 2026-11-23):
 - Human review: yes (you own the npm and GitHub accounts)
 - Build: trademark search for Neukee (USPTO, EUIPO, India; ADR-008), Changesets, and a release workflow that publishes through **npm trusted publishing (OIDC)** from GitHub Actions, which adds provenance automatically. No npm token is ever stored in GitHub (ADR-009). Action version tags.
 - Done when: a dry-run release produces correct packages; nothing is published yet.
+- Note: the catalog ships in `@neukee/cli` from T-033b.
 
 ### T-054 · Documentation
 
