@@ -194,7 +194,8 @@ describe("renderMarkdown", () => {
     expect(row).toContain("\\<img src=x onerror=1\\>");
     expect(row).toContain("a\\|b \\*bold\\* \\_it\\_ \\`code\\` x@<span></span>y.z");
     expect(row).toContain("`p\\|q.json`"); // a pipe stays escaped inside a cell, even in a code span
-    expect(row).not.toMatch(/(?<!\\)<(?!\/?span>)/); // every "<" is escaped or is our own span
+    // Every "<" is escaped, or is part of exactly our own empty span.
+    expect(row).not.toMatch(/(?<!\\|<span>)<(?!span><\/span>)/);
   });
 
   it("keeps a multi-line message in one table row and neutralises control and bidi characters", () => {
@@ -458,8 +459,9 @@ describe.each(["empty", "runtime-sources", "render-mixed"])("rendering the %s fi
 // mentions, scoped package names, issue references, emoji, emails and values with backticks.
 // These tests pin the string only. What GitHub does with it shows only in its renderer, and in a
 // table cell differently from a paragraph, so after changing `fixtures/expected/hostile.md` render
-// it once: `gh api markdown -F text=@fixtures/expected/hostile.md -f mode=gfm` must show no
-// user-mention, issue-link, emoji or mailto element.
+// it once: `gh api markdown -F text=@fixtures/expected/hostile.md -f mode=gfm -f context=owner/repo`
+// (without a context a bare `#1` never becomes an issue link, so the check would pass for nothing)
+// must show no user-mention, issue-link or mailto element and no emoji character.
 describe("rendering hostile text", () => {
   const hostile = report({
     detected: { node: ["22", "`x` || >=20"], frameworks: {} },
