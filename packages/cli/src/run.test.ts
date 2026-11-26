@@ -214,8 +214,14 @@ describe("neukee scan", () => {
     writeFileSync(victim, "precious");
     try {
       symlinkSync(victim, link);
-    } catch {
-      context.skip(); // creating a file symlink needs a privilege on some Windows setups
+    } catch (error) {
+      // Only Windows without the symlink privilege skips; any other setup failure fails the test.
+      const denied =
+        error instanceof Error &&
+        "code" in error &&
+        ["EPERM", "EACCES"].includes(String(error.code));
+      if (process.platform === "win32" && denied) context.skip();
+      throw error;
     }
     const result = run(["scan", fixture("empty"), "--output", link], options);
     expect(result.code).toBe(2);
