@@ -142,6 +142,29 @@ describe("renderTerminal", () => {
   });
 });
 
+describe("marking default targets", () => {
+  const targets = [
+    { tool: "next" as const, version: "16" },
+    { tool: "node" as const, version: "26" },
+  ];
+  const defaultTargets = [{ tool: "node" as const, version: "26" }];
+
+  it("marks only the targets that came from defaults, in both formats", () => {
+    const withDefaults = report({ targets });
+    expect(renderTerminal(withDefaults, { ...plain, defaultTargets })).toContain(
+      "Targets: next@16, node@26 (default)",
+    );
+    expect(renderMarkdown(withDefaults, { defaultTargets })).toContain(
+      "- **Targets:** next\\@16, node\\@26 (default)",
+    );
+  });
+
+  it("marks nothing when no default is given", () => {
+    expect(renderTerminal(report({ targets }), plain)).toContain("Targets: next@16, node@26\n");
+    expect(renderMarkdown(report({ targets }))).toContain("- **Targets:** next\\@16, node\\@26\n");
+  });
+});
+
 describe("renderMarkdown", () => {
   it("has a summary table, a table per severity, diagnostics and the coverage note", () => {
     const md = renderMarkdown(

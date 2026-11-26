@@ -1,4 +1,4 @@
-import type { Diagnostic, Finding, ScanReport, Severity } from "@neukee/core";
+import type { Diagnostic, Finding, ScanReport, Severity, Target } from "@neukee/core";
 import { blockingFindings, type FailOn } from "./fail-on.js";
 
 /**
@@ -24,13 +24,13 @@ function coverageNote(report: ScanReport): string {
 
 export function renderTerminal(
   report: ScanReport,
-  options: { color: boolean; failOn: FailOn },
+  options: { color: boolean; failOn: FailOn; defaultTargets?: readonly Target[] },
 ): string {
   const paint = (text: string, code: string) =>
     options.color ? `\u001b[${code}m${text}\u001b[0m` : text;
   const lines = [
     paint(`Neukee scan report (scanned ${clean(report.scannedAt)})`, "1"),
-    `Targets: ${report.targets.map((t) => clean(`${t.tool}@${t.version}`)).join(", ") || "(none)"}`,
+    `Targets: ${targetsText(report, options.defaultTargets, clean)}`,
   ];
   if (report.detected.node.length > 0) {
     lines.push(`Detected Node.js: ${report.detected.node.map(clean).join(", ")}`);
@@ -67,11 +67,14 @@ export function renderTerminal(
   return `${lines.join("\n")}\n`;
 }
 
-export function renderMarkdown(report: ScanReport): string {
+export function renderMarkdown(
+  report: ScanReport,
+  options: { defaultTargets?: readonly Target[] } = {},
+): string {
   const lines = [
     "# Neukee scan report",
     "",
-    `- **Targets:** ${report.targets.map((t) => escapeMarkdown(`${t.tool}@${t.version}`)).join(", ") || "(none)"}`,
+    `- **Targets:** ${targetsText(report, options.defaultTargets, escapeMarkdown)}`,
     `- **Scanned:** ${escapeMarkdown(report.scannedAt)}; ${filesText(report)}`,
   ];
   if (report.detected.node.length > 0) {
@@ -101,6 +104,19 @@ export function renderMarkdown(report: ScanReport): string {
     for (const d of report.diagnostics) lines.push(diagnosticRow(d));
   }
   return `${lines.join("\n")}\n`;
+}
+
+/** `node@26 (default)`: a target that came from a default says so; `safe` neutralises each name. */
+function targetsText(
+  report: ScanReport,
+  defaults: readonly Target[] = [],
+  safe: (text: string) => string,
+): string {
+  const names = report.targets.map((target) => {
+    const isDefault = defaults.some((d) => d.tool === target.tool && d.version === target.version);
+    return `${safe(`${target.tool}@${target.version}`)}${isDefault ? " (default)" : ""}`;
+  });
+  return names.join(", ") || "(none)";
 }
 
 function markdownRow(finding: Finding): string {

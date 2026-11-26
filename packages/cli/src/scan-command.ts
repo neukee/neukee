@@ -4,6 +4,7 @@ import { loadCatalog, type Target } from "@neukee/core";
 import {
   blockingFindings,
   type FailOn,
+  missingRuleIds,
   renderMarkdown,
   renderTerminal,
   scan,
@@ -82,13 +83,15 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   if (catalog.errors.length > 0 || catalog.entries.length === 0) {
     return catalogFailure(catalog.errors);
   }
+  const missing = missingRuleIds(catalog.entries);
+  if (missing.length > 0) return catalogFailure([], missing);
   const report = scan(
     root,
     parsed.targets,
     { name: "neukee", version },
     {
       entries: catalog.entries,
-      defaultTarget: parsed.isDefault,
+      defaultTarget: parsed.defaults.length > 0,
       ...(options.scannedAt === undefined ? {} : { scannedAt: options.scannedAt }),
     },
   );
@@ -96,8 +99,12 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   // A file never gets color codes; the terminal gets them only when it can show them.
   const text =
     format === "markdown"
-      ? renderMarkdown(report)
-      : renderTerminal(report, { color: options.color && args.output === undefined, failOn });
+      ? renderMarkdown(report, { defaultTargets: parsed.defaults })
+      : renderTerminal(report, {
+          color: options.color && args.output === undefined,
+          failOn,
+          defaultTargets: parsed.defaults,
+        });
   if (args.output === undefined) return { code, stdout: text, stderr: "" };
   try {
     writeFileSync(args.output, text);
@@ -107,11 +114,13 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   return { code, stdout: "", stderr: `Wrote the ${format} report to ${args.output}.\n` };
 }
 
-/** With no `--target`, the default Node.js target; the default softens below-target (ADR-021). */
+/**
+ * Named targets replace the default for their own tool only (SPEC §1): without a Node.js target
+ * the default `node@26` is added, and softens below-target (ADR-021). One target per tool.
+ */
 function parseTargets(
   given: readonly string[],
-): { targets: Target[]; isDefault: boolean } | string {
-  if (given.length === 0) return { targets: [DEFAULT_TARGET], isDefault: true };
+): { targets: Target[]; defaults: Target[] } | string {
   const supported = SUPPORTED_TARGETS.map((t) => `${t.tool}@${t.version}`).join(", ");
   const targets: Target[] = [];
   for (const text of given) {
@@ -119,11 +128,12 @@ function parseTargets(
     if (target === undefined) return `Unknown target "${text}". Supported targets: ${supported}.`;
     const same = targets.find((t) => t.tool === target.tool);
     if (same !== undefined) {
-      return `Use one ${target.tool} target at most, not ${same.tool}@${same.version} and ${text}.`;
+      return `Use one ${target.tool} target per run, not ${same.tool}@${same.version} and ${text}: run once per target.`;
     }
     targets.push(target);
   }
-  return { targets, isDefault: false };
+  const defaults = targets.some((t) => t.tool === DEFAULT_TARGET.tool) ? [] : [DEFAULT_TARGET];
+  return { targets: [...targets, ...defaults], defaults };
 }
 
 function isFolder(path: string): boolean {
@@ -156,9 +166,13 @@ function defaultCatalogDir(): string {
   return shipped;
 }
 
-/** A broken or missing catalog is a packaging bug: scanning without it would hide findings. */
-function catalogFailure(errors: readonly { file: string; message: string }[]): RunResult {
+/** A broken, missing or incomplete catalog is a packaging bug: scanning would look clean. */
+function catalogFailure(
+  errors: readonly { file: string; message: string }[],
+  missingRules: readonly string[] = [],
+): RunResult {
   const lines = errors.map((error) => `  ${error.file}: ${error.message}`);
+  if (missingRules.length > 0) lines.push(`  no entry for: ${missingRules.join(", ")}`);
   const detail = lines.length > 0 ? `\n${lines.join("\n")}` : " It has no entries.";
   return {
     code: 3,

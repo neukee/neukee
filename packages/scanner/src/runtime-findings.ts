@@ -26,7 +26,7 @@ export function runtimeFindings(input: {
   // A date we can't read dates nothing: no end-of-life, no softening.
   const date = DATE.exec(input.scannedAt)?.[0];
   const findings: Finding[] = [];
-  const add = (id: string, detail: string, locations: Location[], severity?: Severity) => {
+  const add = (id: RuntimeRuleId, detail: string, locations: Location[], severity?: Severity) => {
     const rule = input.entries.find((e) => e.id === id);
     if (rule === undefined) return;
     findings.push({
@@ -79,6 +79,22 @@ export function runtimeFindings(input: {
     }
   }
   return findings;
+}
+
+/** The catalog entries this detector builds its findings from. */
+const RUNTIME_RULE_IDS = [
+  "runtime/below-target",
+  "runtime/end-of-life",
+  "runtime/sources-disagree",
+] as const;
+type RuntimeRuleId = (typeof RUNTIME_RULE_IDS)[number];
+
+/**
+ * The runtime rules a catalog lacks. `runtimeFindings` skips a rule it can't find, so a catalog
+ * without one would look like a clean repository; callers check this first.
+ */
+export function missingRuleIds(entries: readonly CatalogEntry[]): string[] {
+  return RUNTIME_RULE_IDS.filter((id) => !entries.some((entry) => entry.id === id));
 }
 
 // A target major of up to nine digits without a leading zero, alone or before a `.`: "26",

@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { type Finding, loadCatalog, type Target } from "@neukee/core";
 import { describe, expect, it } from "vitest";
 import { discoverFiles } from "./discover.js";
-import { runtimeFindings } from "./runtime-findings.js";
+import { missingRuleIds, runtimeFindings } from "./runtime-findings.js";
 import { type NodeVersionDeclaration, readRuntimeSources } from "./runtime-sources.js";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
@@ -541,5 +541,21 @@ describe("runtime findings in general", () => {
   it("gives the same findings in the same order for the same input", () => {
     const fixture = "fixtures/rules/runtime-sources-disagree/positive";
     expect(JSON.stringify(findingsIn(fixture))).toBe(JSON.stringify(findingsIn(fixture)));
+  });
+});
+
+describe("missingRuleIds", () => {
+  it("is empty for the real catalog", () => {
+    expect(missingRuleIds(entries)).toEqual([]);
+  });
+
+  it("names every runtime rule a catalog lacks, in id order", () => {
+    expect(missingRuleIds([])).toEqual([
+      "runtime/below-target",
+      "runtime/end-of-life",
+      "runtime/sources-disagree",
+    ]);
+    const withoutEndOfLife = entries.filter((entry) => entry.id !== "runtime/end-of-life");
+    expect(missingRuleIds(withoutEndOfLife)).toEqual(["runtime/end-of-life"]);
   });
 });

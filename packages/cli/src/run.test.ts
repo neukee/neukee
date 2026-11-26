@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +18,7 @@ const fixture = (name: string) =>
   fileURLToPath(new URL(`../../../fixtures/repos/${name}`, import.meta.url));
 // A fixed scan date keeps dated findings (end-of-life, the softening of below-target) stable.
 const options = { color: false, scannedAt: "2026-11-26T12:00:00.000Z" };
+const repoCatalog = fileURLToPath(new URL("../../../catalog", import.meta.url));
 
 const temps: string[] = [];
 afterEach(() => {
@@ -155,6 +164,32 @@ describe("neukee scan", () => {
     );
     expect(twice.code).toBe(2);
     expect(twice.stderr).toContain("one node target");
+    expect(twice.stderr).toContain("run once per target");
+  });
+
+  it("marks the default target in the Targets line", () => {
+    const result = run(["scan", fixture("empty")], options);
+    expect(result.stdout).toContain("Targets: node@26 (default)");
+    const markdown = run(["scan", fixture("empty"), "--format", "markdown"], options);
+    expect(markdown.stdout).toContain("- **Targets:** node\\@26 (default)");
+  });
+
+  it("replaces the default only for the tool it names: next@16 still checks node@26", () => {
+    const result = run(["scan", fixture("render-mixed"), "--target", "next@16"], options);
+    expect(result.stdout).toContain("Targets: next@16, node@26 (default)");
+    expect(result.stdout).toContain("INFO (1)"); // the default node target softens below-target
+  });
+
+  it("does not add a default for a tool whose target was named", () => {
+    const node = run(["scan", fixture("render-mixed"), "--target", "node@24"], options);
+    expect(node.stdout).toContain("Targets: node@24\n");
+    expect(node.stdout).not.toContain("(default)");
+    const both = run(
+      ["scan", fixture("render-mixed"), "--target", "next@16", "--target", "node@26"],
+      options,
+    );
+    expect(both.stdout).toContain("Targets: next@16, node@26\n");
+    expect(both.stdout).toContain("WARNING (1)"); // a named node target is never softened
   });
 
   it("exits 2 for a path that isn't a folder, and for more than one path", () => {
@@ -234,6 +269,24 @@ describe("the catalog", () => {
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain("runtime/broken.yaml");
     expect(result.stderr).toContain("bug");
+  });
+
+  it("exits 3 and names the rules a catalog lacks, instead of reporting a clean scan", () => {
+    const catalogDir = tempDir();
+    cpSync(join(repoCatalog, "next16"), join(catalogDir, "next16"), { recursive: true });
+    const result = run(["scan", fixture("runtime-sources")], { ...options, catalogDir });
+    expect(result.code).toBe(3);
+    expect(result.stdout).toBe("");
+    for (const id of ["runtime/below-target", "runtime/end-of-life", "runtime/sources-disagree"]) {
+      expect(result.stderr).toContain(id);
+    }
+    expect(result.stderr).toContain("bug");
+    cpSync(join(repoCatalog, "runtime"), join(catalogDir, "runtime"), { recursive: true });
+    rmSync(join(catalogDir, "runtime", "end-of-life.yaml"));
+    const one = run(["scan", fixture("runtime-sources")], { ...options, catalogDir });
+    expect(one.code).toBe(3);
+    expect(one.stderr).toContain("runtime/end-of-life");
+    expect(one.stderr).not.toContain("runtime/below-target");
   });
 
   it("exits 3 when the catalog is missing or empty, instead of reporting a clean scan", () => {
