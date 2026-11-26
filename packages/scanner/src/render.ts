@@ -71,11 +71,13 @@ export function renderMarkdown(report: ScanReport): string {
   const lines = [
     "# Neukee scan report",
     "",
-    `- **Targets:** ${report.targets.map((t) => escapeMarkdown(`${t.tool}@${t.version}`)).join(", ") || "(none)"}`,
-    `- **Scanned:** ${escapeMarkdown(report.scannedAt)}; ${filesText(report)}`,
+    `- **Targets:** ${report.targets.map((target) => codeSpan(`${target.tool}@${target.version}`)).join(", ") || "(none)"}`,
+    `- **Scanned:** ${codeSpan(report.scannedAt)}; ${filesText(report)}`,
   ];
   if (report.detected.node.length > 0) {
-    lines.push(`- **Detected Node.js:** ${report.detected.node.map(escapeMarkdown).join(", ")}`);
+    lines.push(
+      `- **Detected Node.js:** ${report.detected.node.map((v) => codeSpan(v)).join(", ")}`,
+    );
   }
   lines.push("", `> **Coverage.** ${escapeMarkdown(coverageNote(report))}`, "", "## Summary", "");
   lines.push("| Severity | Findings |", "| --- | ---: |");
@@ -104,10 +106,13 @@ export function renderMarkdown(report: ScanReport): string {
 }
 
 function markdownRow(finding: Finding): string {
-  const locations = finding.locations.length > 0 ? finding.locations.map(where) : ["(no location)"];
+  const locations =
+    finding.locations.length > 0
+      ? finding.locations.map((location) => codeSpan(where(location), true))
+      : ["(no location)"];
   return `| ${[
-    escapeMarkdown(finding.ruleId),
-    locations.map(escapeMarkdown).join("<br>"),
+    codeSpan(finding.ruleId, true),
+    locations.join("<br>"),
     escapeMarkdown(finding.message),
     finding.fix === undefined ? "" : escapeMarkdown(finding.fix),
     sourceLink(finding.sourceUrl),
@@ -115,7 +120,8 @@ function markdownRow(finding: Finding): string {
 }
 
 function diagnosticRow(d: Diagnostic): string {
-  return `| ${escapeMarkdown(d.level)} | ${d.file === undefined ? "" : escapeMarkdown(d.file)} | ${escapeMarkdown(d.message)} |`;
+  const file = d.file === undefined ? "" : codeSpan(d.file, true);
+  return `| ${escapeMarkdown(d.level)} | ${file} | ${escapeMarkdown(d.message)} |`;
 }
 
 /**
@@ -181,10 +187,31 @@ function clean(text: string): string {
   );
 }
 
-// Markdown punctuation, plus the two ways text becomes a link on its own: `https://…` and `www.…`
-// (and `x@y.z`, covered by `@`). Linear: one character class and two short lookarounds.
-const MARKDOWN = /[\\`*_[\]<>|&~!#@]|:(?=\/\/)|(?<=www)\./gi;
+// Markdown punctuation, plus the two ways text becomes a link on its own: `https://…` and `www.…`.
+// Linear: one character class and two short lookarounds.
+const MARKDOWN = /[\\`*_[\]<>|&~!]|:(?=\/\/)|(?<=www)\./gi;
+// GitHub turns `@name`, `#1` and `:+1:` into a mention, an issue link and an emoji even after a
+// backslash escape or an HTML entity. An empty HTML comment right after the `@`, the `#` or the
+// colon of an emoji name stops that, shows the text unchanged and hides no character.
+const GITHUB_LINKS = /[@#]|:(?=[\w+-]+:)/g;
 
+/** Prose from the repo or the catalog (a message, a fix): escaped so it can't format or link. */
 function escapeMarkdown(text: string): string {
-  return clean(text).replace(MARKDOWN, (match) => `\\${match}`);
+  return clean(text)
+    .replace(MARKDOWN, (match) => `\\${match}`)
+    .replace(GITHUB_LINKS, (match) => `${match}<!-- -->`);
+}
+
+/**
+ * A value (a path, a version, a rule id) as a code span, where nothing formats, links or
+ * mentions. The fence is one backtick longer than any run inside, and a value that starts or ends
+ * with a backtick gets a space on both sides. In a table cell a pipe stays escaped, even here.
+ */
+function codeSpan(value: string, inTable = false): string {
+  const text = clean(value);
+  if (text === "") return "";
+  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  const fence = "`".repeat(longest + 1);
+  const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
+  return `${fence}${pad}${inTable ? text.replaceAll("|", "\\|") : text}${pad}${fence}`;
 }
