@@ -6,8 +6,7 @@
       "entry": ["test/**/*.test.ts"]
     },
     "packages/cli": {
-      "entry": ["src/index.ts", "src/**/*.test.ts"],
-      "ignoreDependencies": ["@neukee/core", "@neukee/scanner"]
+      "entry": ["src/index.ts", "src/**/*.test.ts"]
     },
     "packages/*": {
       "entry": ["src/**/*.test.ts"]
