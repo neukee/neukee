@@ -192,9 +192,9 @@ describe("renderMarkdown", () => {
     expect(row).toContain("\\[click\\]");
     expect(row).toContain("https\\://evil.example");
     expect(row).toContain("\\<img src=x onerror=1\\>");
-    expect(row).toContain("a\\|b \\*bold\\* \\_it\\_ \\`code\\` x@<!-- -->y.z");
+    expect(row).toContain("a\\|b \\*bold\\* \\_it\\_ \\`code\\` x@<span></span>y.z");
     expect(row).toContain("`p\\|q.json`"); // a pipe stays escaped inside a cell, even in a code span
-    expect(row).not.toMatch(/(?<!\\)<(?!!-- -->)/); // every "<" is escaped or is our own comment
+    expect(row).not.toMatch(/(?<!\\)<(?!\/?span>)/); // every "<" is escaped or is our own span
   });
 
   it("keeps a multi-line message in one table row and neutralises control and bidi characters", () => {
@@ -243,10 +243,10 @@ describe("renderMarkdown", () => {
     const message =
       "@Venu2328 @next/swc-linux-x64-gnu #1 neukee/neukee#1 :+1: x@y.z https://example.com www.example.com";
     const md = renderMarkdown(report({ findings: [finding({ message })] }));
-    expect(md).toContain("@<!-- -->Venu2328 @<!-- -->next/swc-linux-x64-gnu");
-    expect(md).toContain("#<!-- -->1 neukee/neukee#<!-- -->1");
-    expect(md).toContain(":<!-- -->+1:");
-    expect(md).toContain("x@<!-- -->y.z");
+    expect(md).toContain("@<span></span>Venu2328 @<span></span>next/swc-linux-x64-gnu");
+    expect(md).toContain("#<span></span>1 neukee/neukee#<span></span>1");
+    expect(md).toContain(":<span></span>+1:");
+    expect(md).toContain("x@<span></span>y.z");
     expect(md).toContain("https\\://example.com www\\.example.com");
   });
 });
@@ -336,7 +336,8 @@ const HIDDEN: [string, string][] = HIDDEN_CODE_POINTS.map((codePoint) => [
 
 // Prose that would format, link, mention or embed if it reached markdown as written, with its
 // neutralised form. Backslash escapes work for formatting, but GitHub still links an escaped
-// `\@name` or `\#1`, so those get an empty HTML comment after them instead.
+// `\@name` or `\#1`, so those get an empty `<span></span>` after them instead. (An empty HTML
+// comment does the same in a paragraph but not in a table cell, where the prose lives.)
 const PROSE_ESCAPES: [string, string][] = [
   ["`", "\\`"],
   ["*", "\\*"],
@@ -350,10 +351,12 @@ const PROSE_ESCAPES: [string, string][] = [
   ["&lt;", "\\&lt;"],
   ["~~", "\\~\\~"],
   ["![", "\\!\\["],
-  ["#1", "#<!-- -->1"],
-  ["@octocat", "@<!-- -->octocat"],
-  ["x@y.z", "x@<!-- -->y.z"],
-  [":+1:", ":<!-- -->+1:"],
+  ["#1", "#<span></span>1"],
+  ["@octocat", "@<span></span>octocat"],
+  ["x@y.z", "x@<span></span>y.z"],
+  [":+1:", ":<span></span>+1:"],
+  [":white_check_mark:", ":<span></span>white\\_check\\_mark:"],
+  [":+1://x", ":<span></span>+1\\://x"],
   ["https://x.example", "https\\://x.example"],
   ["www.x.example", "www\\.x.example"],
   ["WWW.x.example", "WWW\\.x.example"],
@@ -411,8 +414,14 @@ describe("hostile text elsewhere", () => {
     );
     expect(md).toContain("\\[".repeat(1_000_000));
     expect(md).toContain("www\\.".repeat(250_000));
-    expect(md).toContain("@<!-- -->".repeat(250_000));
+    expect(md).toContain("@<span></span>".repeat(250_000));
     expect(md).toContain(`${"`".repeat(1_000_001)} ${ticks} ${"`".repeat(1_000_001)}`);
+  });
+
+  it("handles two hundred thousand separate runs of backticks without throwing", () => {
+    const file = "` ".repeat(200_000);
+    const md = renderMarkdown(report({ findings: [finding({ locations: [{ file }] })] }));
+    expect(md).toContain("`` ` ` ` ");
   });
 
   it("does not let a link destination split a table cell or smuggle characters", () => {
@@ -447,7 +456,10 @@ describe.each(["empty", "runtime-sources", "render-mixed"])("rendering the %s fi
 
 // The cases that broke on GitHub when backslash escapes were used (Sreeram's paste test, 2026-11-27):
 // mentions, scoped package names, issue references, emoji, emails and values with backticks.
-// Reading the golden against GitHub's renderer is the check; the file is `fixtures/expected/hostile.md`.
+// These tests pin the string only. What GitHub does with it shows only in its renderer, and in a
+// table cell differently from a paragraph, so after changing `fixtures/expected/hostile.md` render
+// it once: `gh api markdown -F text=@fixtures/expected/hostile.md -f mode=gfm` must show no
+// user-mention, issue-link, emoji or mailto element.
 describe("rendering hostile text", () => {
   const hostile = report({
     detected: { node: ["22", "`x` || >=20"], frameworks: {} },

@@ -187,19 +187,19 @@ function clean(text: string): string {
   );
 }
 
-// Markdown punctuation, plus the two ways text becomes a link on its own: `https://…` and `www.…`.
-// Linear: one character class and two short lookarounds.
-const MARKDOWN = /[\\`*_[\]<>|&~!]|:(?=\/\/)|(?<=www)\./gi;
-// GitHub turns `@name`, `#1` and `:+1:` into a mention, an issue link and an emoji even after a
-// backslash escape or an HTML entity. An empty HTML comment right after the `@`, the `#` or the
-// colon of an emoji name stops that, shows the text unchanged and hides no character.
-const GITHUB_LINKS = /[@#]|:(?=[\w+-]+:)/g;
+// One pass, so every lookahead sees the original text. The first group is escaped with a backslash:
+// markdown punctuation, plus the two ways text becomes a link on its own, `https://…` and `www.…`.
+// The second gets an empty `<span></span>` right after it: `@` and `#` (a mention or issue link,
+// which GitHub still makes of `\@name` or `\#1`) and the colon of an emoji name (`:+1:`). Unlike an
+// empty HTML comment, the span also works inside a table cell, where all prose is. It shows the
+// text unchanged and hides no character. Linear: a lookahead starts only at a colon.
+const MARKDOWN = /([\\`*_[\]<>|&~!]|:(?=\/\/)|(?<=www)\.)|([@#]|:(?=[\w+-]+:))/gi;
 
 /** Prose from the repo or the catalog (a message, a fix): escaped so it can't format or link. */
 function escapeMarkdown(text: string): string {
-  return clean(text)
-    .replace(MARKDOWN, (match) => `\\${match}`)
-    .replace(GITHUB_LINKS, (match) => `${match}<!-- -->`);
+  return clean(text).replace(MARKDOWN, (match, escaped: string | undefined) =>
+    escaped === undefined ? `${match}<span></span>` : `\\${match}`,
+  );
 }
 
 /**
@@ -210,7 +210,8 @@ function escapeMarkdown(text: string): string {
 function codeSpan(value: string, inTable = false): string {
   const text = clean(value);
   if (text === "") return "";
-  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  let longest = 0;
+  for (const run of text.match(/`+/g) ?? []) longest = Math.max(longest, run.length);
   const fence = "`".repeat(longest + 1);
   const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
   return `${fence}${pad}${inTable ? text.replaceAll("|", "\\|") : text}${pad}${fence}`;

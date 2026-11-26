@@ -18,10 +18,10 @@
 
 | Rule | Where | What was found | Fix | Source |
 | --- | --- | --- | --- | --- |
-| `runtime/below-target` | `packages/@scope/a#b/.nvmrc:1:1`<br>```odd`name``x.js:2```<br>`` `lead.js `` | @<!-- -->Venu2328 @<!-- -->next/swc-linux-x64-gnu #<!-- -->1 neukee/neukee#<!-- -->1 :<!-- -->+1: x@<!-- -->y.z https\://example.com www\.example.com | Ask @<!-- -->maintainer about #<!-- -->2, then rerun. | [Source](https://nodejs.org/en/about/previous-releases) |
+| `runtime/below-target` | `packages/@scope/a#b/.nvmrc:1:1`<br>```odd`name``x.js:2```<br>`` `lead.js `` | @<span></span>Venu2328 @<span></span>next/swc-linux-x64-gnu #<span></span>1 neukee/neukee#<span></span>1 :<span></span>+1: x@<span></span>y.z https\://example.com www\.example.com | Ask @<span></span>maintainer about #<span></span>2, then rerun. | [Source](https://nodejs.org/en/about/previous-releases) |
 
 ## Diagnostics (1)
 
 | Level | File | Message |
 | --- | --- | --- |
-| warning | `packages/@scope/a#b/package.json` | Could not read @<!-- -->scope/pkg#<!-- -->3 :<!-- -->tada: |
+| warning | `packages/@scope/a#b/package.json` | Could not read @<span></span>scope/pkg#<span></span>3 :<span></span>tada: |
