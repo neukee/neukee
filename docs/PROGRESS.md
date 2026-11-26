@@ -4,25 +4,26 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-25, 20:40 IST.
+- **Last updated:** 2026-11-26, 19:30 IST.
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
-- **Branches and worktrees:** `main` at `f983a69`, no open task PRs. `docs-sync/2026-11-24` (worktree `../neukee-wt/docs-sync`) carries 2026-11-24 and 2026-11-25 updates; it was never merged at a `/wrap`.
-- **Last finished:** T-010 (runtime sources), merged as `f983a69` under standing approval. Reviewer PASS at head `6974be5` (Sonnet, after Opus rounds), CodeRabbit approved. MVP: 9 of 28 launch tasks done (32%).
-- **In progress:** T-014 (runtime findings), built and committed on `t-014-runtime-findings` (`a75c21a`), in review by the reviewer subagent (Opus). Resume it there: fix any findings, then open its PR. It adds the `semver` dependency, so its merge needs Sreeram's approval.
-- **Exact next step:** T-014 (runtime findings, thin path). Sreeram answered the monorepo question on 2026-11-25: `sources-disagree` is scoped per package, never across packages. SPEC-SCANNER §2.1 and an ADR in T-014's PR record it. T-014 also needs Node release data from the official schedule.
+- **Branches and worktrees:** `main` at `7473949`. `t-014-runtime-findings` at `4851d8b` (main checkout), PR #17 open. `docs-sync/2026-11-26` (worktree `../neukee-wt/docs-sync`) carries today's updates, including the 2026-11-25 `/wrap` that was never committed.
+- **Last finished:** T-010 (runtime sources), merged as `f983a69`. MVP: 9 of 28 launch tasks done (32%).
+- **In progress:** T-014 (runtime findings), PR #17 at `4851d8b`. Reviewer (Opus) PASS at `4851d8b`; CI and the quality job green. CodeRabbit requested changes once (Minor): `engines.node` doesn't select a runtime, so below-target's message ("keep running the old runtime") and sources-disagree's ("decide which Node.js version runs") overstate what a range does. The fix changes finding text and golden snapshots.
+- **Exact next step:** with Sreeram's OK, fix the wording in #17, re-run `pnpm verify`, have the reviewer check that commit, resolve the thread, then get Sreeram's merge approval: the `semver` dependency, the core type change (`applies.introducedIn` optional) and the new official host `docs.npmjs.com`. Then T-030 (report assembly; passes `defaultTarget` and `scannedAt` to T-014), T-031, T-033.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
-  - Report progress at every 10% of the work in hand, against a stated step list (2026-11-23).
-  - Report overall MVP progress as launch tasks done out of 28 (9 done: 32%, on 2026-11-25).
+  - Report only overall MVP progress, as launch tasks done out of 28, never step progress (2026-11-25; replaces "every 10%").
+  - If Saturday's `/checkpoint` shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation. T-024 stays in place until then.
 - **Blocked / waiting on Sreeram:**
+  - PR #17 (T-014): the CodeRabbit wording fix, then merge approval (see above). REVIEW-QUEUE has the reviewer's four open points.
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
   - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
   - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio.
   - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
 - **`/checkpoint`:** Sreeram runs it on Saturday, Nov 28, after the thin path (2026-11-24).
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (12 days). Launch Tuesday, Dec 8 (13 days). 19 launch tasks remain (9 of 28 done; T-014 in progress): about 1.6 a day needed. Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28.
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (11 days). Launch Tuesday, Dec 8 (12 days). 19 launch tasks remain (9 of 28 done; T-014 in review): about 1.7 a day needed. The pace is about 1 a day, which lands around Dec 14–15: **Dec 7 is at risk by more than 3 days** (flagged 2026-11-26). Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28 (2 days; T-014, T-030, T-031 and T-033 still open).
 
 ## Dated checkpoints
 
@@ -40,10 +41,10 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 
 ## Current state
 
-- **Phase:** 0 — Foundation
-- **Current task:** T-005a (PR #9) and T-005b (PR #8), in review
+- **Phase:** 1a — Thin end-to-end path
+- **Current task:** T-014 (PR #17), in review
 - **Scanner launch target:** Tuesday, December 8, 2026 (ADR-013)
-- **On track?** Not yet measured. Run `/checkpoint` after T-005.
+- **On track?** Behind: about 1 task a day against 1.7 needed. Sreeram's `/checkpoint` on Saturday, Nov 28 decides (Dec 15 fallback, ADR-017).
 
 ## Launch targets
 
@@ -73,10 +74,34 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 | 2026-11-22 | T-004  | S    | 1               | —             | done   | Harness, golden reports, dependency rule                                                                                                                                                                                   |
 | 2026-11-23 | T-005a | L    | 1               | —             | done   | Copilot's T-005 matcher replaced; tested against real git (103 cases). Reviewer: 2 rounds of CHANGES REQUIRED (speed at the caps), then PASS. 4 CodeRabbit findings fixed. 359 lines accepted. PR #9                       |
 | 2026-11-23 | T-005b | L    | 1               | —             | done   | Copilot's discovery reworked on T-005a: single-handle reads, symlinks never followed, races tested. Reviewer: CHANGES REQUIRED (untested Windows path), then PASS on each later commit. 2 CodeRabbit findings fixed. PR #8 |
+| 2026-11-24 | T-005c | M    | 1               | —             | done   | Scan-wide budget; parsing charged at 48 steps per byte; subtree fail-open folded in from CodeRabbit on #10. Reviewer (Opus) PASS at `aa4b8ff`. PR #11                                                                      |
+| 2026-11-25 | T-010  | M    | 1               | —             | done   | First detector. Reviewer (Opus): 2 rounds of CHANGES REQUIRED (a bad field dropped a good one; a quadratic trim regex), then PASS. CodeRabbit: range check looser than semver, fixed in the PR. PR #15                     |
 
 ## Daily log
 
 Sreeram's notes and each session's summary. Newest first.
+
+### 2026-11-26 · Session start: the 11-25 wrap was never committed
+
+- The 2026-11-25 `/wrap` stopped before it committed anything, so this entry and today's Resume here record that session.
+- **T-014 (PR #17)** opened at `4851d8b` with the reviewer's PASS quoted; CI green. CodeRabbit requested changes once (Minor): `engines.node` is advisory and doesn't select a runtime, so the catalog messages for below-target and sources-disagree overstate what a range does. Waiting for Sreeram's OK to fix it in #17.
+- **Date risk flagged:** 19 launch tasks in 11 days needs about 1.7 a day; the pace is about 1. Options: launch Tue Dec 15 (ADR-017's fallback, Sreeram's preference over cutting validation), or keep Dec 8 by moving more tasks after launch. Saturday's `/checkpoint` decides.
+
+- **Reviewer cost (Sreeram, from `/usage`: 14% of his usage):** the agent file already said Sonnet, but 12 of 15 reviewer runs went to Opus. Five ran before the file had a model line; six were foundational reviews as ruled; one (T-014) was my slip, since it isn't foundational. Sreeram approved three rule changes, in this PR:
+  - CLAUDE.md step 6: Opus only for the listed foundational reviews, or when he asks.
+  - CLAUDE.md "Merging": a follow-up review uses Opus only when the new commits change product code on a foundational task or matching logic; Sonnet for merges from main, docs, comments and test-only commits.
+  - `reviewer.md`: the reviewer no longer runs `pnpm verify` or `pnpm check:all` (33 runs in 15 reviews); the author runs them and CI runs them on every push. It keeps targeted tests, mutation checks and small scripts.
+  - Still Opus: T-015, T-016, T-021.
+
+### 2026-11-25 (evening) · T-014 built and reviewed; default target node@26
+
+- **T-014** built on `t-014-runtime-findings`: `runtime/sources-disagree` per package, `runtime/below-target`, `runtime/end-of-life`, three catalog entries with official sources, and the release table from the official `schedule.json`. Reviewer (Opus): CHANGES REQUIRED on `a75c21a` (non-exhaustive switches, an EOL claim its source didn't support, quadratic scoping, throws on bad targets) and on `9c4ae0f` (size; a leading-zero target that still threw), then PASS on `4851d8b`. 720 tests.
+- **Sreeram decided:**
+  - ADR-020: `applies.introducedIn` is optional; `semver` is added; `docs.npmjs.com` is an official host; `volta.node` covers its own package only (Volta's `extends` isn't followed yet).
+  - ADR-021: the default target is `node@26` (LTS since 2026-10-28). Under the default, below-target is `info` while the declared line has at least 12 months of support left from `scannedAt`, else `warning`; an explicit `--target` is never softened. The coverage note says plainly that v0.1.0 checks which Node.js version runs where, not code for APIs removed in Node 23 to 26.
+  - Waived the ~300-line guideline for #17 (399 source lines, about 120 of them data).
+  - T-024 stays in place; Saturday's `/checkpoint` decides whether it moves up.
+- **Sreeram said to remember:** report only overall MVP progress (launch tasks done out of 28), never step progress.
 
 ### 2026-11-25 · T-010 merged; a merge sent before its PR quoted the verdict
 
