@@ -4,26 +4,26 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-26, 20:45 IST.
+- **Last updated:** 2026-11-26, 22:30 IST.
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
-- **Branches and worktrees:** `main` at `26b53eb`. Main checkout on `t-014-wording-comments` (`5056285`): PR #19, a small follow-up, Sonnet PASS. `docs-sync/2026-11-26b` (worktree `../neukee-wt/docs-sync`) carries these updates.
-- **Last finished:** T-014 (runtime findings), merged as `26b53eb` after Sreeram's approval (semver, optional `applies.introducedIn`, `docs.npmjs.com`). Reviewer PASS at `4851d8b` (Opus) and `71e9cff` (Sonnet); CodeRabbit approved. MVP: 10 of 28 launch tasks done (36%).
-- **In progress:** T-030 (report assembly), routine, so Sonnet. Not started in code. The wording follow-up (PR #19: comments in `runtime-findings.ts` and SPEC §2.1 line 34, so a range never "selects" a runtime) has its Sonnet PASS and waits for CI, CodeRabbit and Sreeram's merge.
-- **Exact next step:** T-030 on a new branch `t-030-report-assembly`: tests first. It runs the detectors that exist (T-010's sources into T-014's findings), deduplicates, sorts deterministically and attaches diagnostics. It passes `defaultTarget` (true when `--target` isn't given) and `scannedAt` to `runtimeFindings`. Then T-031 (renderers plus the coverage note) and T-033 (CLI, default `node@26`). The thin-path target is Sat Nov 28.
+- **Branches and worktrees:** `main` at `2a04356`. Main checkout on `t-014-wording-comments` (PR #19, waiting for Sreeram). `../neukee-wt/t-031` on `t-031-renderers` (T-031, in review). `../neukee-wt/t-030` is a finished worktree (branch merged and deleted on GitHub). `../neukee-wt/docs-sync` on `docs-sync/2026-11-26b`.
+- **Last finished:** T-030 (report assembly), merged as `2a04356` under standing approval. Reviewer (Sonnet): CHANGES REQUIRED on `51cd4e2` (an empty `engines.node` made `detected.node` invalid), PASS on `4a361c9`; CodeRabbit approved. MVP: 11 of 28 launch tasks done (39%).
+- **In progress:** T-031 (terminal and markdown renderers), routine, so Sonnet. Committed as `ca571a0` on `t-031-renderers`; the Sonnet review is running. Its manual step is for Sreeram: paste `fixtures/expected/runtime-sources.md` into a test PR once and check it renders on GitHub.
+- **Exact next step:** finish T-031 (review, PR, CodeRabbit, merge under standing approval if the four-line check stays clean). Then T-033 (CLI: `neukee scan`, default `node@26`, `defaultTarget` when `--target` is absent, exit codes via `blockingFindings`, print `loadCatalog` errors). The thin-path target is Sat Nov 28.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
   - Report only overall MVP progress, as launch tasks done out of 28, never step progress (2026-11-25; replaces "every 10%").
   - If Saturday's `/checkpoint` shows more than 3 days behind, propose launching Tue Dec 15 rather than cutting validation. T-024 stays in place until then.
 - **Blocked / waiting on Sreeram:**
-  - The wording follow-up PR #19: Sonnet PASS at `5056285`; waiting for CodeRabbit, CI and Sreeram's merge approval.
+  - PR #19 (wording follow-up, Sonnet PASS at `5056285`, CI and CodeRabbit green): merge approval.
   - Approve updating `.claude/skills/next/SKILL.md` to the new rules. It still reviews before committing and updates PROGRESS, TASKS and REVIEW-QUEUE inside the task.
   - The personal profile `Venu2328/Venu2328`: a PR that adds Neukee through its own `tools/build_assets.py`. Not started.
   - Browser-only kit steps: org avatar and display name, the social preview image, pins, his profile's company and bio.
   - REVIEW-QUEUE: the residual races; a depth cap for very deep trees on Windows; a CI `timeout-minutes`; the `pnpm audit` advisories; the T-005b path-ordering nit; `realpathSync` cost on deep trees.
   - NEWKEY: a live US trademark that sounds like "Neukee" when said as "new-key". Decide the pronunciation and check the registration details before the T-053 trademark search.
 - **`/checkpoint`:** Sreeram runs it on Saturday, Nov 28, after the thin path (2026-11-24).
-- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (11 days). Launch Tuesday, Dec 8 (12 days). 18 launch tasks remain (10 of 28 done): about 1.6 a day needed against about 1 a day so far, so Dec 7 is still at risk by more than 3 days (flagged 2026-11-26). Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28; T-030, T-031 and T-033 remain.
+- **Next dated checkpoint:** Dec 7, scanner runs on 10 public repos (11 days). Launch Tuesday, Dec 8 (12 days). 17 launch tasks remain (11 of 28 done): about 1.5 a day needed against about 1 a day so far, so Dec 7 is still at risk by more than 3 days (flagged 2026-11-26). Thin-path target: `neukee scan` prints a real finding on a real public repo by Sat Nov 28; T-031 and T-033 remain.
 
 ## Dated checkpoints
 
@@ -42,7 +42,7 @@ From `docs/BRIEF.md` §7. `/checkpoint` updates the status column.
 ## Current state
 
 - **Phase:** 1a — Thin end-to-end path
-- **Current task:** T-030 (report assembly), starting
+- **Current task:** T-031 (renderers), in review
 - **Scanner launch target:** Tuesday, December 8, 2026 (ADR-013)
 - **On track?** Behind: about 1 task a day against 1.7 needed. Sreeram's `/checkpoint` on Saturday, Nov 28 decides (Dec 15 fallback, ADR-017).
 
@@ -77,6 +77,7 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 | 2026-11-24 | T-005c | M    | 1               | —             | done   | Scan-wide budget; parsing charged at 48 steps per byte; subtree fail-open folded in from CodeRabbit on #10. Reviewer (Opus) PASS at `aa4b8ff`. PR #11                                                                      |
 | 2026-11-25 | T-010  | M    | 1               | —             | done   | First detector. Reviewer (Opus): 2 rounds of CHANGES REQUIRED (a bad field dropped a good one; a quadratic trim regex), then PASS. CodeRabbit: range check looser than semver, fixed in the PR. PR #15                     |
 | 2026-11-26 | T-014  | L    | 1               | —             | done   | Runtime findings: sources-disagree per package, below-target, end-of-life; default target node@26 (ADR-021). Reviewer (Opus): CHANGES REQUIRED twice (non-exhaustive switches, an EOL claim its source didn't support, quadratic scoping, throws on bad targets, a leading-zero target), then PASS; Sonnet PASS on the wording commit. CodeRabbit: `engines.node` is advisory, fixed in the catalog text. 399 source lines (waived). PR #17 |
+| 2026-11-26 | T-030  | M    | 1               | —             | done   | Report assembly: `scan()` runs the runtime detectors, sorts and dedupes, fills `detected.node`. Reviewer (Sonnet): CHANGES REQUIRED once (an empty `engines.node` made the report invalid), then PASS. CodeRabbit approved with no findings. PR #20 |
 
 ## Daily log
 
