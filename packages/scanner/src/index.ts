@@ -1,6 +1,8 @@
 import type { Diagnostic } from "@neukee/core";
 import { parseSync } from "oxc-parser";
 
+export { blockingFindings, type FailOn } from "./fail-on.js";
+export { renderMarkdown, renderTerminal } from "./render.js";
 export { type ScanOptions, scan } from "./scan.js";
 
 export interface SyntaxCheck {
