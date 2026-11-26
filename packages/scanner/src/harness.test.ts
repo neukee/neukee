@@ -45,6 +45,12 @@ describe("fixture harness", () => {
     }
   });
 
+  it("rejects an empty golden name", async () => {
+    await expect(matchGolden("", scanFixture("empty"))).rejects.toThrow(
+      /inside fixtures\/expected/,
+    );
+  });
+
   it("rejects a golden path that escapes fixtures/expected/", async () => {
     await expect(matchGolden("../../package", scanFixture("empty"))).rejects.toThrow(
       /inside fixtures\/expected/,
