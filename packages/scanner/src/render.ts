@@ -7,22 +7,19 @@ import { blockingFindings, type FailOn } from "./fail-on.js";
  * characters are shown as visible escapes, and markdown is escaped (ADR-011, T-031).
  */
 
-const SEVERITIES: readonly Severity[] = ["action-required", "warning", "info"];
-// Records keyed by the union: a new severity fails to compile until it is listed.
-const HEADING: Record<Severity, string> = {
-  "action-required": "Action required",
-  warning: "Warning",
-  info: "Info",
+// One record keyed by the union: a new severity fails to compile until it is listed here, and its
+// key order is the order the severities are printed in.
+const STYLE: Record<Severity, { heading: string; sgr: string }> = {
+  "action-required": { heading: "Action required", sgr: "1;31" },
+  warning: { heading: "Warning", sgr: "33" },
+  info: { heading: "Info", sgr: "36" },
 };
-const SGR: Record<Severity, string> = {
-  "action-required": "1;31",
-  warning: "33",
-  info: "36",
-};
+const isSeverity = (key: string): key is Severity => Object.hasOwn(STYLE, key);
+const SEVERITIES = Object.keys(STYLE).filter(isSeverity);
 
 /** ADR-021: every report says plainly what this version does not check. */
 function coverageNote(report: ScanReport): string {
-  return `Neukee v${report.tool.version} checks which Node.js version runs where, not your code for APIs removed in Node 23 to 26. Rules for those APIs come after launch.`;
+  return `Neukee v${clean(report.tool.version)} checks which Node.js version runs where, not your code for APIs removed in Node 23 to 26. Rules for those APIs come after launch.`;
 }
 
 export function renderTerminal(
@@ -42,7 +39,10 @@ export function renderTerminal(
   for (const severity of SEVERITIES) {
     const group = report.findings.filter((finding) => finding.severity === severity);
     if (group.length === 0) continue;
-    lines.push("", paint(`${HEADING[severity].toUpperCase()} (${group.length})`, SGR[severity]));
+    lines.push(
+      "",
+      paint(`${STYLE[severity].heading.toUpperCase()} (${group.length})`, STYLE[severity].sgr),
+    );
     for (const finding of group) {
       lines.push("", `  ${clean(finding.ruleId)}: ${clean(finding.title)}`);
       for (const location of finding.locations.length > 0
@@ -59,7 +59,7 @@ export function renderTerminal(
     lines.push("", `Diagnostics (${report.diagnostics.length})`);
     for (const d of report.diagnostics)
       lines.push(
-        `  ${d.level}${d.file === undefined ? "" : ` ${clean(d.file)}`}: ${clean(d.message)}`,
+        `  ${clean(d.level)}${d.file === undefined ? "" : ` ${clean(d.file)}`}: ${clean(d.message)}`,
       );
   }
   const blocking = blockingFindings(report.findings, options.failOn).length;
@@ -81,14 +81,14 @@ export function renderMarkdown(report: ScanReport): string {
   lines.push("| Severity | Findings |", "| --- | ---: |");
   for (const severity of SEVERITIES) {
     lines.push(
-      `| ${HEADING[severity]} | ${report.findings.filter((f) => f.severity === severity).length} |`,
+      `| ${STYLE[severity].heading} | ${report.findings.filter((f) => f.severity === severity).length} |`,
     );
   }
   if (report.findings.length === 0) lines.push("", "No findings.");
   for (const severity of SEVERITIES) {
     const group = report.findings.filter((finding) => finding.severity === severity);
     if (group.length === 0) continue;
-    lines.push("", `## ${HEADING[severity]} (${group.length})`, "");
+    lines.push("", `## ${STYLE[severity].heading} (${group.length})`, "");
     lines.push(
       "| Rule | Where | What was found | Fix | Source |",
       "| --- | --- | --- | --- | --- |",
@@ -115,17 +115,23 @@ function markdownRow(finding: Finding): string {
 }
 
 function diagnosticRow(d: Diagnostic): string {
-  return `| ${d.level} | ${d.file === undefined ? "" : escapeMarkdown(d.file)} | ${escapeMarkdown(d.message)} |`;
+  return `| ${escapeMarkdown(d.level)} | ${d.file === undefined ? "" : escapeMarkdown(d.file)} | ${escapeMarkdown(d.message)} |`;
 }
 
-/** A link for an https URL, with the characters that end a link destination percent-encoded. */
+/**
+ * A link for an https URL. Everything that ends a link destination or a table cell, and every
+ * non-ASCII character, is percent-encoded, so the destination stays one safe ASCII token.
+ */
 function sourceLink(url: string): string {
-  if (!url.startsWith("https://")) return escapeMarkdown(url);
+  const safe = clean(url);
+  if (!safe.startsWith("https://")) return escapeMarkdown(safe);
   let destination = "";
-  for (const ch of url) {
+  for (const ch of safe) {
     const code = ch.codePointAt(0) ?? 0;
-    const breaks = code <= 0x20 || code === 0x7f || '()<>\\"'.includes(ch);
-    destination += breaks ? `%${code.toString(16).toUpperCase().padStart(2, "0")}` : ch;
+    if (code > 0x7f) destination += encodeURIComponent(ch);
+    else if (code <= 0x20 || code === 0x7f || '()<>\\"|'.includes(ch)) {
+      destination += `%${code.toString(16).toUpperCase().padStart(2, "0")}`;
+    } else destination += ch;
   }
   return `[Source](${destination})`;
 }
@@ -156,33 +162,25 @@ function exitReason(blocking: number, failOn: FailOn): string {
   return `Exit code 1: ${plural(blocking, "finding")} at or above ${failOn} (--fail-on ${failOn}).`;
 }
 
-/** Characters that can hide or reorder text, or move a terminal's cursor. */
-function isHidden(code: number): boolean {
-  return (
-    code <= 0x1f || // C0 controls, including ESC
-    (code >= 0x7f && code <= 0x9f) || // DEL and C1 controls
-    code === 0x61c ||
-    (code >= 0x200b && code <= 0x200f) || // zero-width characters and direction marks
-    (code >= 0x2028 && code <= 0x202e) || // line and paragraph separators, bidi embeddings
-    code === 0x2060 ||
-    (code >= 0x2066 && code <= 0x2069) || // bidi isolates
-    (code >= 0xd800 && code <= 0xdfff) || // lone surrogates
-    code === 0xfeff
-  );
-}
+// Everything invisible or that reorders text: controls, format characters (soft hyphen, zero-width,
+// bidi, invisible operators, tag characters), line and paragraph separators, surrogates,
+// private-use and unassigned code points, plus the few invisible letters and marks that no
+// category covers (combining grapheme joiner, Mongolian vowel separator, Hangul filler, variation
+// selectors). Linear: a character class and two single-character alternatives (a combining
+// character can't sit in the class).
+const HIDDEN =
+  /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Cs}\p{Co}\p{Cn}\u{180e}\u{3164}]|\p{Variation_Selector}|\u{34f}/gu;
 
 /**
- * One line of safe text: line breaks and tabs become spaces, and every character that can hide
- * or reorder text becomes a visible `\u{…}` escape.
+ * One line of safe text: line breaks and tabs become spaces, and every hidden character becomes a
+ * visible `\u{…}` escape.
  */
 function clean(text: string): string {
-  let out = "";
-  for (const ch of text) {
-    const code = ch.codePointAt(0) ?? 0;
-    if (code === 0x0a || code === 0x0d || code === 0x09) out += " ";
-    else out += isHidden(code) ? `\\u{${code.toString(16)}}` : ch;
-  }
-  return out;
+  return text.replace(HIDDEN, (ch) =>
+    ch === "\n" || ch === "\r" || ch === "\t"
+      ? " "
+      : `\\u{${(ch.codePointAt(0) ?? 0).toString(16)}}`,
+  );
 }
 
 // Markdown punctuation, plus the two ways text becomes a link on its own: `https://…` and `www.…`

@@ -231,6 +231,105 @@ describe("renderMarkdown", () => {
   });
 });
 
+// Every string field the renderers print, with the report built around one value.
+const FIELDS: [string, (value: string) => ScanReport][] = [
+  ["tool version", (v) => report({ tool: { name: "neukee", version: v } })],
+  ["scannedAt", (v) => report({ scannedAt: v })],
+  ["target version", (v) => report({ targets: [{ tool: "node", version: v }] })],
+  ["detected.node", (v) => report({ detected: { node: [v], frameworks: {} } })],
+  ["ruleId", (v) => report({ findings: [finding({ ruleId: v })] })],
+  ["message", (v) => report({ findings: [finding({ message: v })] })],
+  ["fix", (v) => report({ findings: [finding({ fix: v })] })],
+  ["sourceUrl", (v) => report({ findings: [finding({ sourceUrl: v })] })],
+  ["location file", (v) => report({ findings: [finding({ locations: [{ file: v }] })] })],
+  [
+    "diagnostic file",
+    (v) => report({ diagnostics: [{ level: "warning", message: "m", file: v }] }),
+  ],
+  ["diagnostic message", (v) => report({ diagnostics: [{ level: "warning", message: v }] })],
+];
+
+// Characters that hide or reorder text: one per class (controls, format characters, tags,
+// variation selectors, fillers, separators, a lone surrogate), as [raw, hex].
+const HIDDEN: [string, string][] = [
+  [ESC, "1b"],
+  ["\u0085", "85"], // C1 next line
+  ["­", "ad"], // soft hyphen
+  ["͏", "34f"], // combining grapheme joiner
+  ["᠎", "180e"], // Mongolian vowel separator
+  [RLO, "202e"],
+  ["​", "200b"], // zero-width space
+  [" ", "2028"], // line separator
+  ["⁣", "2063"], // invisible separator
+  ["ㅤ", "3164"], // Hangul filler
+  ["️", "fe0f"], // variation selector
+  ["￹", "fff9"], // interlinear annotation anchor
+  ["\u{e0041}", "e0041"], // tag character: "ASCII smuggling"
+  ["\ud800", "d800"], // lone surrogate
+];
+
+// Text that would format, link or embed if it reached markdown as written, with its escaped form.
+const MARKDOWN_ESCAPES: [string, string][] = [
+  ["`", "\\`"],
+  ["*", "\\*"],
+  ["_", "\\_"],
+  ["[", "\\["],
+  ["]", "\\]"],
+  ["<", "\\<"],
+  [">", "\\>"],
+  ["|", "\\|"],
+  ["\\", "\\\\"],
+  ["&lt;", "\\&lt;"],
+  ["~~", "\\~\\~"],
+  ["![", "\\!\\["],
+  ["#", "\\#"],
+  ["@octocat", "\\@octocat"],
+  ["https://x.example", "https\\://x.example"],
+  ["www.x.example", "www\\.x.example"],
+  ["WWW.x.example", "WWW\\.x.example"],
+];
+
+describe.each(FIELDS)("hostile text in %s", (_name, build) => {
+  it.each(HIDDEN)("shows U+%j as a visible escape in both formats", (raw, hex) => {
+    const value = `a${raw}b`;
+    const terminal = renderTerminal(build(value), plain);
+    const markdown = renderMarkdown(build(value));
+    expect(terminal).not.toContain(raw);
+    expect(markdown).not.toContain(raw);
+    expect(terminal).toContain(`a\\u{${hex}}b`);
+    expect(markdown).toContain(`a\\\\u{${hex}}b`); // the escape's own backslash is escaped too
+  });
+
+  it.each(MARKDOWN_ESCAPES)("escapes %j in markdown", (raw, escaped) => {
+    expect(renderMarkdown(build(`a${raw}b`))).toContain(`a${escaped}b`);
+  });
+});
+
+describe("hostile text elsewhere", () => {
+  it("neutralises a finding's title in the terminal, where it is printed", () => {
+    const text = renderTerminal(report({ findings: [finding({ title: `t${ESC}[2J` })] }), plain);
+    expect(text).not.toContain(ESC);
+    expect(text).toContain("t\\u{1b}[2J");
+  });
+
+  it("handles a million characters of markdown punctuation and link starts", () => {
+    const bracket = "[".repeat(1_000_000);
+    const www = "www.".repeat(250_000);
+    const md = renderMarkdown(report({ findings: [finding({ message: `${bracket}${www}` })] }));
+    expect(md).toContain("\\[".repeat(1_000_000));
+    expect(md).toContain("www\\.".repeat(250_000));
+  });
+
+  it("does not let a link destination split a table cell or smuggle characters", () => {
+    const link = (sourceUrl: string) =>
+      renderMarkdown(report({ findings: [finding({ sourceUrl })] }));
+    expect(link("https://x.example/a|b")).toContain("[Source](https://x.example/a%7Cb)");
+    expect(link("https://x.example/é")).toContain("[Source](https://x.example/%C3%A9)");
+    expect(link(`https://x.example/${RLO}`)).not.toContain(RLO);
+    expect(link("https://x.example/\ud800")).toContain("%5Cu{d800}");
+  });
+});
+
 // Golden renderings of three fixture repos: no findings, every runtime rule, and an info finding
 // with a diagnostic. Changing one needs a reason in the commit message and PROGRESS.
 describe.each(["empty", "runtime-sources", "render-mixed"])("rendering the %s fixture", (name) => {
@@ -241,10 +340,10 @@ describe.each(["empty", "runtime-sources", "render-mixed"])("rendering the %s fi
     });
 
   it("matches the golden terminal output", async () => {
-    await matchGoldenText(`${name}.terminal.txt`, renderTerminal(scanned(), plain));
+    await matchGoldenText(`${name}.terminal`, ".txt", renderTerminal(scanned(), plain));
   });
 
   it("matches the golden markdown", async () => {
-    await matchGoldenText(`${name}.md`, renderMarkdown(scanned()));
+    await matchGoldenText(name, ".md", renderMarkdown(scanned()));
   });
 });
