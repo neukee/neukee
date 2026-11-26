@@ -164,12 +164,10 @@ function exitReason(blocking: number, failOn: FailOn): string {
 
 // Everything invisible or that reorders text: controls, format characters (soft hyphen, zero-width,
 // bidi, invisible operators, tag characters), line and paragraph separators, surrogates,
-// private-use and unassigned code points, plus the few invisible letters and marks that no
-// category covers (combining grapheme joiner, Mongolian vowel separator, Hangul filler, variation
-// selectors). Linear: a character class and two single-character alternatives (a combining
-// character can't sit in the class).
-const HIDDEN =
-  /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Cs}\p{Co}\p{Cn}\u{180e}\u{3164}]|\p{Variation_Selector}|\u{34f}/gu;
+// private-use and unassigned code points, and the default-ignorable ones the categories miss
+// (variation selectors, the combining grapheme joiner, Hangul and Khmer fillers). Linear: one
+// character class.
+const HIDDEN = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Cs}\p{Co}\p{Cn}\p{Default_Ignorable_Code_Point}]/gu;
 
 /**
  * One line of safe text: line breaks and tabs become spaces, and every hidden character becomes a

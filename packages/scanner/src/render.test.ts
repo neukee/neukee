@@ -4,7 +4,7 @@ import { renderMarkdown, renderTerminal } from "./render.js";
 import { matchGoldenText, scanFixture } from "./testing/scan-fixture.js";
 
 const ESC = String.fromCharCode(27);
-const RLO = "‮"; // right-to-left override
+const RLO = String.fromCodePoint(0x202e); // right-to-left override
 
 const base: ScanReport = {
   schemaVersion: 1,
@@ -249,24 +249,36 @@ const FIELDS: [string, (value: string) => ScanReport][] = [
   ["diagnostic message", (v) => report({ diagnostics: [{ level: "warning", message: v }] })],
 ];
 
-// Characters that hide or reorder text: one per class (controls, format characters, tags,
-// variation selectors, fillers, separators, a lone surrogate), as [raw, hex].
-const HIDDEN: [string, string][] = [
-  [ESC, "1b"],
-  ["\u0085", "85"], // C1 next line
-  ["­", "ad"], // soft hyphen
-  ["͏", "34f"], // combining grapheme joiner
-  ["᠎", "180e"], // Mongolian vowel separator
-  [RLO, "202e"],
-  ["​", "200b"], // zero-width space
-  [" ", "2028"], // line separator
-  ["⁣", "2063"], // invisible separator
-  ["ㅤ", "3164"], // Hangul filler
-  ["️", "fe0f"], // variation selector
-  ["￹", "fff9"], // interlinear annotation anchor
-  ["\u{e0041}", "e0041"], // tag character: "ASCII smuggling"
-  ["\ud800", "d800"], // lone surrogate
+// Characters that hide or reorder text, one or more per class, as code points: controls, format
+// characters, tags, variation selectors, fillers, separators, private use, unassigned and a lone
+// surrogate. Numbers, not literals, so no invisible character sits in this source.
+const HIDDEN_CODE_POINTS = [
+  0x1b, // ESC
+  0x85, // C1 next line
+  0xad, // soft hyphen
+  0x378, // unassigned
+  0x34f, // combining grapheme joiner
+  0x115f, // Hangul choseong filler
+  0x1160, // Hangul jungseong filler
+  0x17b4, // Khmer inherent vowel
+  0x180e, // Mongolian vowel separator
+  0x200b, // zero-width space
+  0x2028, // line separator
+  0x2029, // paragraph separator
+  0x202e, // right-to-left override
+  0x2063, // invisible separator
+  0x3164, // Hangul filler
+  0xe000, // private use
+  0xfe0f, // variation selector
+  0xffa0, // halfwidth Hangul filler
+  0xfff9, // interlinear annotation anchor
+  0xe0041, // tag character: "ASCII smuggling"
+  0xd800, // lone surrogate
 ];
+const HIDDEN: [string, string][] = HIDDEN_CODE_POINTS.map((codePoint) => [
+  codePoint.toString(16),
+  String.fromCodePoint(codePoint),
+]);
 
 // Text that would format, link or embed if it reached markdown as written, with its escaped form.
 const MARKDOWN_ESCAPES: [string, string][] = [
@@ -290,7 +302,7 @@ const MARKDOWN_ESCAPES: [string, string][] = [
 ];
 
 describe.each(FIELDS)("hostile text in %s", (_name, build) => {
-  it.each(HIDDEN)("shows U+%j as a visible escape in both formats", (raw, hex) => {
+  it.each(HIDDEN)("shows U+%s as a visible escape in both formats", (hex, raw) => {
     const value = `a${raw}b`;
     const terminal = renderTerminal(build(value), plain);
     const markdown = renderMarkdown(build(value));
@@ -327,6 +339,8 @@ describe("hostile text elsewhere", () => {
     expect(link("https://x.example/é")).toContain("[Source](https://x.example/%C3%A9)");
     expect(link(`https://x.example/${RLO}`)).not.toContain(RLO);
     expect(link("https://x.example/\ud800")).toContain("%5Cu{d800}");
+    expect(link("http://x.example/a")).not.toContain("](http");
+    expect(link("http://x.example/a")).toContain("http\\://x.example/a");
   });
 });
 
