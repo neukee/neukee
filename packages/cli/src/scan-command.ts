@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, statSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { loadCatalog, type Target } from "@neukee/core";
+import { loadCatalog, type ReportTarget, type Target } from "@neukee/core";
 import {
   blockingFindings,
   type FailOn,
@@ -87,11 +87,10 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   if (missing.length > 0) return catalogFailure([], missing);
   const report = scan(
     root,
-    parsed.targets,
+    parsed,
     { name: "neukee", version },
     {
       entries: catalog.entries,
-      defaultTarget: parsed.defaults.some((target) => target.tool === "node"),
       ...(options.scannedAt === undefined ? {} : { scannedAt: options.scannedAt }),
     },
   );
@@ -99,11 +98,10 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   // A file never gets color codes; the terminal gets them only when it can show them.
   const text =
     format === "markdown"
-      ? renderMarkdown(report, { defaultTargets: parsed.defaults })
+      ? renderMarkdown(report)
       : renderTerminal(report, {
           color: options.color && args.output === undefined,
           failOn,
-          defaultTargets: parsed.defaults,
         });
   if (args.output === undefined) return { code, stdout: text, stderr: "" };
   try {
@@ -118,24 +116,23 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
  * Named targets replace the default for their own tool only (SPEC §1): without a Node.js target
  * the default `node@26` is added, and softens below-target (ADR-021). One target per tool.
  */
-function parseTargets(
-  given: readonly string[],
-): { targets: Target[]; defaults: Target[] } | string {
-  const supported = SUPPORTED_TARGETS.map((t) => `${t.tool}@${t.version}`).join(", ");
-  const targets: Target[] = [];
+function parseTargets(given: readonly string[]): ReportTarget[] | string {
+  const supported = SUPPORTED_TARGETS.map(label).join(", ");
+  const targets: ReportTarget[] = [];
   for (const text of given) {
-    const target = SUPPORTED_TARGETS.find((t) => `${t.tool}@${t.version}` === text);
+    const target = SUPPORTED_TARGETS.find((t) => label(t) === text);
     if (target === undefined) return `Unknown target "${text}". Supported targets: ${supported}.`;
     const same = targets.find((t) => t.tool === target.tool);
     if (same !== undefined) {
-      return `Use one ${target.tool} target per run, not ${same.tool}@${same.version} and ${text}: run once per target.`;
+      return `Use one ${target.tool} target per run, not ${label(same)} and ${text}: run once per target.`;
     }
-    targets.push(target);
+    targets.push({ ...target, source: "flag" });
   }
-  const defaults = targets.some((t) => t.tool === DEFAULT_TARGET.tool) ? [] : [DEFAULT_TARGET];
+  if (!targets.some((t) => t.tool === DEFAULT_TARGET.tool)) {
+    targets.push({ ...DEFAULT_TARGET, source: "default" });
+  }
   // Sorted, so the same targets give the same report in any flag order (ARCHITECTURE §4).
-  const all = [...targets, ...defaults].sort((a, b) => (label(a) < label(b) ? -1 : 1));
-  return { targets: all, defaults };
+  return targets.sort((a, b) => (label(a) < label(b) ? -1 : 1));
 }
 
 const label = (target: Target): string => `${target.tool}@${target.version}`;

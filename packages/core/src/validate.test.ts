@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import type { Diagnostic, Finding, Location, ScanReport, Target } from "./index.js";
+import type { Diagnostic, Finding, Location, ReportTarget, ScanReport, Target } from "./index.js";
 import { isRepoPath, validateReport } from "./index.js";
 import {
   type SchemaNode,
@@ -22,6 +22,7 @@ const def = (name: string): JsonObject => (schema.$defs as JsonObject)[name] as 
 // Every field of every type, optional ones included, so the agreement tests see the whole contract.
 const location: Required<Location> = { file: "app/page.tsx", line: 3, column: 15 };
 const target: Required<Target> = { tool: "next", version: "16" };
+const reportTarget: Required<ReportTarget> = { ...target, source: "flag" };
 const finding: Required<Finding> = {
   ruleId: "next16/sync-request-apis",
   severity: "action-required",
@@ -51,7 +52,7 @@ const report: Required<ScanReport> = {
   root: ".",
   // A copy: structuredClone keeps shared references, so sharing `target` with the finding
   // would make a change to one appear in both.
-  targets: [{ ...target }],
+  targets: [{ ...reportTarget }],
   detected,
   findings: [finding],
   diagnostics: [diagnostic],
@@ -325,6 +326,36 @@ describe("validateReport: broken reports fail with clear messages", () => {
           path: "report.scannedAt",
           message:
             'report.scannedAt must be an ISO 8601 date and time with a time zone (got "22 Nov 2026").',
+        },
+      ],
+    },
+    {
+      name: "a report target without its source",
+      input: changed(["targets", 0, "source"], REMOVE),
+      errors: [
+        {
+          path: "report.targets[0]",
+          message: 'report.targets[0] is missing required property "source".',
+        },
+      ],
+    },
+    {
+      name: "an unknown target source",
+      input: changed(["targets", 0, "source"], "implicit"),
+      errors: [
+        {
+          path: "report.targets[0].source",
+          message: 'report.targets[0].source must be one of "default" or "flag" (got "implicit").',
+        },
+      ],
+    },
+    {
+      name: "a finding's target that carries a source (only report targets have one)",
+      input: changed(["findings", 0, "target", "source"], "flag"),
+      errors: [
+        {
+          path: "report.findings[0].target",
+          message: 'report.findings[0].target has unknown property "source".',
         },
       ],
     },
@@ -759,6 +790,7 @@ const optionalKeys = {
   detected: { packageManager: true } satisfies Record<OptionalKeys<ScanReport["detected"]>, true>,
   stats: {} satisfies Record<OptionalKeys<ScanReport["stats"]>, true>,
   target: {} satisfies Record<OptionalKeys<Target>, true>,
+  reportTarget: {} satisfies Record<OptionalKeys<ReportTarget>, true>,
   location: { line: true, column: true } satisfies Record<OptionalKeys<Location>, true>,
   finding: { fix: true } satisfies Record<OptionalKeys<Finding>, true>,
   diagnostic: { file: true } satisfies Record<OptionalKeys<Diagnostic>, true>,
@@ -785,6 +817,12 @@ const objectShapes = [
     optional: optionalKeys.stats,
   },
   { name: "Target", node: def("Target"), example: target, optional: optionalKeys.target },
+  {
+    name: "ReportTarget",
+    node: def("ReportTarget"),
+    example: reportTarget,
+    optional: optionalKeys.reportTarget,
+  },
   { name: "Location", node: def("Location"), example: location, optional: optionalKeys.location },
   { name: "Finding", node: def("Finding"), example: finding, optional: optionalKeys.finding },
   {
@@ -848,9 +886,11 @@ describe("types and schema agree", () => {
       prisma: true,
     };
     const levels: Record<Diagnostic["level"], true> = { error: true, warning: true };
+    const sources: Record<ReportTarget["source"], true> = { default: true, flag: true };
     expect(properties(def("Finding")).severity).toEqual({ enum: Object.keys(severities) });
     expect(properties(def("Target")).tool).toEqual({ enum: Object.keys(tools) });
     expect(properties(def("Diagnostic")).level).toEqual({ enum: Object.keys(levels) });
+    expect(properties(def("ReportTarget")).source).toEqual({ enum: Object.keys(sources) });
   });
 
   it("uses only keywords, types and value shapes the validator implements", () => {

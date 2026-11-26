@@ -11,7 +11,7 @@ const base: ScanReport = {
   tool: { name: "neukee", version: "0.1.0" },
   scannedAt: "2026-11-26T12:00:00.000Z",
   root: ".",
-  targets: [{ tool: "node", version: "26" }],
+  targets: [{ tool: "node", version: "26", source: "flag" }],
   detected: { node: ["22"], frameworks: {} },
   findings: [],
   diagnostics: [],
@@ -143,41 +143,23 @@ describe("renderTerminal", () => {
 });
 
 describe("marking default targets", () => {
-  const targets = [
-    { tool: "next" as const, version: "16" },
-    { tool: "node" as const, version: "26" },
-  ];
-  const defaultTargets = [{ tool: "node" as const, version: "26" }];
+  const named = { tool: "next" as const, version: "16", source: "flag" as const };
+  const added = { tool: "node" as const, version: "26", source: "default" as const };
 
-  it("marks only the targets that came from defaults, in both formats", () => {
-    const withDefaults = report({ targets });
-    expect(renderTerminal(withDefaults, { ...plain, defaultTargets })).toContain(
-      "Targets: next@16, node@26 (default)",
+  it("marks only the targets whose source is a default, in both formats", () => {
+    const mixed = report({ targets: [named, added] });
+    expect(renderTerminal(mixed, plain)).toContain("Targets: next@16, node@26 (default)");
+    expect(renderMarkdown(mixed)).toContain("- **Targets:** next\\@16, node\\@26 (default)");
+  });
+
+  it("marks nothing when every target was named", () => {
+    const named26 = { ...added, source: "flag" as const };
+    expect(renderTerminal(report({ targets: [named, named26] }), plain)).toContain(
+      "Targets: next@16, node@26\n",
     );
-    expect(renderMarkdown(withDefaults, { defaultTargets })).toContain(
-      "- **Targets:** next\\@16, node\\@26 (default)",
+    expect(renderMarkdown(report({ targets: [named, named26] }))).toContain(
+      "- **Targets:** next\\@16, node\\@26\n",
     );
-  });
-
-  it("marks a target only when both its tool and its version are the default", () => {
-    const text = renderTerminal(report({ targets: [{ tool: "node", version: "26" }] }), {
-      ...plain,
-      defaultTargets: [{ tool: "node", version: "24" }],
-    });
-    expect(text).toContain("Targets: node@26\n");
-  });
-
-  it("does not mark a target of another tool that has the default's version", () => {
-    const text = renderTerminal(report({ targets: [{ tool: "next", version: "26" }] }), {
-      ...plain,
-      defaultTargets: [{ tool: "node", version: "26" }],
-    });
-    expect(text).toContain("Targets: next@26\n");
-  });
-
-  it("marks nothing when no default is given", () => {
-    expect(renderTerminal(report({ targets }), plain)).toContain("Targets: next@16, node@26\n");
-    expect(renderMarkdown(report({ targets }))).toContain("- **Targets:** next\\@16, node\\@26\n");
   });
 });
 
@@ -274,7 +256,7 @@ describe("renderMarkdown", () => {
 const FIELDS: [string, (value: string) => ScanReport][] = [
   ["tool version", (v) => report({ tool: { name: "neukee", version: v } })],
   ["scannedAt", (v) => report({ scannedAt: v })],
-  ["target version", (v) => report({ targets: [{ tool: "node", version: v }] })],
+  ["target version", (v) => report({ targets: [{ tool: "node", version: v, source: "flag" }] })],
   ["detected.node", (v) => report({ detected: { node: [v], frameworks: {} } })],
   ["ruleId", (v) => report({ findings: [finding({ ruleId: v })] })],
   ["message", (v) => report({ findings: [finding({ message: v })] })],
@@ -387,8 +369,7 @@ describe("hostile text elsewhere", () => {
 // with a diagnostic. Changing one needs a reason in the commit message and PROGRESS.
 describe.each(["empty", "runtime-sources", "render-mixed"])("rendering the %s fixture", (name) => {
   const scanned = () =>
-    scanFixture(name, [{ tool: "node", version: "26" }], {
-      defaultTarget: true,
+    scanFixture(name, [{ tool: "node", version: "26", source: "default" }], {
       scannedAt: "2026-11-26T12:00:00.000Z",
     });
 

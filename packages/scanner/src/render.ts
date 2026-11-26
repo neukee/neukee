@@ -1,4 +1,4 @@
-import type { Diagnostic, Finding, ScanReport, Severity, Target } from "@neukee/core";
+import type { Diagnostic, Finding, ScanReport, Severity } from "@neukee/core";
 import { blockingFindings, type FailOn } from "./fail-on.js";
 
 /**
@@ -24,13 +24,13 @@ function coverageNote(report: ScanReport): string {
 
 export function renderTerminal(
   report: ScanReport,
-  options: { color: boolean; failOn: FailOn; defaultTargets?: readonly Target[] },
+  options: { color: boolean; failOn: FailOn },
 ): string {
   const paint = (text: string, code: string) =>
     options.color ? `\u001b[${code}m${text}\u001b[0m` : text;
   const lines = [
     paint(`Neukee scan report (scanned ${clean(report.scannedAt)})`, "1"),
-    `Targets: ${targetsText(report, options.defaultTargets, clean)}`,
+    `Targets: ${targetsText(report, clean)}`,
   ];
   if (report.detected.node.length > 0) {
     lines.push(`Detected Node.js: ${report.detected.node.map(clean).join(", ")}`);
@@ -67,14 +67,11 @@ export function renderTerminal(
   return `${lines.join("\n")}\n`;
 }
 
-export function renderMarkdown(
-  report: ScanReport,
-  options: { defaultTargets?: readonly Target[] } = {},
-): string {
+export function renderMarkdown(report: ScanReport): string {
   const lines = [
     "# Neukee scan report",
     "",
-    `- **Targets:** ${targetsText(report, options.defaultTargets, escapeMarkdown)}`,
+    `- **Targets:** ${targetsText(report, escapeMarkdown)}`,
     `- **Scanned:** ${escapeMarkdown(report.scannedAt)}; ${filesText(report)}`,
   ];
   if (report.detected.node.length > 0) {
@@ -107,15 +104,11 @@ export function renderMarkdown(
 }
 
 /** `node@26 (default)`: a target that came from a default says so; `safe` neutralises each name. */
-function targetsText(
-  report: ScanReport,
-  defaults: readonly Target[] = [],
-  safe: (text: string) => string,
-): string {
-  const names = report.targets.map((target) => {
-    const isDefault = defaults.some((d) => d.tool === target.tool && d.version === target.version);
-    return `${safe(`${target.tool}@${target.version}`)}${isDefault ? " (default)" : ""}`;
-  });
+function targetsText(report: ScanReport, safe: (text: string) => string): string {
+  const names = report.targets.map(
+    (target) =>
+      `${safe(`${target.tool}@${target.version}`)}${target.source === "default" ? " (default)" : ""}`,
+  );
   return names.join(", ") || "(none)";
 }
 

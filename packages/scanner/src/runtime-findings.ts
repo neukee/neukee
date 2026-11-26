@@ -1,4 +1,4 @@
-import type { CatalogEntry, Finding, Location, Severity, Target } from "@neukee/core";
+import type { CatalogEntry, Finding, Location, ReportTarget, Severity } from "@neukee/core";
 import { gtr, intersects, validRange } from "semver";
 import { endOfLife, ltsMajor, majorLines, releaseLine } from "./node-releases.js";
 import type { NodeVersionDeclaration } from "./runtime-sources.js";
@@ -13,9 +13,8 @@ export function runtimeFindings(input: {
   declarations: readonly NodeVersionDeclaration[];
   /** Repo-relative folders that hold a package.json ("" for the root). */
   packageDirs: readonly string[];
-  targets: readonly Target[];
-  /** The node target came from the default, not from `--target` (softens below-target). */
-  defaultTarget: boolean;
+  /** A node target whose `source` is "default" softens below-target (ADR-021). */
+  targets: readonly ReportTarget[];
   entries: readonly CatalogEntry[];
   /** The report's scannedAt; its date dates end-of-life and support left. */
   scannedAt: string;
@@ -37,7 +36,8 @@ export function runtimeFindings(input: {
       ...(rule.fix === undefined ? {} : { fix: rule.fix }),
       sourceUrl: rule.sourceUrl,
       locations,
-      target,
+      // The finding's own target is the plain Target: `source` belongs to the report's list.
+      target: { tool: target.tool, version: target.version },
     });
   };
 
@@ -65,7 +65,7 @@ export function runtimeFindings(input: {
       "runtime/below-target",
       `${describe(declaration)}, below the target Node.js ${targetMajor}`,
       [declaration.location],
-      input.defaultTarget ? softened(line, date) : undefined,
+      target.source === "default" ? softened(line, date) : undefined,
     );
   }
 

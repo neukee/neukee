@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Neukee scan report, schema version 1",
-  "description": "The JSON report written by `neukee scan --format json`. Hand-written to match the types in packages/core/src/index.ts (docs/ARCHITECTURE.md §5); tests keep the two in agreement. Changing it means a new schemaVersion and a decision record.",
+  "description": "The JSON report written by `neukee scan --format json`. Hand-written to match the types in packages/core/src/index.ts (docs/ARCHITECTURE.md §5); tests keep the two in agreement. Changing it needs a decision record, and a new schemaVersion where the compatibility policy says so (docs/ARCHITECTURE.md §5).",
   "type": "object",
   "properties": {
     "schemaVersion": { "const": 1 },
@@ -21,7 +21,7 @@
       "format": "date-time"
     },
     "root": { "const": "." },
-    "targets": { "type": "array", "items": { "$ref": "#/$defs/Target" } },
+    "targets": { "type": "array", "items": { "$ref": "#/$defs/ReportTarget" } },
     "detected": {
       "type": "object",
       "properties": {
@@ -73,6 +73,17 @@
       },
       "required": ["tool", "version"],
       "additionalProperties": false
+    },
+    "ReportTarget": {
+      "type": "object",
+      "properties": {
+        "tool": { "enum": ["node", "next", "react", "prisma"] },
+        "version": { "type": "string", "minLength": 1 },
+        "source": { "enum": ["default", "flag"] }
+      },
+      "required": ["tool", "version", "source"],
+      "additionalProperties": false,
+      "description": "a target of the scan, and whether it came from --target (flag) or a default"
     },
     "Location": {
       "type": "object",

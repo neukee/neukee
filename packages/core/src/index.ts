@@ -25,6 +25,11 @@ export interface Target {
   version: string;
 }
 
+/** Where a report's target came from: named with `--target`, or added as a default (ADR-022). */
+export interface ReportTarget extends Target {
+  source: "default" | "flag";
+}
+
 export interface Location {
   /** Repo-relative path with forward slashes. Never absolute. */
   file: string;
@@ -58,7 +63,7 @@ export interface ScanReport {
   scannedAt: string;
   /** Always "." — reports never contain absolute paths. */
   root: ".";
-  targets: Target[];
+  targets: ReportTarget[];
   detected: { node: string[]; packageManager?: string; frameworks: Record<string, string> };
   findings: Finding[];
   diagnostics: Diagnostic[];

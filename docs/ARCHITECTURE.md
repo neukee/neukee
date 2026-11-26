@@ -102,6 +102,10 @@ interface Target {
   version: string;
 } // e.g. { tool: "node", version: "24" }
 
+interface ReportTarget extends Target {
+  source: "default" | "flag"; // named with --target, or added by the scanner (ADR-022)
+}
+
 interface Location {
   file: string;
   line?: number;
@@ -130,7 +134,7 @@ interface ScanReport {
   tool: { name: string; version: string };
   scannedAt: string; // ISO timestamp — the ONLY non-deterministic field; excluded from snapshots
   root: "."; // always "." — never an absolute path (no leaking machine paths)
-  targets: Target[];
+  targets: ReportTarget[];
   detected: { node: string[]; packageManager?: string; frameworks: Record<string, string> };
   findings: Finding[];
   diagnostics: Diagnostic[];
