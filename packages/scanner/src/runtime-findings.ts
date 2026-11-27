@@ -116,8 +116,9 @@ function softened(line: string, date: string | undefined): Severity {
 
 /**
  * The release line to report when a declaration is below the target: the line a pin selects, or
- * the newest line an `engines.node` range allows when every version it allows is below. A range
- * only allows versions; it never selects a runtime.
+ * the newest line an `engines.node` range allows when every version it allows is below. To npm
+ * a range is advisory; hosting platforms such as Vercel and Heroku read it to choose the runtime
+ * (ADR-023).
  */
 function belowTargetLine(
   declaration: NodeVersionDeclaration,

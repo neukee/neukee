@@ -1,8 +1,18 @@
 # Source: npm Docs, package.json, "engines" (fetched 2026-11-25).
-# "You can specify the version of node that your stuff works on" and "Unless the user has set the
-# engine-strict config flag, this field is advisory only and will only produce warnings when your
-# package is installed as a dependency." (fetched 2026-11-26). So `engines.node` is described as
-# allowing or excluding versions, never as selecting a runtime (catalog/README.md, wording rule).
+# npm, "You can specify the version of node that your stuff works on" (fetched 2026-11-25).
+# For `engines.node`, the docs of three hosting platforms (fetched 2026-11-27) say it selects the
+# runtime. Vercel, https://vercel.com/docs/functions/runtimes/node-js/node-js-versions: "You can
+# define the major Node.js version in the engines#node section of the package.json to override the
+# one you have selected in the Project Settings". Heroku,
+# https://devcenter.heroku.com/articles/nodejs-support: "To specify the version of Node.js to use
+# on Heroku, use the engines section of package.json." DigitalOcean App Platform,
+# https://docs.digitalocean.com/products/app-platform/languages-frameworks/nodejs/: "You can
+# specify your desired Node.js version in the engines section of package.json."
+# npm, package.json docs, "engines" (https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines,
+# fetched 2026-11-26): "Unless the user has set the engine-strict config flag, this field is
+# advisory only and will only produce warnings when your package is installed as a dependency."
+# So a range is said to select the runtime on those three platforms, and elsewhere only to allow or
+# exclude versions (catalog/README.md, wording rule; ADR-023).
 # nvm's README: "nvm use et. al. will traverse directory structure upwards from the current
 # directory looking for the .nvmrc file" (https://github.com/nvm-sh/nvm), which is how a pin
 # applies to a package (SPEC-SCANNER §2.1, ADR-020).
@@ -16,8 +26,9 @@ message: >-
   Two version pins that apply to this package (such as `.nvmrc` and `.node-version`) name
   different major versions, or a pin names a major version that the package's `engines.node`
   range excludes. When pins differ, tools that read different pins run different versions, so an
-  upgrade that passes locally can still run the old runtime elsewhere. An `engines.node` range
-  doesn't select a runtime: it says which versions the package works on, and npm treats it as
+  upgrade that passes locally can still run the old runtime elsewhere. On Vercel, Heroku and
+  DigitalOcean App Platform the `engines.node` range chooses the Node.js version for builds and
+  deployments, so production can run a different version than the pin; elsewhere npm treats it as
   advisory unless `engine-strict` is set.
 fix: Make every pin and the engines.node range agree on one major version.
 sourceUrl: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines

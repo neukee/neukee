@@ -33,7 +33,7 @@ neukee --help
 
 ### 2.1 Runtime sources — `runtime/*`
 
-Every place that pins the Node.js version the app runs on, plus `engines.node`, a supported range that doesn't select a runtime (npm treats it as advisory unless `engine-strict` is set):
+Every place that pins the Node.js version the app runs on, plus `engines.node`, a range: npm treats it as advisory unless `engine-strict` is set, but Vercel, Heroku and DigitalOcean App Platform use it to choose the runtime for builds and deployments (ADR-023):
 
 | Source                                      | What to read                                                                             |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------- |
