@@ -4,10 +4,12 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -164,47 +166,52 @@ describe("the built CLI", () => {
 // unpacked into a temp `node_modules`; their npm dependencies are linked from this repository's own
 // install, so the test needs no network. It also runs inside this file so the one `pnpm -r build`
 // above is shared: two files building at once would race on `dist`.
+function dependencyNames(manifest: unknown): string[] {
+  if (typeof manifest !== "object" || manifest === null || !("dependencies" in manifest)) return [];
+  const { dependencies } = manifest;
+  return typeof dependencies === "object" && dependencies !== null ? Object.keys(dependencies) : [];
+}
+
 describe("a packed install", () => {
   const packages = ["core", "scanner", "cli"];
   let project = "";
-  let tarballs = "";
   const links: string[] = [];
+  const tarballs = (name: string) => join(project, "tarballs", name);
 
-  const tar = (...args: string[]) => {
-    const result = spawnSync("tar", args, { encoding: "utf8" });
+  // Archive names stay relative to `cwd`: a Windows path like C:\x is read as a remote host by GNU tar.
+  const tar = (cwd: string, ...args: string[]) => {
+    const result = spawnSync("tar", args, { cwd, encoding: "utf8" });
     if (result.status !== 0) throw new Error(`tar ${args.join(" ")} failed:\n${result.stderr}`);
     return result.stdout;
+  };
+  const tarballOf = (name: string) => {
+    const [file] = readdirSync(tarballs(name)).filter((entry) => entry.endsWith(".tgz"));
+    if (file === undefined) throw new Error(`pnpm pack made no tarball for ${name}`);
+    return file;
   };
 
   beforeAll(() => {
     project = mkdtempSync(join(tmpdir(), "neukee-pack-"));
-    tarballs = join(project, "tarballs");
-    mkdirSync(tarballs);
     for (const name of packages) {
+      mkdirSync(tarballs(name), { recursive: true });
       const pack = spawnSync(
-        `pnpm --filter ./packages/${name} pack --pack-destination "${tarballs}"`,
-        {
-          cwd: repoRoot,
-          encoding: "utf8",
-          shell: true,
-        },
+        `pnpm --filter ./packages/${name} pack --pack-destination "${tarballs(name)}"`,
+        { cwd: repoRoot, encoding: "utf8", shell: true },
       );
-      if (pack.status !== 0)
+      if (pack.status !== 0) {
         throw new Error(`pnpm pack failed for ${name}:\n${pack.stdout}${pack.stderr}`);
+      }
       const target = join(project, "node_modules", "@neukee", name);
       mkdirSync(target, { recursive: true });
-      tar("-xzf", join(tarballs, `neukee-${name}-0.0.0.tgz`), "-C", target, "--strip-components=1");
+      tar(tarballs(name), "-xzf", tarballOf(name), "-C", target, "--strip-components=1");
       // The package's own npm dependencies come from the repository's install.
-      const manifest = JSON.parse(readFileSync(join(target, "package.json"), "utf8"));
-      for (const dep of Object.keys(manifest.dependencies ?? {})) {
+      const manifest: unknown = JSON.parse(readFileSync(join(target, "package.json"), "utf8"));
+      for (const dep of dependencyNames(manifest)) {
         const link = join(project, "node_modules", dep);
         if (dep.startsWith("@neukee/") || existsSync(link)) continue;
         mkdirSync(dirname(link), { recursive: true });
-        symlinkSync(
-          realpathSync(join(repoRoot, "packages", name, "node_modules", dep)),
-          link,
-          "junction",
-        );
+        const real = realpathSync(join(repoRoot, "packages", name, "node_modules", dep));
+        symlinkSync(real, link, "junction");
         links.push(link);
       }
     }
@@ -215,16 +222,14 @@ describe("a packed install", () => {
     rmSync(project, { recursive: true, force: true });
   });
 
-  it("ships the built code and the catalog entries, but not the catalog's README", () => {
-    const listing = tar("-tzf", join(tarballs, "neukee-cli-0.0.0.tgz")).split(/\r?\n/);
+  it("ships the built code and every catalog entry, but not the catalog's README", () => {
+    const listing = tar(tarballs("cli"), "-tzf", tarballOf("cli")).split(/\r?\n/);
     expect(listing).toContain("package/dist/index.js");
-    for (const entry of [
-      "runtime/below-target",
-      "runtime/end-of-life",
-      "runtime/sources-disagree",
-    ]) {
-      expect(listing).toContain(`package/catalog/${entry}.yaml`);
-    }
+    const entries = readdirSync(join(repoRoot, "catalog"), { recursive: true })
+      .map((name) => String(name).replaceAll("\\", "/"))
+      .filter((name) => name.endsWith(".yaml"));
+    expect(entries.length).toBeGreaterThan(3);
+    for (const entry of entries) expect(listing).toContain(`package/catalog/${entry}`);
     expect(listing.some((name) => name.endsWith("catalog/README.md"))).toBe(false);
   });
 
@@ -249,5 +254,55 @@ describe("a packed install", () => {
     const body = (text: string) => text.split("\n").slice(1).join("\n");
     expect(body(installed.stdout)).toBe(body(own.stdout));
     expect(installed.stdout).toContain("runtime/sources-disagree");
+  });
+});
+
+// In a checkout the CLI reads the repository's catalog, never the built copy in packages/cli/catalog
+// that `pnpm build` leaves behind, which may be stale. A copy of the layout, with a decoy copy.
+describe("a checkout with a stale built catalog", () => {
+  it("reads the repository's catalog, not packages/cli/catalog", () => {
+    const root = mkdtempSync(join(tmpdir(), "neukee-checkout-"));
+    const links = [
+      join(root, "node_modules", "@neukee", "core"),
+      join(root, "node_modules", "@neukee", "scanner"),
+    ];
+    try {
+      writeFileSync(join(root, "pnpm-workspace.yaml"), "packages:\n  - packages/*\n");
+      cpSync(join(repoRoot, "catalog"), join(root, "catalog"), { recursive: true });
+      const cliCopy = join(root, "packages", "cli");
+      mkdirSync(cliCopy, { recursive: true });
+      cpSync(join(repoRoot, "packages", "cli", "dist"), join(cliCopy, "dist"), { recursive: true });
+      cpSync(join(repoRoot, "packages", "cli", "package.json"), join(cliCopy, "package.json"));
+      // The stale copy: only the next16 entry, so reading it instead would exit 3.
+      cpSync(join(repoRoot, "catalog", "next16"), join(cliCopy, "catalog", "next16"), {
+        recursive: true,
+      });
+      mkdirSync(join(root, "node_modules", "@neukee"), { recursive: true });
+      for (const link of links) {
+        symlinkSync(
+          join(repoRoot, "packages", link.endsWith("core") ? "core" : "scanner"),
+          link,
+          "junction",
+        );
+      }
+      const result = spawnSync(
+        process.execPath,
+        [
+          join(cliCopy, "dist", "index.js"),
+          "scan",
+          fixture("runtime-sources"),
+          "--target",
+          "node@26",
+          "--fail-on",
+          "warning",
+        ],
+        { encoding: "utf8" },
+      );
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("runtime/sources-disagree");
+    } finally {
+      for (const link of links) rmSync(link, { force: true });
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
