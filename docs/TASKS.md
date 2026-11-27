@@ -207,7 +207,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-015 · Lockfile: package-lock.json
 
-- Status: todo
+- Status: in progress (session 2, branch `t-015-npm-lockfile`; foundational, so its reviews run on Opus)
 - Depends on: T-005b
 - Human review: no
 - Build: v2/v3 `packages` map → resolved versions, direct vs transitive, `hasInstallScript`. Add `fast-check` (ADR-007) and property-based tests: the parser never throws on arbitrary input.
