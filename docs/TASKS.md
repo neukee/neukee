@@ -148,7 +148,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-033 · CLI
 
-- Status: in-progress (two PRs: part A the CLI, merged as PR #22, `29a0717`; part B Sreeram's decisions and the `targets[].source` schema change, ADR-022, in review)
+- Status: done (PR #22 `29a0717`, the CLI; PR #23 `1a9cfe7`, Sreeram's decisions and the `targets[].source` schema change, ADR-022)
 - Depends on: T-031
 - Human review: no
 - Build: `neukee scan` with the options in `docs/SPEC-SCANNER.md` §1 except the JSON and SARIF formats, which T-032 adds (thin path, 2026-11-23), exit codes, `--help` text, friendly errors. Remove the temporary `ignoreDependencies` for `packages/cli` from `knip.json`.
@@ -157,7 +157,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-033b · Ship the catalog in @neukee/cli
 
-- Status: todo
+- Status: in-progress
 - Depends on: T-033
 - Human review: no
 - Why (Sreeram, 2026-11-27): `neukee scan` exits 3 when no `catalog/` folder sits beside `dist`, so a previewed or published `@neukee/cli` fails for everyone. Not waiting for T-053. The pkg.pr.new preview must work by Saturday, Nov 28.
