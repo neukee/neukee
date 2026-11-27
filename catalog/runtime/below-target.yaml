@@ -1,11 +1,21 @@
 # Source: Node.js Releases, nodejs.org (fetched 2026-11-25).
 # "Production applications should only use Active LTS or Maintenance LTS releases."
 # The rule needs no further claim: the upgrade target is the version the user asked to run.
-# For `engines.node`, npm's package.json docs, "engines"
-# (https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines, fetched 2026-11-26):
-# "Unless the user has set the engine-strict config flag, this field is advisory only and will
-# only produce warnings when your package is installed as a dependency." So a range is described
-# as excluding the target, never as selecting a runtime (catalog/README.md, wording rule).
+# For `engines.node`, the docs of three hosting platforms (fetched 2026-11-27) say it selects the
+# runtime. Vercel, https://vercel.com/docs/functions/runtimes/node-js/node-js-versions: "You can
+# define the major Node.js version in the engines#node section of the package.json to override the
+# one you have selected in the Project Settings". Heroku,
+# https://devcenter.heroku.com/articles/nodejs-support: "To specify the version of Node.js to use
+# on Heroku, use the engines section of package.json." DigitalOcean App Platform,
+# https://docs.digitalocean.com/products/app-platform/languages-frameworks/nodejs/: "You can
+# specify your desired Node.js version in the engines section of package.json." The same page:
+# App Platform "defaults to using a Dockerfile if one is present in the root of the directory or
+# specified in the app spec", so the engines.node claim is for buildpack deployments.
+# npm, package.json docs, "engines" (https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines,
+# fetched 2026-11-26): "Unless the user has set the engine-strict config flag, this field is
+# advisory only and will only produce warnings when your package is installed as a dependency."
+# So a range is said to select the runtime on those three platforms, and elsewhere only to allow or
+# exclude versions (catalog/README.md, wording rule; ADR-023).
 # Severity (Sreeram, ADR-021): warning; under the default target it softens to info while the
 # declared line has at least 12 months of support left.
 id: runtime/below-target
@@ -16,9 +26,10 @@ severity: warning
 detector: runtime/sources
 message: >-
   This declaration is below the upgrade target. A version pin (such as `.nvmrc`) makes the tools
-  that read it keep running the old Node.js after the upgrade. An `engines.node` range doesn't
-  select a runtime: it only excludes the target version, and npm treats it as advisory unless
-  `engine-strict` is set.
+  that read it keep running the old Node.js after the upgrade. So does an `engines.node` range
+  that excludes the target on Vercel, Heroku and DigitalOcean App Platform (buildpack deployments),
+  which use it to choose the Node.js version for builds and deployments (https://vercel.com/docs/functions/runtimes/node-js/node-js-versions, https://devcenter.heroku.com/articles/nodejs-support and https://docs.digitalocean.com/products/app-platform/languages-frameworks/nodejs/).
+  To npm such a range is advisory unless `engine-strict` is set.
 fix: Update this declaration to the target's major version.
 sourceUrl: https://nodejs.org/en/about/previous-releases
 fixtures:
