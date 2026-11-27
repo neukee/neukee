@@ -1,7 +1,16 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -148,5 +157,97 @@ describe("the built CLI", () => {
         uninstall(root);
       }
     });
+  });
+});
+
+// What `pnpm pack` produces and what an install of it can do (T-033b). The three tarballs are
+// unpacked into a temp `node_modules`; their npm dependencies are linked from this repository's own
+// install, so the test needs no network. It also runs inside this file so the one `pnpm -r build`
+// above is shared: two files building at once would race on `dist`.
+describe("a packed install", () => {
+  const packages = ["core", "scanner", "cli"];
+  let project = "";
+  let tarballs = "";
+  const links: string[] = [];
+
+  const tar = (...args: string[]) => {
+    const result = spawnSync("tar", args, { encoding: "utf8" });
+    if (result.status !== 0) throw new Error(`tar ${args.join(" ")} failed:\n${result.stderr}`);
+    return result.stdout;
+  };
+
+  beforeAll(() => {
+    project = mkdtempSync(join(tmpdir(), "neukee-pack-"));
+    tarballs = join(project, "tarballs");
+    mkdirSync(tarballs);
+    for (const name of packages) {
+      const pack = spawnSync(
+        `pnpm --filter ./packages/${name} pack --pack-destination "${tarballs}"`,
+        {
+          cwd: repoRoot,
+          encoding: "utf8",
+          shell: true,
+        },
+      );
+      if (pack.status !== 0)
+        throw new Error(`pnpm pack failed for ${name}:\n${pack.stdout}${pack.stderr}`);
+      const target = join(project, "node_modules", "@neukee", name);
+      mkdirSync(target, { recursive: true });
+      tar("-xzf", join(tarballs, `neukee-${name}-0.0.0.tgz`), "-C", target, "--strip-components=1");
+      // The package's own npm dependencies come from the repository's install.
+      const manifest = JSON.parse(readFileSync(join(target, "package.json"), "utf8"));
+      for (const dep of Object.keys(manifest.dependencies ?? {})) {
+        const link = join(project, "node_modules", dep);
+        if (dep.startsWith("@neukee/") || existsSync(link)) continue;
+        mkdirSync(dirname(link), { recursive: true });
+        symlinkSync(
+          realpathSync(join(repoRoot, "packages", name, "node_modules", dep)),
+          link,
+          "junction",
+        );
+        links.push(link);
+      }
+    }
+  }, 240_000);
+
+  afterAll(() => {
+    for (const link of links) rmSync(link, { force: true }); // unlink first, never follow into the repository
+    rmSync(project, { recursive: true, force: true });
+  });
+
+  it("ships the built code and the catalog entries, but not the catalog's README", () => {
+    const listing = tar("-tzf", join(tarballs, "neukee-cli-0.0.0.tgz")).split(/\r?\n/);
+    expect(listing).toContain("package/dist/index.js");
+    for (const entry of [
+      "runtime/below-target",
+      "runtime/end-of-life",
+      "runtime/sources-disagree",
+    ]) {
+      expect(listing).toContain(`package/catalog/${entry}.yaml`);
+    }
+    expect(listing.some((name) => name.endsWith("catalog/README.md"))).toBe(false);
+  });
+
+  it("scans a fixture like the repository's own build", () => {
+    const args = [
+      "scan",
+      fixture("runtime-sources"),
+      "--target",
+      "node@26",
+      "--fail-on",
+      "warning",
+    ];
+    const installed = spawnSync(
+      process.execPath,
+      [join(project, "node_modules", "@neukee", "cli", "dist", "index.js"), ...args],
+      { encoding: "utf8" },
+    );
+    const own = neukee(...args);
+    expect(installed.status).toBe(1);
+    expect(installed.stderr).toBe("");
+    // The first line holds the scan time; everything else must match.
+    const body = (text: string) => text.split("\n").slice(1).join("\n");
+    expect(body(installed.stdout)).toBe(body(own.stdout));
+    expect(installed.stdout).toContain("runtime/sources-disagree");
   });
 });

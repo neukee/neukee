@@ -196,6 +196,7 @@ fixtures:
 - Every entry has a positive fixture (must produce the finding) and a negative fixture (must not), both folders under the top-level `fixtures/`. The loader checks the paths; the tests check the folders exist, because the npm package ships the catalog without fixtures.
 - The file path is the id, with the lowercase `.yaml` extension. Fields are closed (no unknown keys). `applies.introducedIn`, when present, is `x.y.z`; rules not tied to a release omit it (ADR-020). `title` is one line.
 - Every `catalog/**/*.yaml` is an entry, so data that isn't an entry (such as Node release dates for T-014) lives somewhere else.
+- `@neukee/cli` ships the entries, not the README or the fixtures: `pnpm build` copies `catalog/**/*.yaml` into `packages/cli/catalog` (git-ignored, listed in the package's `files`), and a test packs the three packages, unpacks them and scans a fixture (T-033b). In a checkout the CLI reads the repository's catalog directly; in an install, its own copy.
 - The loader treats YAML as untrusted even though the catalog is ours: core schema only, any parser warning is fatal (no custom tags), aliases are capped, there's a 64 KiB size limit, and it follows no symlinks. One bad file is an error naming it; the rest still load.
 - Severity is `action-required` only when the change breaks the build or the running app; `warning` for deprecations; `info` for behavior changes worth knowing.
 
