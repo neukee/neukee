@@ -30,7 +30,7 @@ export function renderTerminal(
     options.color ? `\u001b[${code}m${text}\u001b[0m` : text;
   const lines = [
     paint(`Neukee scan report (scanned ${clean(report.scannedAt)})`, "1"),
-    `Targets: ${report.targets.map((t) => clean(`${t.tool}@${t.version}`)).join(", ") || "(none)"}`,
+    `Targets: ${targetsText(report, clean)}`,
   ];
   if (report.detected.node.length > 0) {
     lines.push(`Detected Node.js: ${report.detected.node.map(clean).join(", ")}`);
@@ -71,7 +71,7 @@ export function renderMarkdown(report: ScanReport): string {
   const lines = [
     "# Neukee scan report",
     "",
-    `- **Targets:** ${report.targets.map((target) => codeSpan(`${target.tool}@${target.version}`)).join(", ") || "(none)"}`,
+    `- **Targets:** ${targetsText(report, codeSpan)}`,
     `- **Scanned:** ${codeSpan(report.scannedAt)}; ${filesText(report)}`,
   ];
   if (report.detected.node.length > 0) {
@@ -103,6 +103,15 @@ export function renderMarkdown(report: ScanReport): string {
     for (const d of report.diagnostics) lines.push(diagnosticRow(d));
   }
   return `${lines.join("\n")}\n`;
+}
+
+/** `node@26 (default)`: a target that came from a default says so; `safe` neutralises each name. */
+function targetsText(report: ScanReport, safe: (text: string) => string): string {
+  const names = report.targets.map(
+    (target) =>
+      `${safe(`${target.tool}@${target.version}`)}${target.source === "default" ? " (default)" : ""}`,
+  );
+  return names.join(", ") || "(none)";
 }
 
 function markdownRow(finding: Finding): string {

@@ -1,21 +1,17 @@
 import { fileURLToPath } from "node:url";
-import { type Finding, loadCatalog, type Target } from "@neukee/core";
+import { type Finding, loadCatalog, type ReportTarget } from "@neukee/core";
 import { describe, expect, it } from "vitest";
 import { discoverFiles } from "./discover.js";
-import { runtimeFindings } from "./runtime-findings.js";
+import { missingRuleIds, runtimeFindings } from "./runtime-findings.js";
 import { type NodeVersionDeclaration, readRuntimeSources } from "./runtime-sources.js";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const { entries } = loadCatalog(`${repoRoot}catalog`);
-const NODE_24: Target = { tool: "node", version: "24" };
+const NODE_24: ReportTarget = { tool: "node", version: "24", source: "flag" };
 const SCANNED_AT = "2026-11-25T12:00:00.000Z";
 
 /** Runs discovery and the runtime readers over a fixture, as the pipeline does. */
-function findingsIn(
-  fixture: string,
-  targets: Target[] = [NODE_24],
-  defaultTarget = false,
-): Finding[] {
+function findingsIn(fixture: string, targets: ReportTarget[] = [NODE_24]): Finding[] {
   const declarations: NodeVersionDeclaration[] = [];
   const packageDirs: string[] = [];
   for (const event of discoverFiles(`${repoRoot}${fixture}`)) {
@@ -32,7 +28,6 @@ function findingsIn(
     targets,
     entries,
     scannedAt: SCANNED_AT,
-    defaultTarget,
   });
 }
 
@@ -75,7 +70,7 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
           { file: "apps/web/.nvmrc", line: 1, column: 1 },
           { file: "apps/web/package.json", line: 4, column: 14 },
         ],
-        target: NODE_24,
+        target: { tool: "node", version: "24" }, // the finding's target has no source
       },
     ]);
   });
@@ -96,7 +91,6 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
       targets: [NODE_24],
       entries,
       scannedAt: SCANNED_AT,
-      defaultTarget: false,
     });
     expect(rule(findings, "runtime/sources-disagree").map((f) => f.locations)).toEqual([
       [
@@ -117,7 +111,6 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
       targets: [NODE_24],
       entries,
       scannedAt: SCANNED_AT,
-      defaultTarget: false,
     });
     expect(rule(findings, "runtime/sources-disagree")).toEqual([]);
   });
@@ -129,7 +122,6 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
       targets: [NODE_24],
       entries,
       scannedAt: SCANNED_AT,
-      defaultTarget: false,
     });
     expect(rule(findings, "runtime/sources-disagree")).toEqual([]);
   });
@@ -143,7 +135,6 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
           targets: [NODE_24],
           entries,
           scannedAt: SCANNED_AT,
-          defaultTarget: false,
         }),
         "runtime/sources-disagree",
       ).length;
@@ -163,7 +154,6 @@ describe("runtime/sources-disagree (Sreeram's monorepo rule, ADR-020)", () => {
           targets: [NODE_24],
           entries,
           scannedAt: SCANNED_AT,
-          defaultTarget: false,
         }),
         "runtime/sources-disagree",
       ).length;
@@ -183,7 +173,6 @@ describe("which packages a declaration covers", () => {
         targets: [NODE_24],
         entries,
         scannedAt: SCANNED_AT,
-        defaultTarget: false,
       }),
       "runtime/sources-disagree",
     );
@@ -327,7 +316,6 @@ describe("runtime/end-of-life", () => {
         targets: [NODE_24],
         entries,
         scannedAt: `${today}T23:59:59.000Z`,
-        defaultTarget: false,
       }).filter((f) => f.ruleId === "runtime/end-of-life").length;
     expect(run("2026-04-30")).toBe(0); // Node.js 20's last day, even late in the day
     expect(run("2026-05-01")).toBe(1);
@@ -342,7 +330,6 @@ describe("runtime/end-of-life for LTS codenames", () => {
       targets: [NODE_24],
       entries,
       scannedAt: SCANNED_AT,
-      defaultTarget: false,
     });
     expect(rule(findings, "runtime/end-of-life").map((f) => f.message.split(". ")[0])).toEqual([
       ".nvmrc pins lts/hydrogen (Node.js 18), which reached end-of-life on 2025-04-30",
@@ -351,9 +338,10 @@ describe("runtime/end-of-life for LTS codenames", () => {
 });
 
 describe("runtime/below-target under the default target (Sreeram, ADR-021)", () => {
-  const NODE_26: Target = { tool: "node", version: "26" };
-  const severity = (fixture: string, defaultTarget: boolean) =>
-    rule(findingsIn(fixture, [NODE_26], defaultTarget), "runtime/below-target").map(
+  const NODE_26: ReportTarget = { tool: "node", version: "26", source: "flag" };
+  const NODE_26_DEFAULT: ReportTarget = { ...NODE_26, source: "default" };
+  const severity = (fixture: string, isDefault: boolean) =>
+    rule(findingsIn(fixture, [isDefault ? NODE_26_DEFAULT : NODE_26]), "runtime/below-target").map(
       (f) => f.severity,
     );
 
@@ -385,8 +373,7 @@ describe("runtime/below-target under the default target (Sreeram, ADR-021)", () 
           { source: "nvmrc", location: { file: ".nvmrc", line: 1, column: 1 }, version },
         ],
         packageDirs: [""],
-        targets: [NODE_26],
-        defaultTarget: true,
+        targets: [NODE_26_DEFAULT],
         entries,
         scannedAt,
       }).map((f) => f.severity);
@@ -402,7 +389,7 @@ describe("runtime findings: more coverage and edges", () => {
   const all = (
     declarations: NodeVersionDeclaration[],
     packageDirs: string[] = [""],
-    targets = [NODE_24],
+    targets: ReportTarget[] = [NODE_24],
   ) =>
     runtimeFindings({
       declarations,
@@ -410,7 +397,6 @@ describe("runtime findings: more coverage and edges", () => {
       targets,
       entries,
       scannedAt: SCANNED_AT,
-      defaultTarget: false,
     });
 
   it("applies volta.node to its own package only (Volta needs extends to share it)", () => {
@@ -471,7 +457,9 @@ describe("runtime findings: more coverage and edges", () => {
   it.each(["99999999999999999999", "24garbage", "lts", "", "026", "026.1.0"])(
     "produces nothing, and doesn't throw, for the target %j",
     (version) => {
-      expect(all([pin(".nvmrc", v("20"))], [""], [{ tool: "node", version }])).toEqual([]);
+      expect(
+        all([pin(".nvmrc", v("20"))], [""], [{ tool: "node", version, source: "flag" }]),
+      ).toEqual([]);
     },
   );
 
@@ -482,7 +470,6 @@ describe("runtime findings: more coverage and edges", () => {
       targets: [NODE_24],
       entries,
       scannedAt: "yesterday",
-      defaultTarget: false,
     });
     expect(rule(findings, "runtime/end-of-life")).toEqual([]);
   });
@@ -505,14 +492,16 @@ describe("runtime findings: more coverage and edges", () => {
 describe("runtime findings in general", () => {
   it("produces nothing without a Node.js target", () => {
     expect(
-      findingsIn("fixtures/rules/runtime-below-target/positive", [{ tool: "next", version: "16" }]),
+      findingsIn("fixtures/rules/runtime-below-target/positive", [
+        { tool: "next", version: "16", source: "flag" },
+      ]),
     ).toEqual([]);
   });
 
   it("produces nothing when the target isn't a version", () => {
     expect(
       findingsIn("fixtures/rules/runtime-below-target/positive", [
-        { tool: "node", version: "lts" },
+        { tool: "node", version: "lts", source: "flag" },
       ]),
     ).toEqual([]);
   });
@@ -532,7 +521,6 @@ describe("runtime findings in general", () => {
       targets: [NODE_24],
       entries: withoutFix,
       scannedAt: SCANNED_AT,
-      defaultTarget: false,
     });
     expect(findings.map((f) => f.ruleId)).toEqual(["runtime/below-target"]);
     expect(findings[0]).not.toHaveProperty("fix");
@@ -541,5 +529,21 @@ describe("runtime findings in general", () => {
   it("gives the same findings in the same order for the same input", () => {
     const fixture = "fixtures/rules/runtime-sources-disagree/positive";
     expect(JSON.stringify(findingsIn(fixture))).toBe(JSON.stringify(findingsIn(fixture)));
+  });
+});
+
+describe("missingRuleIds", () => {
+  it("is empty for the real catalog", () => {
+    expect(missingRuleIds(entries)).toEqual([]);
+  });
+
+  it("names every runtime rule a catalog lacks, in id order", () => {
+    expect(missingRuleIds([])).toEqual([
+      "runtime/below-target",
+      "runtime/end-of-life",
+      "runtime/sources-disagree",
+    ]);
+    const withoutEndOfLife = entries.filter((entry) => entry.id !== "runtime/end-of-life");
+    expect(missingRuleIds(withoutEndOfLife)).toEqual(["runtime/end-of-life"]);
   });
 });
