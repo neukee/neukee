@@ -165,6 +165,16 @@ Guardrails (Sreeram, 2026-11-23):
 - Done when: a test packs `@neukee/core`, `@neukee/scanner` and `@neukee/cli`, unpacks the tarballs into a temp `node_modules` (their dependencies resolve from the repository's install, so the test needs no network), runs `neukee scan` on a fixture, and gets the same exit code and findings as in the repository; it fails if the tarball lacks `catalog/`. Manual check, noted in PROGRESS: `npx https://pkg.pr.new/neukee/neukee/@neukee/cli@<sha> scan <a fixture or repo>` from a pull request's preview works.
 - Note: T-053 keeps the release pipeline; this task covers only what the package contains.
 
+### T-033c · Catalog wording: `engines.node` selects the runtime on deployment platforms
+
+- Status: todo
+- Depends on: T-033b
+- Human review: no
+- Why (Sreeram, 2026-11-27): the 2026-11-26 wording rule ("`engines.node` may only be described as allowing or excluding versions", `catalog/README.md`) followed npm's docs, which are right about npm but incomplete. Hosting platforms read `engines.node` to choose the runtime. Sources, fetched and read on 2026-11-27 (also in `docs/research/engines-node-selects-runtime.md` on the `research/answer-key` branch, written by Claude in the chat): Vercel, https://vercel.com/docs/functions/runtimes/node-js/node-js-versions ("You can define the major Node.js version in the `engines#node` section of the `package.json` to override the one you have selected in the Project Settings"; its table maps `>=22.0.0` to "latest 26.x version"); Heroku, https://devcenter.heroku.com/articles/nodejs-support ("To specify the version of Node.js to use on Heroku, use the `engines` section of `package.json`"; without it "Node.js 26.x is used automatically"); DigitalOcean App Platform, https://docs.digitalocean.com/products/app-platform/languages-frameworks/nodejs/ ("App Platform uses Node.js 22.x by default if you do not specify a Node.js version in the `engines` section").
+- Build: change the wording rule in `catalog/README.md` to: npm treats `engines.node` as advisory unless `engine-strict` is set, but on Vercel, Heroku and DigitalOcean App Platform it selects the Node.js version for builds and deployments, so entries may say so for those platforms, citing their docs. Update the messages and header comments of `below-target.yaml` and `sources-disagree.yaml` to match (a pin selects the runtime for tools that read it; a range selects it on those platforms and is otherwise advisory). New ADR (023) that supersedes the 2026-11-26 rule. Text only; no code, fixture or schema change beyond the goldens that embed the catalog prose.
+- Not in this task (candidate post-launch rules, logged in REVIEW-QUEUE): a wide `engines.node` range with no upper bound on such a platform; `.nvmrc` present, `engines.node` absent and a platform detected.
+- Done when: the catalog text agrees with the three sources; the ADR is recorded; Sonnet review.
+
 ## Phase 1 — Detectors
 
 ### T-005d · Dropped negations fail open
