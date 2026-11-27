@@ -1,6 +1,6 @@
 # Neukee scan report
 
-- **Targets:** `node@26`
+- **Targets:** `node@26` (default)
 - **Scanned:** `2026-11-26T12:00:00.000Z`; 2 files scanned, 0 skipped
 - **Detected Node.js:** `24`
 

@@ -1,10 +1,11 @@
 import { existsSync, lstatSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadCatalog, type Target } from "@neukee/core";
+import { loadCatalog, type ReportTarget, type Target } from "@neukee/core";
 import {
   blockingFindings,
   type FailOn,
+  missingRuleIds,
   renderMarkdown,
   renderTerminal,
   scan,
@@ -84,13 +85,14 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   if (catalog.errors.length > 0 || catalog.entries.length === 0) {
     return catalogFailure(catalog.errors);
   }
+  const missing = missingRuleIds(catalog.entries);
+  if (missing.length > 0) return catalogFailure([], missing);
   const report = scan(
     root,
-    parsed.targets,
+    parsed,
     { name: "neukee", version },
     {
       entries: catalog.entries,
-      defaultTarget: parsed.isDefault,
       ...(options.scannedAt === undefined ? {} : { scannedAt: options.scannedAt }),
     },
   );
@@ -99,7 +101,10 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   const text =
     format === "markdown"
       ? renderMarkdown(report)
-      : renderTerminal(report, { color: options.color && args.output === undefined, failOn });
+      : renderTerminal(report, {
+          color: options.color && args.output === undefined,
+          failOn,
+        });
   if (args.output === undefined) return { code, stdout: text, stderr: "" };
   try {
     writeFileSync(resolve(args.output), text); // the path the guard checked, `..` already collapsed
@@ -109,24 +114,30 @@ export function scanCommand(args: ScanArgs, options: RunOptions, version: string
   return { code, stdout: "", stderr: `Wrote the ${format} report to ${args.output}.\n` };
 }
 
-/** With no `--target`, the default Node.js target; the default softens below-target (ADR-021). */
-function parseTargets(
-  given: readonly string[],
-): { targets: Target[]; isDefault: boolean } | string {
-  if (given.length === 0) return { targets: [DEFAULT_TARGET], isDefault: true };
-  const supported = SUPPORTED_TARGETS.map((t) => `${t.tool}@${t.version}`).join(", ");
-  const targets: Target[] = [];
+/**
+ * Named targets replace the default for their own tool only (SPEC §1): without a Node.js target
+ * the default `node@26` is added, and softens below-target (ADR-021). One target per tool.
+ */
+function parseTargets(given: readonly string[]): ReportTarget[] | string {
+  const supported = SUPPORTED_TARGETS.map(label).join(", ");
+  const targets: ReportTarget[] = [];
   for (const text of given) {
-    const target = SUPPORTED_TARGETS.find((t) => `${t.tool}@${t.version}` === text);
+    const target = SUPPORTED_TARGETS.find((t) => label(t) === text);
     if (target === undefined) return `Unknown target "${text}". Supported targets: ${supported}.`;
     const same = targets.find((t) => t.tool === target.tool);
     if (same !== undefined) {
-      return `Use one ${target.tool} target at most, not ${same.tool}@${same.version} and ${text}.`;
+      return `Use one ${target.tool} target per run, not ${label(same)} and ${text}: run once per target.`;
     }
-    targets.push(target);
+    targets.push({ ...target, source: "flag" });
   }
-  return { targets, isDefault: false };
+  if (!targets.some((t) => t.tool === DEFAULT_TARGET.tool)) {
+    targets.push({ ...DEFAULT_TARGET, source: "default" });
+  }
+  // Sorted, so the same targets give the same report in any flag order (ARCHITECTURE §4).
+  return targets.sort((a, b) => (label(a) < label(b) ? -1 : 1));
 }
+
+const label = (target: Target): string => `${target.tool}@${target.version}`;
 
 function isFolder(path: string): boolean {
   try {
@@ -186,9 +197,13 @@ function defaultCatalogDir(): string {
   return shipped;
 }
 
-/** A broken or missing catalog is a packaging bug: scanning without it would hide findings. */
-function catalogFailure(errors: readonly { file: string; message: string }[]): RunResult {
+/** A broken, missing or incomplete catalog is a packaging bug: scanning would look clean. */
+function catalogFailure(
+  errors: readonly { file: string; message: string }[],
+  missingRules: readonly string[] = [],
+): RunResult {
   const lines = errors.map((error) => `  ${error.file}: ${error.message}`);
+  if (missingRules.length > 0) lines.push(`  no entry for: ${missingRules.join(", ")}`);
   const detail = lines.length > 0 ? `\n${lines.join("\n")}` : " It has no entries.";
   return {
     code: 3,

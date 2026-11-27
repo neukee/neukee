@@ -13,8 +13,9 @@ Usage:
   neukee --help
 
 Options:
-  --target     What to check against, repeatable, one per tool. Supported: node@24,
-               node@26, next@15, next@16. Default: node@26.
+  --target     What to check against, repeatable, one per tool. Supported:
+               node@24, node@26, next@15, next@16.
+               Default: node@26, unless you name a Node.js target.
   --format     terminal (default) or markdown. json and sarif come later.
   --output     Write the report to a file instead of printing it.
   --fail-on    Exit with code 1 when a finding is at or above this severity:

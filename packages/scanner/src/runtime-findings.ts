@@ -1,4 +1,4 @@
-import type { CatalogEntry, Finding, Location, Severity, Target } from "@neukee/core";
+import type { CatalogEntry, Finding, Location, ReportTarget, Severity } from "@neukee/core";
 import { gtr, intersects, validRange } from "semver";
 import { endOfLife, ltsMajor, majorLines, releaseLine } from "./node-releases.js";
 import type { NodeVersionDeclaration } from "./runtime-sources.js";
@@ -13,9 +13,8 @@ export function runtimeFindings(input: {
   declarations: readonly NodeVersionDeclaration[];
   /** Repo-relative folders that hold a package.json ("" for the root). */
   packageDirs: readonly string[];
-  targets: readonly Target[];
-  /** The node target came from the default, not from `--target` (softens below-target). */
-  defaultTarget: boolean;
+  /** A node target whose `source` is "default" softens below-target (ADR-021). */
+  targets: readonly ReportTarget[];
   entries: readonly CatalogEntry[];
   /** The report's scannedAt; its date dates end-of-life and support left. */
   scannedAt: string;
@@ -26,7 +25,7 @@ export function runtimeFindings(input: {
   // A date we can't read dates nothing: no end-of-life, no softening.
   const date = DATE.exec(input.scannedAt)?.[0];
   const findings: Finding[] = [];
-  const add = (id: string, detail: string, locations: Location[], severity?: Severity) => {
+  const add = (id: RuntimeRuleId, detail: string, locations: Location[], severity?: Severity) => {
     const rule = input.entries.find((e) => e.id === id);
     if (rule === undefined) return;
     findings.push({
@@ -37,7 +36,8 @@ export function runtimeFindings(input: {
       ...(rule.fix === undefined ? {} : { fix: rule.fix }),
       sourceUrl: rule.sourceUrl,
       locations,
-      target,
+      // The finding's own target is the plain Target: `source` belongs to the report's list.
+      target: { tool: target.tool, version: target.version },
     });
   };
 
@@ -65,7 +65,7 @@ export function runtimeFindings(input: {
       "runtime/below-target",
       `${describe(declaration)}, below the target Node.js ${targetMajor}`,
       [declaration.location],
-      input.defaultTarget ? softened(line, date) : undefined,
+      target.source === "default" ? softened(line, date) : undefined,
     );
   }
 
@@ -79,6 +79,22 @@ export function runtimeFindings(input: {
     }
   }
   return findings;
+}
+
+/** The catalog entries this detector builds its findings from. */
+const RUNTIME_RULE_IDS = [
+  "runtime/below-target",
+  "runtime/end-of-life",
+  "runtime/sources-disagree",
+] as const;
+type RuntimeRuleId = (typeof RUNTIME_RULE_IDS)[number];
+
+/**
+ * The runtime rules a catalog lacks. `runtimeFindings` skips a rule it can't find, so a catalog
+ * without one would look like a clean repository; callers check this first.
+ */
+export function missingRuleIds(entries: readonly CatalogEntry[]): string[] {
+  return RUNTIME_RULE_IDS.filter((id) => !entries.some((entry) => entry.id === id));
 }
 
 // A target major of up to nine digits without a leading zero, alone or before a `.`: "26",

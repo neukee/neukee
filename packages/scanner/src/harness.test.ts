@@ -7,10 +7,10 @@ import { FIXED_SCANNED_AT, matchGolden, scanFixture } from "./testing/scan-fixtu
 
 describe("fixture harness", () => {
   it("scans a fixture repo into a valid report with the fixed timestamp", () => {
-    const report = scanFixture("empty", [{ tool: "next", version: "16" }]);
+    const report = scanFixture("empty", [{ tool: "next", version: "16", source: "flag" }]);
     expect(report.scannedAt).toBe(FIXED_SCANNED_AT);
     expect(report.root).toBe(".");
-    expect(report.targets).toEqual([{ tool: "next", version: "16" }]);
+    expect(report.targets).toEqual([{ tool: "next", version: "16", source: "flag" }]);
     expect(validateReport(report).valid).toBe(true);
   });
 
