@@ -9,3 +9,4 @@ coverage/
 .stryker-tmp/
 reports/
 *.tgz
+/packages/cli/catalog/
