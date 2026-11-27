@@ -7,7 +7,9 @@
 # https://devcenter.heroku.com/articles/nodejs-support: "To specify the version of Node.js to use
 # on Heroku, use the engines section of package.json." DigitalOcean App Platform,
 # https://docs.digitalocean.com/products/app-platform/languages-frameworks/nodejs/: "You can
-# specify your desired Node.js version in the engines section of package.json."
+# specify your desired Node.js version in the engines section of package.json." The same page:
+# App Platform "defaults to using a Dockerfile if one is present in the root of the directory or
+# specified in the app spec", so the engines.node claim is for buildpack deployments.
 # npm, package.json docs, "engines" (https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines,
 # fetched 2026-11-26): "Unless the user has set the engine-strict config flag, this field is
 # advisory only and will only produce warnings when your package is installed as a dependency."
@@ -27,9 +29,10 @@ message: >-
   different major versions, or a pin names a major version that the package's `engines.node`
   range excludes. When pins differ, tools that read different pins run different versions, so an
   upgrade that passes locally can still run the old runtime elsewhere. On Vercel, Heroku and
-  DigitalOcean App Platform the `engines.node` range chooses the Node.js version for builds and
-  deployments, so production can run a different version than the pin; elsewhere npm treats it as
-  advisory unless `engine-strict` is set.
+  DigitalOcean App Platform (buildpack deployments) the `engines.node` range chooses the Node.js
+  version for builds and deployments, so production can run a different version than a pin the
+  range excludes (https://vercel.com/docs/functions/runtimes/node-js/node-js-versions, https://devcenter.heroku.com/articles/nodejs-support and https://docs.digitalocean.com/products/app-platform/languages-frameworks/nodejs/).
+  To npm the range is advisory unless `engine-strict` is set.
 fix: Make every pin and the engines.node range agree on one major version.
 sourceUrl: https://docs.npmjs.com/cli/v10/configuring-npm/package-json#engines
 fixtures:
