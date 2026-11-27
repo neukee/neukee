@@ -147,7 +147,7 @@ interface ScanReport {
 - **Within `schemaVersion: 1`**, we may add **optional** fields. Consumers must ignore fields they don't know.
 - **Removing, renaming or retyping a field, or changing its meaning**, bumps `schemaVersion`. So does making an optional field required.
 - **Our own validator stays strict.** The published schema keeps every object closed, so `validateReport` rejects fields it doesn't know. Any added field goes into the schema, the types and the tests in the same PR that adds it. A consumer that validates reports with our schema should use the schema from the same `@neukee/core` version that produced them.
-- **Before the first npm release (v0.1.0)** a change that would bump the version may keep `schemaVersion: 1` when an ADR says why: ADR-022 adds the required `targets[].source` that way. After the release, such a change bumps the version.
+- **Until the first npm release of `@neukee/cli`**, a change that would bump the version may keep `schemaVersion: 1` when an ADR says why: ADR-022 adds the required `targets[].source` that way. The exception ends at that release; after it, such a change bumps the version.
 - **Every schema change needs an ADR**, breaking or not. The constraint snapshot in the tests fails until the change is made on purpose.
 
 ### The report schema (`packages/core/schema/scan-report.v1.json`)
