@@ -15,12 +15,13 @@
     "neukee": "./dist/index.js"
   },
   "files": [
+    "catalog",
     "dist",
     "src",
     "!src/**/*.test.ts"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-catalog.mjs",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {

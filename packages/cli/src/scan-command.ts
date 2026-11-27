@@ -184,17 +184,16 @@ function isInside(folder: string, path: string): boolean {
 }
 
 /**
- * This package's own `catalog` folder when it ships one. The repository's catalog is used only in
- * a checkout (the pnpm workspace file is three folders up): in an install, three folders up is
- * `node_modules`, where any package named `catalog` could sit.
+ * The catalog a scan reads. In a checkout (the pnpm workspace file is three folders up) it is the
+ * repository's own, so an edited entry applies at once and a stale built copy never does. In an
+ * install it is this package's `catalog` folder, which `pnpm build` copies in (T-033b); three
+ * folders up is then `node_modules`, where any package named `catalog` could sit, so it is never read.
  */
 function defaultCatalogDir(): string {
-  const shipped = fileURLToPath(new URL("../catalog", import.meta.url));
   const workspaceFile = fileURLToPath(new URL("../../../pnpm-workspace.yaml", import.meta.url));
-  if (!existsSync(shipped) && existsSync(workspaceFile)) {
-    return fileURLToPath(new URL("../../../catalog", import.meta.url));
-  }
-  return shipped;
+  return fileURLToPath(
+    new URL(existsSync(workspaceFile) ? "../../../catalog" : "../catalog", import.meta.url),
+  );
 }
 
 /** A broken, missing or incomplete catalog is a packaging bug: scanning would look clean. */
