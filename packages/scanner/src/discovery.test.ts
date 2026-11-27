@@ -307,6 +307,70 @@ describe("file discovery", () => {
     expect(files).not.toContain("dropped.js");
   });
 
+  // A `!` line the parser drops (a POSIX class, an unclosed class, a trailing backslash, over 1 KiB)
+  // might have re-included files, so the .gitignore is treated like one that can't be applied:
+  // its own rules and the inherited ones stop for its folder and below (fail open, T-005d).
+  const dropped = [
+    ["a POSIX class", "!*[[:digit:]].js"],
+    ["an unclosed class", "!*[0-9.js"],
+    ["a trailing backslash", "!1.js\\"],
+    ["an over-long rule", `!${"a".repeat(2000)}.js`],
+  ] as const;
+
+  it.each(dropped)(
+    "turns off inherited rules below a .gitignore whose negation was dropped (%s)",
+    (_, line) => {
+      const root = copyFixture();
+      writeFileSync(join(root, ".gitignore"), "*.js\n");
+      mkdirSync(join(root, "src"));
+      writeFileSync(join(root, "src/.gitignore"), `${line}\n`);
+      writeFileSync(join(root, "src/1.js"), "might be re-included");
+      writeFileSync(join(root, "dropped.js"), "still ignored by the root rule");
+      const events = Array.from(discoverFiles(root));
+      expect(paths(events)).toContain("src/1.js");
+      expect(paths(events)).not.toContain("dropped.js");
+      expect(diagnosticsOf(events)).toContainEqual({
+        level: "warning",
+        message:
+          "Line 1 of this .gitignore is a negation that was not applied, so no .gitignore rule applies here or below.",
+        file: "src/.gitignore",
+      });
+    },
+  );
+
+  it("turns off the file's own rules too when its own negation was dropped", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), "*.js\n!*[[:digit:]].js\n");
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "1.js"), "might be re-included");
+    writeFileSync(join(root, "other.js"), "ignored only by a rule that no longer applies");
+    writeFileSync(join(root, "src/deep.js"), "below the file");
+    const files = paths(Array.from(discoverFiles(root)));
+    expect(files).toEqual(expect.arrayContaining(["1.js", "other.js", "src/deep.js"]));
+  });
+
+  it("names the first dropped negation, whatever dropped lines come before it", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), "*.js\n[[:digit:]].txt\n!*[[:digit:]].js\n");
+    const messages = diagnosticsOf(Array.from(discoverFiles(root))).map((d) => d.message);
+    expect(messages).toContain(
+      "Line 3 of this .gitignore is a negation that was not applied, so no .gitignore rule applies here or below.",
+    );
+  });
+
+  it("changes nothing for a dropped line that is not a negation", () => {
+    const root = copyFixture();
+    writeFileSync(join(root, ".gitignore"), "*.js\n[[:digit:]].txt\n\\!a[\n");
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "src/.gitignore"), "[[:digit:]].md\n");
+    writeFileSync(join(root, "src/1.js"), "ignored by the root rule");
+    writeFileSync(join(root, "dropped.js"), "ignored by the root rule");
+    const events = Array.from(discoverFiles(root));
+    expect(paths(events)).not.toContain("src/1.js");
+    expect(paths(events)).not.toContain("dropped.js");
+    expect(diagnosticsOf(events).some((d) => d.message.includes("is a negation"))).toBe(false);
+  });
+
   it("matches a .gitignore against itself as a file, and folder-only rules never match files", () => {
     const root = copyFixture();
     writeFileSync(join(root, ".gitignore"), "/.gitignore\n");

@@ -134,7 +134,16 @@ function* walk(
           path,
         );
       }
-      if (inheritedRules.length + parsed.rules.length > MAX_RULES_IN_FORCE) {
+      // A dropped `!` line might have re-included files, so this .gitignore can't be trusted
+      // either way: no rule applies here or below, its own included (fail open, T-005d).
+      const negation = parsed.problems.find((problem) => problem.negation === true);
+      if (negation !== undefined) {
+        rules = [];
+        yield warning(
+          `Line ${negation.line} of this .gitignore is a negation that was not applied, so no .gitignore rule applies here or below.`,
+          path,
+        );
+      } else if (inheritedRules.length + parsed.rules.length > MAX_RULES_IN_FORCE) {
         // It might re-include files a parent rule ignores, so no inherited rule applies below
         // either (fail open).
         rules = [];

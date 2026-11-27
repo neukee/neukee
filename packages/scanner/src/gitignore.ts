@@ -68,6 +68,8 @@ export interface IgnoreProblem {
   /** 1-based line in the .gitignore. */
   line: number;
   reason: string;
+  /** The dropped line starts with `!`: it might have re-included files (T-005d). */
+  negation?: true;
 }
 
 /** A rule and the repo-relative folder of the .gitignore it came from ("" for the root). */
@@ -95,12 +97,19 @@ export function parseIgnoreFile(text: string): { rules: IgnoreRule[]; problems: 
   lines.forEach((raw, index) => {
     const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
     if (line === "" || line.startsWith("#")) return;
+    // A leading `\\!` is a literal !, and a space before it is part of the pattern: only a first
+    // character `!` makes a negation.
+    const negation = line.startsWith("!") ? ({ negation: true } as const) : {};
     if (encoder.encode(line).length > MAX_RULE_BYTES) {
-      problems.push({ line: index + 1, reason: `is longer than ${MAX_RULE_BYTES} bytes` });
+      problems.push({
+        line: index + 1,
+        reason: `is longer than ${MAX_RULE_BYTES} bytes`,
+        ...negation,
+      });
       return;
     }
     const result = parseRule(trimTrailingSpaces(line));
-    if (typeof result === "string") problems.push({ line: index + 1, reason: result });
+    if (typeof result === "string") problems.push({ line: index + 1, reason: result, ...negation });
     else if (result !== undefined) rules.push(result);
   });
   return { rules, problems };

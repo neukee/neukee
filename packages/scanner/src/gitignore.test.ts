@@ -144,6 +144,29 @@ describe("parseIgnoreFile: lines the scanner drops on purpose, with a reason", (
     ]);
   });
 
+  // A dropped `!` line might have re-included files, so discovery must tell it apart from any
+  // other dropped line (T-005d, Sreeram 2026-11-24).
+  it.each([
+    ["a POSIX class", "!*[[:digit:]].js", POSIX],
+    ["an unclosed class", "!a[", UNCLOSED],
+    ["a trailing backslash", "!foo\\", "ends with a backslash and never matches"],
+    [
+      "an over-long rule",
+      `!${"a".repeat(MAX_RULE_BYTES)}`,
+      `is longer than ${MAX_RULE_BYTES} bytes`,
+    ],
+  ])("marks a dropped negation (%s) as one", (_, rule, reason) => {
+    expect(parseIgnoreFile(`${rule}\n`).problems).toEqual([{ line: 1, reason, negation: true }]);
+  });
+
+  it("marks no other dropped line as a negation, not even an escaped ! or one after spaces", () => {
+    for (const rule of ["\\!a[", " !a[", "a[", "x\\"]) {
+      const { problems } = parseIgnoreFile(`${rule}\n`);
+      expect(problems, rule).toHaveLength(1);
+      expect(problems[0]?.negation, rule).toBeUndefined();
+    }
+  });
+
   it("numbers lines the same with CRLF endings and a byte order mark", () => {
     const { problems } = parseIgnoreFile(`\uFEFF*.log\r\n[ab\r\n`);
     expect(problems).toEqual([{ line: 2, reason: UNCLOSED }]);
