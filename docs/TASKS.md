@@ -157,7 +157,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-033b · Ship the catalog in @neukee/cli
 
-- Status: in-progress
+- Status: done (PR #24, `175caec`). Manual check still open for Sreeram: `npx https://pkg.pr.new/neukee/neukee/@neukee/cli@24 scan <a repository>` (the URL from the bot's comment on #24, or the newest one for `main`); I couldn't run it, because executing or downloading from pkg.pr.new was denied in this session.
 - Depends on: T-033
 - Human review: no
 - Why (Sreeram, 2026-11-27): `neukee scan` exits 3 when no `catalog/` folder sits beside `dist`, so a previewed or published `@neukee/cli` fails for everyone. Not waiting for T-053. The pkg.pr.new preview must work by Saturday, Nov 28.
@@ -167,7 +167,7 @@ Guardrails (Sreeram, 2026-11-23):
 
 ### T-033c · Catalog wording: `engines.node` selects the runtime on deployment platforms
 
-- Status: todo
+- Status: in-progress
 - Depends on: T-033b
 - Human review: no
 - Why (Sreeram, 2026-11-27): the 2026-11-26 wording rule ("`engines.node` may only be described as allowing or excluding versions", `catalog/README.md`) followed npm's docs, which are right about npm but incomplete. Hosting platforms read `engines.node` to choose the runtime. Sources, fetched and read on 2026-11-27 (also in `docs/research/engines-node-selects-runtime.md` on the `research/answer-key` branch, written by Claude in the chat): Vercel, https://vercel.com/docs/functions/runtimes/node-js/node-js-versions ("You can define the major Node.js version in the `engines#node` section of the `package.json` to override the one you have selected in the Project Settings"; its table maps `>=22.0.0` to "latest 26.x version"); Heroku, https://devcenter.heroku.com/articles/nodejs-support ("To specify the version of Node.js to use on Heroku, use the `engines` section of `package.json`"; without it "Node.js 26.x is used automatically"); DigitalOcean App Platform, https://docs.digitalocean.com/products/app-platform/languages-frameworks/nodejs/ ("App Platform uses Node.js 22.x by default if you do not specify a Node.js version in the `engines` section").

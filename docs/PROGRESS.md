@@ -4,12 +4,12 @@ Updated by Claude at the end of every task (`/next`), every session (`/wrap`) an
 
 ## Resume here
 
-- **Last updated:** 2026-11-27, 07:00 IST.
+- **Last updated:** 2026-11-27, 19:30 IST.
 - **Start next session with:** `git status` first, then `/status`. Reconcile any uncommitted work before `/next` (Sreeram, 2026-11-23).
-- **Branches and worktrees:** `main` at `1a9cfe7`. T-033b gets its own worktree `../neukee-wt/t-033b` (branch `t-033b-ship-catalog`). Session 2 builds T-015 in `../neukee-wt/t-015` (branch `t-015-npm-lockfile`). `../neukee-wt/docs-sync` on `docs-sync/2026-11-26b`. Old branches `t-033-cli` and the main checkout's former PR branches are merged or superseded.
-- **Last finished:** T-033 (CLI), complete: part A merged as `29a0717` (PR #22) and part B as `1a9cfe7` (PR #23; Sreeram confirmed the merge: the `targets[].source` schema change, with the `schemaVersion` exception expiring at the first npm release of `@neukee/cli`). MVP: 13 of 30 launch tasks done (43%).
-- **In progress:** session 1: T-033b (ship the catalog in `@neukee/cli`: a build step copies the catalog entries into `packages/cli/catalog`, listed in `files`, and a test packs the three packages with `pnpm pack`, unpacks them and scans a fixture). Session 2: T-015 (npm lockfile parser; Opus reviews).
-- **Exact next step:** T-033b (so the pkg.pr.new preview works by Saturday), then T-033c (catalog wording: `engines.node` selects the runtime on Vercel, Heroku and DigitalOcean, ADR-023), then T-005d. Merge session 2's T-015 PR when it reports one (standing approval; Opus verdict on the head).
+- **Branches and worktrees:** `main` at `175caec`. Session 2: `../neukee-wt/t-015` (`t-015-npm-lockfile`). T-033c gets `../neukee-wt/t-033c`. `../neukee-wt/docs-sync` on `docs-sync/2026-11-26b`.
+- **Last finished:** T-033b (ship the catalog in `@neukee/cli`), merged as `175caec` (PR #24) under standing approval after five rounds of review (checkout-side lookup rule pinned, every catalog entry checked in the tarball, a symlink-safe copy script, a test that can't be skipped in CI). The packed-install and checkout tests ran without skips on both Windows jobs. MVP: 14 of 30 launch tasks done (47%). **Open for Sreeram: the preview check** (`npx https://pkg.pr.new/neukee/neukee/@neukee/cli@24 scan <a repository>`); I couldn't run it.
+- **In progress:** session 1: T-033c (catalog wording: `engines.node` selects the runtime on Vercel, Heroku and DigitalOcean App Platform; ADR-023; Sonnet review). Session 2: T-015 (npm lockfile parser; Opus reviews).
+- **Exact next step:** finish T-033c, then T-005d (dropped negations fail open; foundational, Opus). Merge session 2's T-015 PR when it reports one. Then the Dec 7 work: T-050 validation prep with the chat's answer key (every row verified first), T-032 (JSON and SARIF), T-054 docs, T-053.
 - **Standing instructions (Sreeram) not in CLAUDE.md:**
   - At the start of each task, say in one line whether it's foundational (Sreeram uses Opus) or routine (he switches to Sonnet).
   - Every catalog-entry PR summary gives the official source URL and the single sentence from it that justifies the rule.
@@ -84,6 +84,7 @@ One row per finished task. Size: S (under 1 session), M (1–2 sessions), L (3+)
 | 2026-11-26 | T-030  | M    | 1               | —             | done   | Report assembly: `scan()` runs the runtime detectors, sorts and dedupes, fills `detected.node`. Reviewer (Sonnet): CHANGES REQUIRED once (an empty `engines.node` made the report invalid), then PASS. CodeRabbit approved with no findings. PR #20 |
 | 2026-11-27 | T-031  | L    | 1               | —             | done   | Terminal and markdown renderers, `--fail-on` logic, the coverage note. Reviewer (Sonnet): 5 rounds of CHANGES REQUIRED across invisible characters, per-field tests, and markdown that survives GitHub (code spans for values; an empty span, not a comment, in table cells). Sreeram's paste test drove the markdown rules. 254 source lines. PR #21 |
 | 2026-11-27 | T-033  | L    | 1               | —             | done   | The CLI in two PRs: part A (`neukee scan`, formats, `--output`, `--fail-on`, exit codes; reviews found a catalog-lookup bypass, a crash exiting 1, an `--output` symlink hole, then CodeRabbit's CWE-61 finding led to a real-path guard) and part B (Sreeram's target and catalog decisions and the `targets[].source` schema change, ADR-022). Reviewer (Sonnet) CHANGES REQUIRED several times, all fixed; sizes 328 and 132 source lines (Sreeram waived the first). PRs #22, #23 |
+| 2026-11-27 | T-033b | S    | 1               | —             | done   | The catalog ships in `@neukee/cli`: `pnpm build` copies `*.yaml` entries (symlink-safe allow-list) into `packages/cli/catalog`; a checkout reads the repository's catalog, an install its own; tests pack, unpack and scan, and check the checkout rule. Reviewer (Sonnet): CHANGES REQUIRED once, then PASS on three later commits; CodeRabbit: two Minor findings, both fixed. 32 source lines. PR #24 |
 
 ## Daily log
 
