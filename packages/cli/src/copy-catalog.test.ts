@@ -56,12 +56,13 @@ describe("copy-catalog.mjs", () => {
       symlinkSync(join(dir, "missing"), join(from, "README.md")); // dangling
       symlinkSync(join(dir, "outside.yaml"), join(from, "linked.yaml")); // points at a real file
     } catch (error) {
-      // Only Windows without the symlink privilege skips; any other setup failure fails the test.
+      // Only a developer's Windows without the symlink privilege skips; CI has it (GitHub's Windows
+      // runners do), so there a missing privilege fails instead of hiding the regression.
       const denied =
         error instanceof Error &&
         "code" in error &&
         ["EPERM", "EACCES"].includes(String(error.code));
-      if (process.platform === "win32" && denied) context.skip();
+      if (process.platform === "win32" && denied && !process.env.CI) context.skip();
       throw error;
     }
     const to = join(dir, "out");
